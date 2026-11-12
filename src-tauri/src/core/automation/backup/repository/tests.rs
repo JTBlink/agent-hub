@@ -8,6 +8,7 @@ fn record() -> AutomationBackup {
         draft: AutomationDraft {
             package_options: None,
             name: "Example task".into(),
+            description: None,
             provider: Provider::System,
             content: "echo example".into(),
             workdir: None,
@@ -66,6 +67,7 @@ fn publishes_real_task_directories_and_imports_without_local_runtime() {
         &serde_json::to_vec(&AutomationBackup {
             draft: AutomationDraft {
                 name: "Renamed".into(),
+                description: None,
                 ..one.draft.clone()
             },
             ..one.clone()

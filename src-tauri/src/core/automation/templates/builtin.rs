@@ -64,6 +64,7 @@ pub(super) fn agent_starter(shell: &str) -> AutomationDraft {
     let mut draft = AutomationDraft {
         package_options: None,
         name: String::new(),
+        description: None,
         provider: Provider::System,
         content,
         workdir: None,
@@ -322,6 +323,7 @@ pub(super) fn all_templates(locale: &str, hermes: bool, shell: &str) -> Vec<Auto
             let mut draft = AutomationDraft {
     package_options: Some(super::super::package::PackageOptions { version: Some(package.version), dependencies: package.dependencies, hermes: None }),
                 name: title.clone(),
+                description: Some(manifest.description.get(locale)),
                 provider: package.draft.provider,
                 content: command,
                 files,

@@ -107,6 +107,7 @@ fn only_exact_registered_provider_and_scope_claim_ownership() {
         package_options: None,
         files: Vec::new(),
         name: "Audit".into(),
+        description: None,
         provider: Provider::System,
         content: "exit 0".into(),
         script_dir: None,

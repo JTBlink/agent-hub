@@ -4,6 +4,7 @@ fn draft() -> AutomationDraft {
         package_options: None,
         files: Vec::new(),
         name: "audit".into(),
+        description: None,
         provider: super::super::Provider::System,
         content: "exit 0".into(),
         script_dir: None,

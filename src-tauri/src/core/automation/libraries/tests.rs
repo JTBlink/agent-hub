@@ -285,6 +285,7 @@ fn revision_and_reference_guards_preserve_existing_libraries() {
         location: "fixture".into(),
         draft: super::super::AutomationDraft {
             name: "Library consumer".into(),
+            description: None,
             provider: super::super::Provider::System,
             content: "echo fixture".into(),
             workdir: None,

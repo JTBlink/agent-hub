@@ -7,6 +7,7 @@ fn task(schedule: Schedule) -> ManagedAutomation {
             package_options: None,
             files: Vec::new(),
             name: "Audit & test".into(),
+            description: None,
             provider: super::super::super::definition::Provider::System,
             content: "exit 7".into(),
             script_dir: None,

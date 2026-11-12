@@ -15,6 +15,7 @@ fn copied_packages_preserve_all_declared_content_and_isolate_edits_and_private_s
             hermes: None,
         }),
         name: "Review".into(),
+        description: None,
         provider: Provider::System,
         content: "echo review".into(),
         workdir: Some(project.to_string_lossy().into_owned()),

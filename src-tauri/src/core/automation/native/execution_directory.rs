@@ -16,6 +16,7 @@ fn scripts_stay_in_storage_while_execution_and_project_changes_use_the_selected_
     let mut draft = AutomationDraft {
     package_options: None,
         name: "Review".into(), provider: Provider::System,
+        description: None,
         content: format!("{} './bundle/main.py'", render::shell(&python.to_string_lossy())),
         script_dir: Some(storage.to_string_lossy().into_owned()),
         workdir: Some(project.to_string_lossy().into_owned()),

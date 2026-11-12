@@ -125,6 +125,7 @@ export function filterAutomationTasks(
       (status === "all" || task.status === status) &&
       [
         task.name,
+        task.definition?.description,
         task.identifier,
         task.bundle_id,
         task.schedule,

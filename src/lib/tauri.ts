@@ -68,6 +68,7 @@ export interface AutomationDraft {
   script_dir?: string | null;
   files?: AutomationScriptFile[];
   name: string;
+  description?: string | null;
   provider: "system" | "hermes";
   content: string;
   workdir: string | null;

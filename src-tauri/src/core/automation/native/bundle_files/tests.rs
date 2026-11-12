@@ -51,6 +51,7 @@ fn refuses_unmanaged_files_and_linked_template_directories() {
     let draft = AutomationDraft {
         package_options: None,
         name: "Template".into(),
+        description: None,
         provider: Provider::System,
         content: "python3 bundle/main.py".into(),
         files: vec![AutomationScriptFile {

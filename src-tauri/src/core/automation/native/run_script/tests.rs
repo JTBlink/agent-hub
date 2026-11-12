@@ -17,6 +17,7 @@ fn archives_legacy_output_and_preserves_independent_run_results() {
         package_options: None,
         files: Vec::new(),
         name: "Audit".into(),
+        description: None,
         provider: Provider::System,
         content: "printf 'first run'".into(),
         script_dir: None,

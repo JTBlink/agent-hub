@@ -4,6 +4,7 @@ fn draft(workspace: &Path) -> AutomationDraft {
     AutomationDraft {
         package_options: None,
         name: "Audit".into(),
+        description: None,
         provider: Provider::System,
         content: "printf original".into(),
         script_dir: None,

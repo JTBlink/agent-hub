@@ -16,7 +16,7 @@
 
 ### 创建草稿契约
 
-`create --file` 接受 `AutomationDraft`。`name`、`provider`、`content`、`schedule` 和 `enabled` 必须存在；`package_options`、`workdir` 和 `files` 可省略或使用空值。`script_dir` 属于已创建实例的内部字段，创建草稿不要填写，CLI 会分配独立任务包目录；已有项目路径写在 `workdir`。
+`create --file` 接受 `AutomationDraft`。`name`、`provider`、`content`、`schedule` 和 `enabled` 必须存在；`package_options`、`description`、`workdir` 和 `files` 可省略或使用空值；`description` 用一句话说明任务实现的功能，最多 1000 字节，显示在桌面任务列表中。`script_dir` 属于已创建实例的内部字段，创建草稿不要填写，CLI 会分配独立任务包目录；已有项目路径写在 `workdir`。
 
 - `name` 会去掉首尾空格，必须为 1–200 字节且不能含控制字符；`content` 必须为 1–65536 字节、非空且不含 NUL。它是命令或 Agent 提示词，不代表 `TASK.md`。
 - `workdir` 为空表示命令任务在任务包目录运行；非空时必须能解析为现有绝对目录。`~` 和 `~/...` 由 CLI 解析后保存为绝对路径。任务包的 `script_dir` 与项目 `workdir` 始终分开。

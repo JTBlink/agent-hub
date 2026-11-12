@@ -60,6 +60,7 @@ fn validates_schedules_and_rejects_missing_directories_without_running_commands(
         package_options: None,
         files: Vec::new(),
         name: "Audit".into(),
+        description: None,
         provider: Provider::System,
         content: "exit 99".into(),
         script_dir: None,
@@ -106,4 +107,23 @@ fn accepts_multiple_64_kib_files_but_enforces_the_512_kib_bundle_budget() {
         content: "x".into(),
     });
     assert!(draft.validate().unwrap_err().contains("512 KiB"));
+}
+
+#[test]
+fn trims_optional_descriptions_and_rejects_oversized_ones() {
+    let mut draft: AutomationDraft = serde_json::from_value(serde_json::json!({
+        "name":"Audit", "description":"  Checks tasks\nand reports  ", "provider":"system",
+        "content":"true", "workdir":null, "schedule":{"kind":"manual"}, "enabled":false
+    }))
+    .unwrap();
+    assert!(draft.validate().is_ok());
+    assert_eq!(
+        draft.description.as_deref(),
+        Some("Checks tasks\nand reports")
+    );
+    draft.description = Some("   ".into());
+    assert!(draft.validate().is_ok());
+    assert_eq!(draft.description, None);
+    draft.description = Some("x".repeat(1001));
+    assert!(draft.validate().unwrap_err().contains("Description"));
 }

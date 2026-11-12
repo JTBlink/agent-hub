@@ -160,6 +160,7 @@ export function AutomationEditor({
       await onSave({
         ...draft,
         name: draft.name.trim(),
+        description: draft.description?.trim() || undefined,
         workdir: draft.workdir?.trim() || null,
         script_dir: draft.script_dir?.trim() || null,
       });
@@ -260,6 +261,20 @@ export function AutomationEditor({
                   aria-label={t("automation.columns.name")}
                   disabled={busy}
                   className="w-full border-0 bg-transparent text-2xl font-semibold tracking-tight text-primary outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-accent"
+                />
+              </label>
+              <label className="-mt-3 block">
+                <span className="sr-only">
+                  {t("automation.descriptionLabel")}
+                </span>
+                <input
+                  maxLength={1000}
+                  value={draft.description ?? ""}
+                  onChange={(e) => update({ description: e.target.value })}
+                  placeholder={t("automation.descriptionPlaceholder")}
+                  aria-label={t("automation.descriptionLabel")}
+                  disabled={busy}
+                  className="w-full border-0 bg-transparent text-sm leading-6 text-secondary outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-accent"
                 />
               </label>
               <AutomationTaskContent

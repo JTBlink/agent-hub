@@ -23,6 +23,7 @@ fn edited_files_increment_revision_and_queue_the_custom_script_for_backup() {
                 },
             ],
             name: "Cleanup".into(),
+            description: None,
             provider: Provider::System,
             content: "exit 0".into(),
             script_dir: None,

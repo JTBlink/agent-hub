@@ -5,6 +5,7 @@ fn draft() -> AutomationDraft {
     AutomationDraft {
         package_options: None,
         name: "Audit".into(),
+        description: None,
         provider: Provider::System,
         content: "printf package-output".into(),
         workdir: None,

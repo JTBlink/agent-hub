@@ -75,6 +75,7 @@ fn task() -> AutomationTask {
     task.can_run = true;
     task.definition = Some(AutomationDraft {
         name: task.name.clone(),
+        description: None,
         provider: super::super::Provider::System,
         content: "pwd".into(),
         workdir: None,

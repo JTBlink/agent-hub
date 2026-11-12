@@ -5,6 +5,7 @@ pub(super) const MAX_TASK_BYTES: usize = 512 * 1024;
 pub(super) const MAX_TASK_JSON_BYTES: usize = 8 * MAX_TASK_BYTES;
 pub(super) const MAX_TASK_FILES: usize = 32;
 pub(super) const MAX_PROMPT_BYTES: usize = 65536;
+const MAX_DESCRIPTION_BYTES: usize = 1000;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
@@ -86,6 +87,9 @@ pub struct AutomationDraft {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub package_options: Option<super::package::PackageOptions>,
     pub name: String,
+    /// Optional summary of what the task does, shown in the task list.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     pub provider: Provider,
     pub content: String,
     pub workdir: Option<String>,
@@ -151,6 +155,19 @@ impl AutomationDraft {
         if self.name.is_empty() || self.name.len() > 200 || self.name.chars().any(char::is_control)
         {
             return Err("Name must contain 1–200 bytes without control characters".into());
+        }
+        self.description = self
+            .description
+            .as_deref()
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .map(Into::into);
+        if self.description.as_ref().is_some_and(|text| {
+            text.len() > MAX_DESCRIPTION_BYTES || text.chars().any(|c| c.is_control() && c != '\n')
+        }) {
+            return Err(
+                "Description must contain at most 1000 bytes without control characters".into(),
+            );
         }
         if self.content.trim().is_empty()
             || self.content.len() > 65536

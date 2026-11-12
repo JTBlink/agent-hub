@@ -209,6 +209,11 @@ export function AutomationTaskDetail({
                 />
               )}
             </div>
+            {task?.definition?.description && (
+              <p className="mt-1.5 whitespace-pre-line break-words text-sm leading-6 text-secondary">
+                {task.definition.description}
+              </p>
+            )}
             {task && (
               <p
                 title={task.project ?? undefined}

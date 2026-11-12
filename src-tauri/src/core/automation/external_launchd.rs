@@ -151,6 +151,7 @@ fn draft(value: &Value, name: &str, enabled: bool) -> Option<AutomationDraft> {
     Some(AutomationDraft {
         package_options: None,
         name: name.into(),
+        description: None,
         provider: Provider::System,
         content: command(value)?,
         workdir: value["WorkingDirectory"].as_str().map(str::to_owned),

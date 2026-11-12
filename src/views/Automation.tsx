@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Clock3, RefreshCw, Plus, ChevronRight } from "lucide-react";
+import { RefreshCw, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAutomationNextRunRefresh } from "../hooks/useAutomationNextRunRefresh";
 import { useAutomationOverview } from "../hooks/useAutomationOverview";
 import { AutomationTaskDetail } from "../components/AutomationTaskDetail";
 import { AutomationReadFeedback } from "../components/AutomationReadFeedback";
-import { AutomationStatusBadge } from "../components/AutomationStatusBadge";
 import {
   AutomationToolbar,
   type AutomationOriginFilter,
 } from "../components/AutomationToolbar";
-import { AutomationOriginBadge } from "../components/AutomationOriginBadge";
+import { AutomationTaskTable } from "../components/AutomationTaskTable";
+import { useAutomationTaskOrder } from "../hooks/useAutomationTaskOrder";
 import { AutomationEditor } from "../components/AutomationEditor";
 import { AutomationPageMenu } from "../components/AutomationPageMenu";
 import { AutomationTaskActions } from "../components/AutomationTaskActions";
@@ -33,27 +33,14 @@ import {
   type AutomationDraft,
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
-import { AutomationTaskIcon } from "../components/AutomationTaskIcon";
 import {
   automationProjectName,
-  automationTime,
-  automationNextRun,
-  automationSchedule,
   filterAutomationTasks,
   type AutomationSourceFilter,
 } from "../lib/automation";
 import { cn } from "../utils";
 
-const columns = [
-  "name",
-  "schedule",
-  "project",
-  "host",
-  "nextRun",
-  "lastRun",
-  "status",
-  "source",
-] as const;
+const EMPTY_TASKS: AutomationTask[] = [];
 
 export function Automation() {
   const [importing, setImporting] = useState(false);
@@ -140,10 +127,15 @@ export function Automation() {
       );
     }
   };
+  const {
+    sorted: sortedTasks,
+    ready: orderReady,
+    move: moveTask,
+  } = useAutomationTaskOrder(data?.tasks ?? EMPTY_TASKS);
   const currentSource =
     source === "hermes" && !data?.hermes_installed ? "all" : source;
   const baseTasks = filterAutomationTasks(
-    data?.tasks ?? [],
+    sortedTasks,
     query,
     currentSource,
     status,
@@ -169,7 +161,6 @@ export function Automation() {
   const selected = restored
     ? undefined
     : data?.tasks.find((task) => task.id === selectedId);
-  const unknown = t("automation.unknown");
   const emptyMessage = loading
     ? "common.loading"
     : !data?.tasks.length && (error !== null || !!data?.issues.length)
@@ -429,137 +420,22 @@ export function Automation() {
         searchRef={search}
       />
       {feedback}
-      <div
-        aria-busy={loading}
-        className="overflow-x-auto rounded-xl border border-border-subtle bg-surface"
-      >
-        <table className="w-full min-w-[1000px] border-collapse text-left text-xs">
-          <caption className="sr-only">{t("automation.title")}</caption>
-          <thead className="border-b border-border-subtle bg-bg-secondary text-muted">
-            <tr>
-              {columns.map((key) => (
-                <th key={key} scope="col" className="px-4 py-3 font-medium">
-                  {t(`automation.columns.${key}`)}
-                </th>
-              ))}
-              <th scope="col">
-                <span className="sr-only">{t("automation.details")}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border-subtle">
-            {tasks.map((task) => (
-              <tr
-                key={task.id}
-                tabIndex={0}
-                className="group cursor-pointer transition-colors hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-                onClick={(event) => {
-                  if (
-                    (event.target as Element).closest(
-                      "button,a,input,select,textarea",
-                    )
-                  )
-                    return;
-                  openTask(task.id);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" && event.key !== " ") return;
-                  if (
-                    (event.target as Element).closest(
-                      "button,a,input,select,textarea",
-                    )
-                  )
-                    return;
-                  event.preventDefault();
-                  openTask(task.id);
-                }}
-              >
-                <td className="max-w-[240px] px-4 py-4">
-                  <button
-                    type="button"
-                    onClick={() => openTask(task.id)}
-                    data-automation-id={task.id}
-                    className="flex w-full min-w-0 items-center gap-2.5 text-left text-sm font-medium text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-                    title={task.name}
-                  >
-                    <AutomationTaskIcon task={task} className="h-7 w-7" />
-                    <span className="min-w-0">
-                      <span className="block truncate">{task.name}</span>
-
-                      {task.origin !== "external" && (
-                        <AutomationOriginBadge origin={task.origin} />
-                      )}
-                    </span>
-                  </button>
-                </td>
-                <td
-                  className="max-w-[190px] truncate px-4 py-4 text-tertiary"
-                  title={task.schedule}
-                >
-                  {automationSchedule(task, t)}
-                </td>
-                <td
-                  className="max-w-[130px] truncate px-4 py-4 text-tertiary"
-                  title={task.project ?? undefined}
-                >
-                  {automationProjectName(task.project, projects) || "—"}
-                </td>
-                <td className="whitespace-nowrap px-4 py-4 text-tertiary">
-                  {t("automation.localHost")}
-                </td>
-                <td className="max-w-[170px] px-4 py-4 text-tertiary">
-                  {automationNextRun(task, i18n.language, t)}
-                </td>
-                <td className="max-w-[170px] px-4 py-4 text-tertiary">
-                  {automationTime(task.last_run, i18n.language) || unknown}
-                  {task.last_result && (
-                    <span
-                      className={cn(
-                        "mt-1 block max-w-[160px] truncate text-xs",
-                        ["ok", "0"].includes(task.last_result)
-                          ? "text-accent-light"
-                          : ["skipped", "no_change"].includes(task.last_result)
-                            ? "text-muted"
-                            : "text-danger",
-                      )}
-                      title={task.last_result}
-                    >
-                      {["ok", "0"].includes(task.last_result)
-                        ? t("automation.runSucceeded")
-                        : task.last_result}
-                    </span>
-                  )}
-                </td>
-                <td className="whitespace-nowrap px-4 py-4">
-                  <AutomationStatusBadge status={task.status} />
-                </td>
-                <td className="whitespace-nowrap px-4 py-4 text-tertiary">
-                  {t(`automation.sources.${task.source}`)}
-                </td>
-                <td className="pr-3">
-                  <div className="flex items-center justify-end gap-1">
-                    {actions(task, true)}
-                    <button
-                      type="button"
-                      onClick={() => openTask(task.id)}
-                      aria-label={t("automation.viewTask", { name: task.name })}
-                      className="app-button-ghost rounded-md hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent p-1.5"
-                    >
-                      <ChevronRight aria-hidden="true" className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!tasks.length && (
-          <div className="flex flex-col items-center gap-3 px-5 py-14 text-center text-muted">
-            <Clock3 aria-hidden="true" className="h-7 w-7" />
-            <p className="text-sm">{t(emptyMessage)}</p>
-          </div>
-        )}
-      </div>
+      <AutomationTaskTable
+        tasks={tasks}
+        projects={projects}
+        loading={loading}
+        emptyMessage={emptyMessage}
+        reorderDisabled={!orderReady}
+        onOpen={openTask}
+        onReorder={(activeId, overId) => {
+          void moveTask(activeId, overId).catch((cause: unknown) =>
+            setActionError(
+              getErrorMessage(cause, t("automation.reorderFailed")),
+            ),
+          );
+        }}
+        actions={(task) => actions(task, true)}
+      />
       <p className="text-xs leading-6 text-muted">
         {t("automation.managementNote")}
       </p>

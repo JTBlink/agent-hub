@@ -39,6 +39,8 @@ vi.mock("../lib/tauri", () => ({
   importAutomationPackage: vi.fn(),
   exportAutomationPackage: vi.fn(),
   migrateAutomationPackage: vi.fn(),
+  getSettings: vi.fn(),
+  setSettings: vi.fn(),
 }));
 const i18n = createInstance();
 await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
@@ -134,6 +136,8 @@ beforeEach(() => {
       defaults: { codex: "codex" },
     });
   vi.mocked(api.getProjects).mockReset().mockResolvedValue([]);
+  vi.mocked(api.getSettings).mockReset().mockResolvedValue(null);
+  vi.mocked(api.setSettings).mockReset().mockResolvedValue(undefined);
   vi.mocked(open).mockReset().mockResolvedValue(null);
   vi.mocked(openDirectoryInVscode).mockReset().mockResolvedValue();
   vi.mocked(openFileInVscode).mockReset().mockResolvedValue();
@@ -358,6 +362,45 @@ it("explains an empty filtered list when only built-in tasks exist", async () =>
   expect(container.textContent).toContain("已隐藏 1 个系统内置任务");
   expect(container.textContent).toContain("没有符合筛选条件的任务");
   expect(container.textContent).not.toContain("未发现自动化任务");
+});
+
+it("lists tasks in the persisted order with their descriptions", async () => {
+  vi.mocked(api.getSettings).mockImplementation((key) =>
+    Promise.resolve(
+      key === "automation_task_order" ? JSON.stringify([hermes.id]) : null,
+    ),
+  );
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [
+      {
+        ...native,
+        definition: {
+          name: native.name,
+          description: "每天备份工作区",
+          provider: "system",
+          content: "/bin/backup",
+          workdir: null,
+          schedule: { kind: "manual" },
+          enabled: false,
+        },
+      },
+      hermes,
+    ],
+    issues: [],
+    hermes_installed: true,
+  });
+  await render();
+  await select("任务创建者", "all");
+  const rows = [...container.querySelectorAll("tbody tr")];
+  expect(
+    rows.map((row) =>
+      row
+        .querySelector("[data-automation-id]")
+        ?.getAttribute("data-automation-id"),
+    ),
+  ).toEqual([hermes.id, native.id]);
+  expect(rows[1]?.textContent).toContain("每天备份工作区");
+  expect(container.querySelectorAll("[data-automation-drag]")).toHaveLength(2);
 });
 
 it("shows a friendly name in the list and keeps searchable identifiers in details", async () => {

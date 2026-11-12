@@ -14,6 +14,7 @@ fn task() -> AutomationTask {
     task.definition = Some(AutomationDraft {
         package_options: None,
         name: task.name.clone(),
+        description: None,
         provider: Provider::System,
         content: "echo review".into(),
         workdir: Some("/tasks/review/project".into()),

@@ -5,6 +5,7 @@ fn draft(provider: Provider) -> AutomationDraft {
     AutomationDraft {
         package_options: None,
         name: "Example task".into(),
+        description: None,
         provider,
         content: "do not execute".into(),
         workdir: None,

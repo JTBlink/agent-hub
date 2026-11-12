@@ -234,6 +234,7 @@ pub(super) fn draft(task: &AutomationTask) -> AutomationDraft {
         package_options: None,
         files: Vec::new(),
         name,
+        description: None,
         provider: super::definition::Provider::Hermes,
         content: task.prompt.clone().unwrap_or_default(),
         script_dir: None,

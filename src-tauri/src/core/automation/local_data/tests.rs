@@ -28,6 +28,7 @@ impl Fixture {
             draft: AutomationDraft {
                 package_options: None,
                 name: "Audit".into(),
+                description: None,
                 provider: Provider::System,
                 content: "exit 0".into(),
                 script_dir: None,

@@ -22,6 +22,7 @@ fn prompts_and_names_are_literal_arguments_and_existing_fields_are_not_reset() {
         package_options: None,
         files: Vec::new(),
         name: "Audit $(ignored)".into(),
+        description: None,
         provider: super::super::definition::Provider::Hermes,
         content: "Inspect\n$(literal)".into(),
         script_dir: None,
