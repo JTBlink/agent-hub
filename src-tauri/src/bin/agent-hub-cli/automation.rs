@@ -1,3 +1,5 @@
+#[path = "automation/libraries.rs"]
+mod libraries;
 #[path = "automation/variables.rs"]
 mod variables;
 use app_lib::core::automation::{self, AutomationDraft};
@@ -26,6 +28,11 @@ enum Origin {
 
 #[derive(Subcommand, Debug)]
 enum AutomationCommand {
+    /// 管理可备份、可复用的自动化公共库。
+    Libraries {
+        #[command(subcommand)]
+        command: libraries::Command,
+    },
     /// 按提示词方案查看、设置或移除自定义变量。
     Variables {
         #[command(subcommand)]
@@ -159,6 +166,7 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
         automation::sync_workspace_scripts().map_err(anyhow::Error::msg)?;
     }
     match &args.command {
+        AutomationCommand::Libraries { command } => libraries::run(command)?,
         AutomationCommand::Variables { command } => variables::run(command)?,
         AutomationCommand::Audit { path } => {
             let report = match path {

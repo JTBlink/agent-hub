@@ -14,6 +14,7 @@ const EVENT: &str = "automations-changed";
 
 fn paths(root: &Path) -> HashSet<PathBuf> {
     let mut paths = HashSet::from([root.to_path_buf()]);
+    paths.extend(super::libraries::watch_paths());
     if let Ok(records) = store::load(root) {
         for record in records
             .into_iter()
@@ -66,6 +67,9 @@ fn relevant(event: &Event, root: &Path, watched: &HashSet<PathBuf>) -> bool {
         };
         if !watched.contains(parent) {
             return false;
+        }
+        if super::libraries::definition_event(path) {
+            return true;
         }
         match path.file_name().and_then(|name| name.to_str()) {
             Some("tasks.json") => parent == root,
@@ -133,6 +137,21 @@ pub(crate) fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
             }
             match rx.recv_timeout(Duration::from_millis(100)) {
                 Ok(Ok(event)) if relevant(&event, &root, &watched) => {
+                    let library_root = super::libraries::root();
+                    for path in event.paths.iter().filter(|path| {
+                        path.parent() == Some(library_root.as_path())
+                            && super::libraries::definition_event(path)
+                    }) {
+                        for old in watched
+                            .iter()
+                            .filter(|watched| watched.starts_with(path))
+                            .cloned()
+                            .collect::<Vec<_>>()
+                        {
+                            let _ = watcher.unwatch(&old);
+                            watched.remove(&old);
+                        }
+                    }
                     changed_at = Some(Instant::now());
                     rescan_at = Instant::now();
                 }
@@ -147,6 +166,9 @@ pub(crate) fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
                     log::warn!("Cannot synchronize automation scripts: {error}");
                 }
                 super::managed::upgrade_runners();
+                if super::has_pending_backup() {
+                    super::super::cloud_sync::notify_central_change();
+                }
                 let _ = app.emit(EVENT, ());
             }
         }

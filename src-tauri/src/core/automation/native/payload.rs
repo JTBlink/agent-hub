@@ -44,7 +44,10 @@ pub(super) fn read_file(path: &Path) -> Result<Option<String>, String> {
     read_file_with_limit(path, MAX_SCRIPT_BYTES)
 }
 
-pub(super) fn read_file_with_limit(path: &Path, limit: u64) -> Result<Option<String>, String> {
+pub(in crate::core::automation) fn read_file_with_limit(
+    path: &Path,
+    limit: u64,
+) -> Result<Option<String>, String> {
     let metadata = match fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),

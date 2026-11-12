@@ -176,7 +176,9 @@ export interface AutomationPackage {
   shell: "sh" | "powershell";
   draft: AutomationDraft;
   dependencies: (
-    { kind: "command"; name: string } | { kind: "python"; packages: string[] }
+    | { kind: "command"; name: string }
+    | { kind: "python"; packages: string[] }
+    | { kind: "library"; name: string }
   )[];
   hermes?: {
     script: string | null;

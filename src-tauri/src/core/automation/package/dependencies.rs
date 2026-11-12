@@ -8,6 +8,8 @@ pub(super) fn validate(dependencies: &[Dependency]) -> Result<(), String> {
     }
     for dependency in dependencies {
         match dependency {
+            Dependency::Library { name }
+                if super::super::libraries::validate_name(name).is_ok() => {}
             Dependency::Command { name }
                 if !name.is_empty()
                     && name.len() <= 100
@@ -52,6 +54,9 @@ pub(super) fn prepare(path: &Path, dependencies: &[Dependency]) -> Result<(), St
     validate(dependencies)?;
     for dependency in dependencies {
         match dependency {
+            Dependency::Library { name } => {
+                super::super::libraries::resolve(name, false)?;
+            }
             Dependency::Command { name } => {
                 if crate::core::tool_detection::find_command(name).is_none() {
                     return Err(format!("Required external command is missing: {name}"));

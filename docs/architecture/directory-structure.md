@@ -204,6 +204,8 @@ agent-hub/
 │   │       │   ├── external_launchd.rs # 第三方定时任务编辑与用户级调度事务
 │   │       │   ├── external_launchd/ #   作用域校验、系统管理员事务、Shell 驱动与隔离测试
 │   │       │   ├── next_run.rs      #   launchd 日历任务的本地时区下一次时间
+│   │       │   ├── libraries.rs      #   自动化公共库管理、依赖解析与Python加载入口
+│   │       │   ├── libraries/        #   声明校验、更新恢复、备份投影与隔离回归
 │   │       │   └── templates/       #   从根目录 automations/ 编译嵌入推荐目录与跨平台入口
 │   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理

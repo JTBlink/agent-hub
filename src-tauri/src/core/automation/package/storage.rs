@@ -3,7 +3,7 @@ use super::*;
 use sha2::{Digest, Sha256};
 use std::{fs, io::Read};
 
-pub(super) fn regular_directory(path: &Path) -> Result<(), String> {
+pub(in crate::core::automation) fn regular_directory(path: &Path) -> Result<(), String> {
     let metadata = fs::symlink_metadata(path).map_err(|e| e.to_string())?;
     if !metadata.is_dir() || crate::core::path_guard::is_link_or_reparse_point(&metadata) {
         return Err("Task package directories cannot be links or junctions".into());

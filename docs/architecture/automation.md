@@ -175,3 +175,5 @@ Agent 可选；需要 Agent 时统一经独立 Herdr 模块发起。通用场景
 ## 公共运行依赖审计
 
 `core/automation/runtime_audit` 复用包目录的有界读取，对仓库定义与本机任务执行只读审计；CLI 为 `automations audit [--path <directory>]`。审计不创建任务记录、不运行脚本、不修改日程。复制的 Agent 生命周期或状态存储、未核实的 Agent 适配器及依赖继承目录的 Shell 入口会明确报告。原生 Hermes 和第三方服务保持自己的归属及执行方式，不能通过审计隐式迁移调度器或厂商程序。
+
+任务可通过 library 依赖引用用户独立维护的公共库。目录、运行一致性与自动备份/恢复边界见[自动化公共库](automation-libraries.md)。

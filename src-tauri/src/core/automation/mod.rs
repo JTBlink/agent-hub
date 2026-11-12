@@ -11,6 +11,7 @@ pub use definition::prompt_variants::{prompt_variables, set_prompt_variable};
 mod events;
 mod hermes;
 mod history;
+pub mod libraries;
 pub(crate) use events::start as start_change_events;
 pub use history::{history, run_output, AutomationHistory, AutomationRun};
 mod output;

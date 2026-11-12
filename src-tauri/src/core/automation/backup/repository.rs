@@ -21,7 +21,7 @@ pub(crate) fn export(metadata: &Path, repository: &Path) -> Result<(), String> {
         .collect();
     // Reserve natural names first so duplicate "Audit" never takes the real "Audit-2".
     let reserved: BTreeSet<_> = names.iter().map(|name| name_key(name)).collect();
-    let mut used = BTreeSet::new();
+    let mut used = BTreeSet::from([name_key("_shared")]);
     for (record, base) in records.values().zip(names) {
         let name = (1..=10000)
             .find_map(|number| {
@@ -41,6 +41,7 @@ pub(crate) fn export(metadata: &Path, repository: &Path) -> Result<(), String> {
         // Identity stays inside task.json; directory names are only for human navigation.
         package::write_backup_directory(record, &content.join(name))?;
     }
+    super::super::libraries::backup::export(metadata, &content)?;
     let target = repository.join("automations");
     if target.is_symlink() {
         return Err("Linked automation backup directory is not supported".into());
@@ -81,6 +82,7 @@ pub(crate) fn import(repository: &Path, metadata: &Path) -> Result<bool, String>
             .max_depth(6)
             .follow_links(false)
             .into_iter()
+            .filter_entry(|entry| entry.path() != root.join("_shared"))
             .enumerate()
         {
             if index >= 8192 {
@@ -103,7 +105,8 @@ pub(crate) fn import(repository: &Path, metadata: &Path) -> Result<bool, String>
             records.insert(filename(&record.id)?, record);
         }
     }
-    project_records(&records, metadata)
+    let changed = project_records(&records, metadata)?;
+    Ok(super::super::libraries::backup::import(&root, metadata)? || changed)
 }
 
 #[cfg(test)]

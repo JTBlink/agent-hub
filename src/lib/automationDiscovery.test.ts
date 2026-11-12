@@ -1,5 +1,30 @@
 import { expect, it } from "vitest";
-import { hasNewerAutomationVersion } from "./automationDiscovery";
+import {
+  hasNewerAutomationVersion,
+  automationRequirements,
+} from "./automationDiscovery";
+
+it("shows named library prerequisites without treating them as Python packages", () => {
+  expect(
+    automationRequirements({
+      title: "Example task",
+      description: "",
+      source: "local",
+      draft: {
+        name: "Example task",
+        provider: "system",
+        content: "echo example",
+        workdir: null,
+        enabled: false,
+        schedule: { kind: "manual" },
+        package_options: {
+          dependencies: [{ kind: "library", name: "code-host" }],
+          hermes: null,
+        },
+      },
+    }),
+  ).toEqual(["code-host"]);
+});
 
 it.each([
   ["1.9.0", "1.10.0", true],

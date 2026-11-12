@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.20.0"
+  version: "1.21.0"
 description: Create and manage local scheduled tasks through agent-hub-cli, including scripts, schedules, prompt variants, persistent state, execution limits and run inspection. Also manage the shared agent-skill library, deployments and skill groups, open local files in the desktop, and operate the preview browser or Hosts profiles. Use when creating or maintaining an AgentHub automation or managing managed skills across coding agents.
 ---
 
@@ -134,6 +134,10 @@ upgrade the CLI. `revision` is a numeric optimistic-concurrency token returned b
 by comparing drafts before saving. `schema_version` is a package/state format
 version and currently must remain `1`; it is not a release number and is not
 changed for prompt or script edits.
+
+## Shared automation libraries
+
+For libraries shared by several tasks, read [automation libraries](references/automation-libraries.md). Use the native library manager, declare task dependencies, and verify automatic backup; keep task business state separate.
 
 ## Install
 

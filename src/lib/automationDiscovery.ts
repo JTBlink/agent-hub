@@ -19,7 +19,8 @@ export function automationRequirements(
   for (const requirement of source.package?.dependencies ??
     source.draft.package_options?.dependencies ??
     []) {
-    if (requirement.kind === "command") requirements.add(requirement.name);
+    if (requirement.kind === "command" || requirement.kind === "library")
+      requirements.add(requirement.name);
     else {
       requirements.add("Python 3");
       requirement.packages.forEach((value) => requirements.add(value));

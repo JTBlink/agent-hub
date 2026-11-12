@@ -106,8 +106,15 @@ fn scan_with_shell_validation(
         .filter_entry(|entry| {
             entry.depth() == 0
                 || (!entry.file_name().to_string_lossy().starts_with('.')
-                    && !["node_modules", "target", "dist", "vendor", "skills"]
-                        .contains(&entry.file_name().to_string_lossy().as_ref()))
+                    && ![
+                        "node_modules",
+                        "target",
+                        "dist",
+                        "vendor",
+                        "skills",
+                        "_shared",
+                    ]
+                    .contains(&entry.file_name().to_string_lossy().as_ref()))
         });
     for (index, entry) in walk.enumerate() {
         if index >= 4096 {

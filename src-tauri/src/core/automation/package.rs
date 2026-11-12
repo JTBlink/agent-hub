@@ -28,7 +28,7 @@ pub(crate) use layout::{manifest_directory, manifest_path};
 pub(super) use lifecycle::{prepare_at, remove};
 pub use migration::migrate;
 pub(super) use storage::fingerprint as storage_fingerprint;
-pub(super) use storage::{discover, read, write_receipt};
+pub(super) use storage::{discover, read, regular_directory, write_receipt};
 pub(super) use update::save;
 
 /// Read an editable task draft using the same JSON budget as package imports.
@@ -44,6 +44,7 @@ use std::path::{Path, PathBuf};
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Dependency {
     Command { name: String },
+    Library { name: String },
     Python { packages: Vec<String> },
 }
 

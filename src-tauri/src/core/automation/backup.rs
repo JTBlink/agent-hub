@@ -96,6 +96,7 @@ pub(crate) fn flush(metadata: &Path) -> Result<(), String> {
 #[cfg(any(feature = "cloud-sync", test))]
 fn flush_from(root: &Path, metadata: &Path) -> Result<(), String> {
     super::script_sync::sync_at(root)?;
+    super::libraries::flush(&super::libraries::root(), metadata)?;
     let snapshot = store::read_registry(root)?;
     if snapshot.tasks.is_empty() && snapshot.pending_backup.is_empty() {
         return Ok(());
@@ -133,10 +134,11 @@ fn flush_from(root: &Path, metadata: &Path) -> Result<(), String> {
 }
 
 pub(crate) fn needs_export() -> bool {
-    store::read_registry(&store::root()).is_ok_and(|registry| {
-        !registry.pending_backup.is_empty()
-            || (!registry.backup_initialized && !registry.tasks.is_empty())
-    })
+    super::libraries::backup::pending()
+        || store::read_registry(&store::root()).is_ok_and(|registry| {
+            !registry.pending_backup.is_empty()
+                || (!registry.backup_initialized && !registry.tasks.is_empty())
+        })
 }
 
 pub fn list() -> Result<Vec<AutomationBackup>, String> {
@@ -145,7 +147,7 @@ pub fn list() -> Result<Vec<AutomationBackup>, String> {
         .collect())
 }
 
-fn read(metadata: &Path) -> Result<BTreeMap<String, AutomationBackup>, String> {
+pub(super) fn read(metadata: &Path) -> Result<BTreeMap<String, AutomationBackup>, String> {
     let mut records = BTreeMap::new();
     if metadata.is_symlink() {
         return Err("Automation backup metadata must not be a symbolic link".into());
@@ -186,7 +188,8 @@ fn read(metadata: &Path) -> Result<BTreeMap<String, AutomationBackup>, String> {
 #[cfg(any(feature = "cloud-sync", test))]
 pub(crate) fn project(source: &Path, target: &Path) -> Result<bool, String> {
     let records = read(source)?;
-    project_records(&records, target)
+    let changed = project_records(&records, target)?;
+    Ok(super::libraries::project(source, target)? || changed)
 }
 
 #[cfg(any(feature = "cloud-sync", test))]
@@ -210,7 +213,7 @@ fn project_records(
 
 #[cfg(feature = "cloud-sync")]
 pub(crate) fn differs(source: &Path, target: &Path) -> Result<bool, String> {
-    Ok(read(source)? != read(target)?)
+    Ok(read(source)? != read(target)? || super::libraries::differs(source, target)?)
 }
 
 #[cfg(any(feature = "cloud-sync", test))]
@@ -239,6 +242,16 @@ pub fn restore(id: &str, apply: bool) -> Result<AutomationBackup, String> {
             );
         }
         record.draft.script_dir = None;
+        if let Some(options) = &record.draft.package_options {
+            for dependency in &options.dependencies {
+                if let super::package::Dependency::Library { name } = dependency {
+                    super::libraries::validate_name(name)?;
+                    if !super::libraries::root().join(name).exists() {
+                        super::libraries::restore(name, None, true)?;
+                    }
+                }
+            }
+        }
         record.id = super::save(None, None, record.draft.clone())?;
     }
     Ok(record)
