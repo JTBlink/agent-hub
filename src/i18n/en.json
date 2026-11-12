@@ -604,6 +604,8 @@
     "addVariable": "Add variable",
     "variableName": "Variable name {{index}}",
     "variableValue": "Variable value {{index}}",
+    "expandVariable": "Expand variable {{index}}",
+    "collapseVariable": "Collapse variable {{index}}",
     "variableDescription": "Variable description {{index}}",
     "variableDescriptionPlaceholder": "Description (optional)",
     "variableValueChoices": "Choose variable value {{index}}",

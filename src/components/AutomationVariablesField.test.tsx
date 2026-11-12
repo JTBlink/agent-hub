@@ -152,3 +152,53 @@ it("edits an existing variable name, value, and description in the task draft", 
     vi.unstubAllGlobals();
   }
 });
+
+it("collapses variable details by default and shows options directly when expanded", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  await i18n.changeLanguage("zh");
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <AutomationVariablesField
+          variables={[
+            {
+              name: "scope",
+              value: "all",
+              description: "Every author",
+              options: ["own", "all"],
+            },
+          ]}
+          disabled={false}
+          onChange={() => undefined}
+        />,
+      ),
+    );
+    const details = () =>
+      host.querySelector('[aria-label="变量描述 1"]')!.parentElement!;
+    expect(details().hidden).toBe(true);
+    expect(host.textContent).toContain("Every author");
+    const toggle = host.querySelector<HTMLButtonElement>(
+      '[aria-label="展开变量 1"]',
+    )!;
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    await act(async () => toggle.click());
+    expect(details().hidden).toBe(false);
+    expect(host.querySelector("details")).toBeNull();
+    expect(
+      host.querySelector('[aria-label="移除候选值 own"]')?.closest("[hidden]"),
+    ).toBeNull();
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="折叠变量 1"]')!
+        .click(),
+    );
+    expect(details().hidden).toBe(true);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});

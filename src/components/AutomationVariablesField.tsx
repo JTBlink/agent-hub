@@ -1,4 +1,4 @@
-import { Check, Plus, X } from "lucide-react";
+import { Check, ChevronRight, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AutomationVariableValueField } from "./AutomationVariableValueField";
@@ -8,6 +8,7 @@ import {
   invalidAutomationVariables,
   isValidAutomationVariable,
 } from "../lib/automationPrompts";
+import { cn } from "../utils";
 
 type Variable = AutomationVariable;
 
@@ -23,6 +24,13 @@ export function AutomationVariablesField({
   const { t } = useTranslation();
   const [draft, setDraft] = useState<Variable | null>(null);
   const [draftSubmitted, setDraftSubmitted] = useState(false);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const toggle = (index: number) =>
+    setExpanded((previous) => {
+      const next = new Set(previous);
+      if (!next.delete(index)) next.add(index);
+      return next;
+    });
   const invalid = invalidAutomationVariables([
     { id: "current", name: "current", content: "", variables },
   ]);
@@ -72,53 +80,113 @@ export function AutomationVariablesField({
       <p className="text-xs leading-5 text-muted">
         {t("automation.customVariablesHelp")}
       </p>
-      {variables.map((variable, index) => (
-        <div key={index} className="flex flex-wrap items-start gap-2">
-          <input
-            aria-label={t("automation.variableName", { index: index + 1 })}
-            disabled={disabled}
-            value={variable.name}
-            maxLength={128}
-            className="app-input min-w-0 flex-1 font-mono text-xs"
-            onChange={(event) => update(index, { name: event.target.value })}
-          />
-          <AutomationVariableValueField
-            variable={variable}
-            index={index + 1}
-            disabled={disabled}
-            onChange={(value) => update(index, { value })}
-          />
-          <textarea
-            aria-label={t("automation.variableDescription", {
-              index: index + 1,
-            })}
-            placeholder={t("automation.variableDescriptionPlaceholder")}
-            disabled={disabled}
-            value={variable.description ?? ""}
-            maxLength={2000}
-            rows={2}
-            className="app-input order-last w-full resize-y text-xs"
-            onChange={(event) =>
-              update(index, { description: event.target.value || undefined })
-            }
-          />
-          <button
-            type="button"
-            disabled={disabled}
-            aria-label={t("automation.removeVariable", { index: index + 1 })}
-            className="app-button-secondary"
-            onClick={() => onChange(variables.filter((_, at) => at !== index))}
+      {variables.map((variable, index) => {
+        const open = expanded.has(index);
+        return (
+          <div
+            key={index}
+            className="space-y-2 rounded-lg border border-border-subtle p-2"
           >
-            <X aria-hidden="true" className="h-4 w-4" />
-          </button>
-          <AutomationVariableOptionsField
-            variable={variable}
-            index={index + 1}
-            disabled={disabled}
-            onChange={(options) => update(index, { options })}
-          />
-        </div>
-      ))}
+            <div className="flex items-start gap-2">
+              <button
+                type="button"
+                aria-expanded={open}
+                aria-label={t(
+                  open
+                    ? "automation.collapseVariable"
+                    : "automation.expandVariable",
+                  { index: index + 1 },
+                )}
+                title={t(
+                  open
+                    ? "automation.collapseVariable"
+                    : "automation.expandVariable",
+                  { index: index + 1 },
+                )}
+                className="app-button-ghost mt-1.5 shrink-0 rounded-md p-1 text-muted hover:text-secondary"
+                onClick={() => toggle(index)}
+              >
+                <ChevronRight
+                  aria-hidden="true"
+                  className={cn(
+                    "h-4 w-4 transition-transform",
+                    open && "rotate-90",
+                  )}
+                />
+              </button>
+              <input
+                aria-label={t("automation.variableName", { index: index + 1 })}
+                disabled={disabled}
+                value={variable.name}
+                maxLength={128}
+                className="app-input min-w-0 flex-1 font-mono text-xs"
+                onChange={(event) =>
+                  update(index, { name: event.target.value })
+                }
+              />
+              <AutomationVariableValueField
+                variable={variable}
+                index={index + 1}
+                disabled={disabled}
+                onChange={(value) => update(index, { value })}
+              />
+              <button
+                type="button"
+                disabled={disabled}
+                aria-label={t("automation.removeVariable", {
+                  index: index + 1,
+                })}
+                className="app-button-secondary"
+                onClick={() => {
+                  onChange(variables.filter((_, at) => at !== index));
+                  setExpanded(
+                    (previous) =>
+                      new Set(
+                        [...previous].flatMap((at) =>
+                          at === index ? [] : [at > index ? at - 1 : at],
+                        ),
+                      ),
+                  );
+                }}
+              >
+                <X aria-hidden="true" className="h-4 w-4" />
+              </button>
+            </div>
+            {!open && variable.description && (
+              <p
+                className="truncate pl-8 text-xs text-muted"
+                title={variable.description}
+              >
+                {variable.description}
+              </p>
+            )}
+            <div hidden={!open} className="space-y-3 pl-8">
+              <textarea
+                aria-label={t("automation.variableDescription", {
+                  index: index + 1,
+                })}
+                placeholder={t("automation.variableDescriptionPlaceholder")}
+                disabled={disabled}
+                value={variable.description ?? ""}
+                maxLength={2000}
+                rows={2}
+                className="app-input w-full resize-y text-xs"
+                onChange={(event) =>
+                  update(index, {
+                    description: event.target.value || undefined,
+                  })
+                }
+              />
+              <AutomationVariableOptionsField
+                variable={variable}
+                index={index + 1}
+                disabled={disabled}
+                onChange={(options) => update(index, { options })}
+              />
+            </div>
+          </div>
+        );
+      })}
       {draft && (
         <div className="space-y-1">
           <div className="flex flex-wrap items-start gap-2">
@@ -209,7 +277,6 @@ export function AutomationVariablesField({
           <AutomationVariableOptionsField
             variable={draft}
             index={variables.length + 1}
-            initiallyExpanded
             disabled={disabled}
             onChange={(options) => setDraft({ ...draft, options })}
           />

@@ -11,13 +11,11 @@ export function AutomationVariableOptionsField({
   index,
   disabled,
   onChange,
-  initiallyExpanded = false,
 }: {
   variable: AutomationVariable;
   index: number;
   disabled: boolean;
   onChange: (options: string[]) => void;
-  initiallyExpanded?: boolean;
 }) {
   const { t } = useTranslation();
   const [pending, setPending] = useState("");
@@ -33,13 +31,8 @@ export function AutomationVariableOptionsField({
     setPending("");
   };
   return (
-    <details
-      open={initiallyExpanded}
-      className="order-last w-full text-xs text-muted"
-    >
-      <summary className="cursor-pointer">
-        {t("automation.variableOptionsTitle")}
-      </summary>
+    <div className="w-full text-xs text-muted">
+      <p className="font-medium">{t("automation.variableOptionsTitle")}</p>
       <p className="my-2 leading-5">{t("automation.variableOptionsHelp")}</p>
       {options.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1.5">
@@ -109,6 +102,6 @@ export function AutomationVariableOptionsField({
           {t("automation.addVariableOption")}
         </button>
       </div>
-    </details>
+    </div>
   );
 }

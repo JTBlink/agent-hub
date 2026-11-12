@@ -132,7 +132,7 @@ it("configures multiple suggestions before confirming a new variable and retains
   const options = host.querySelector<HTMLInputElement>(
     '[aria-label="变量候选值 2"]',
   )!;
-  expect(options.closest("details")!.open).toBe(true);
+  expect(options.closest("[hidden]")).toBeNull();
   await type(name, "mode");
   await act(async () => {
     const paste = new Event("paste", { bubbles: true, cancelable: true });

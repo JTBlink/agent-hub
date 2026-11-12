@@ -604,6 +604,8 @@
     "addVariable": "新增變數",
     "variableName": "變數名稱 {{index}}",
     "variableValue": "變數值 {{index}}",
+    "expandVariable": "展開變數 {{index}}",
+    "collapseVariable": "摺疊變數 {{index}}",
     "variableDescription": "變數描述 {{index}}",
     "variableDescriptionPlaceholder": "描述（選填）",
     "variableValueChoices": "選擇變數值 {{index}}",

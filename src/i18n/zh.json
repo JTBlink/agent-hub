@@ -604,6 +604,8 @@
     "addVariable": "添加变量",
     "variableName": "变量名称 {{index}}",
     "variableValue": "变量值 {{index}}",
+    "expandVariable": "展开变量 {{index}}",
+    "collapseVariable": "折叠变量 {{index}}",
     "variableDescription": "变量描述 {{index}}",
     "variableDescriptionPlaceholder": "描述（可选）",
     "variableValueChoices": "选择变量值 {{index}}",
