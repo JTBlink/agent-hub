@@ -99,3 +99,13 @@ Single-context layout; read `CONTEXT.md`, `GLOSSARY.md` (if present), and releva
 ## 自动化与 Agent 启动
 
 自动化任务的 Agent 能力可选；普通任务直接执行命令。需要 Agent 时，复用独立通用启动模块，优先 Herdr，未安装时自动降级原生终端；已发起或结果不明时不切换后端重跑。终端、任务面板与定时任务共享模块边界，规范见 [Agent 启动架构](docs/architecture/agent-launch.md)和[自动化编写规范](docs/product/automation-authoring.md)。
+
+
+### Agent 启动职责与复用
+
+- 所有需要 Agent 的入口（终端、项目任务、自动化模板、已安装任务适配器）复用共享启动配置与执行模块，禁止复制另一套 Agent 启动器、模型切换器、回执或状态存储。
+- `core/agent_launch_config` 负责默认 Agent、可执行文件与参数解析；默认不固定模型，任务仅按用户明确选择追加参数。任务不得通过写全局配置或发送模型命令改变默认值。
+- `core/agent_launcher` 与 `core/herdr/agents` 负责后端选择、空闲面板核验、启动和身份确认；已受理或结果不明时不切换后端重跑。
+- `core/agent_execution` 与 Herdr 执行适配负责运行锁、检查点、提示词送达、去重、结果收回及关闭后恢复。只读 reconcile 不创建 Agent；continue 仅续作原 Agent；显式 recover 在确认旧 Agent/面板已关闭且送达无未决后重建，不因手动关闭 Tab 将业务判为完成或取消。
+- 自动化任务只负责业务对象、授权、提示词、调度、租约、进展判断、额度和验收门禁；恢复前提供准确对象/版本、原批次与未决事项，恢复后读回实际身份及回执。控制器退出成功不代表业务完成，只有业务终态及安全收尾得到验证才结束跟进。
+- 已安装任务采用薄适配器调用公开 CLI。新增共享恢复能力后，显式升级指定任务并保留 ID、日程、累计次数、租约、人工状态及历史；不得将公共生命周期实现复制进每个任务。

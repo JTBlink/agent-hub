@@ -46,7 +46,7 @@ class HerdrChecks(unittest.TestCase):
                 output='Synthetic Herdr result', read_failure=None, config=None,
                 missing_agent=False, pane_exists=False, lookup_failure=None,
                 replacement_name=None, previous_after=None, pane_failure=None, progress=None, previous_completion=None,
-                shell_busy=False, pane_cwd=None, start_failure=None, prompt_context=None, shell_initializing=0, launch=None, launch_failure=False, herdr_missing=False, terminal_phase="running", reconcile_only=False, continuation_prompt="", continuation_id="retry-1"):
+                shell_busy=False, pane_cwd=None, start_failure=None, prompt_context=None, shell_initializing=0, launch=None, launch_failure=False, herdr_missing=False, terminal_phase="running", reconcile_only=False, continuation_prompt="", continuation_id="retry-1", recover_closed=False, recovery_pane=""):
         if config is not None:
             CONFIG.write_text(json.dumps(config), encoding='utf-8')
         previous_name = json.loads(STATE.read_text()).get('agent_name', OLD_NAME) if STATE.exists() else OLD_NAME
@@ -105,6 +105,8 @@ class HerdrChecks(unittest.TestCase):
                         return subprocess.CompletedProcess(args, 1, '', json.dumps({'error': {'code': failure, 'message': 'delivery uncertain'}}))
                     payload = {'result': {'agent': {'agent_status': status}}}
                 elif command[:2] == ['agent', 'get']:
+                    if missing_agent and not start_attempts and command[2] == previous_name:
+                        return error(args, 'agent_not_found')
                     if command[2].startswith('w-test:') and lookups < (2 if previous != 'unknown' else 1):
                         lookups += 1
                         if lookup_failure or missing_agent:
@@ -116,6 +118,8 @@ class HerdrChecks(unittest.TestCase):
                         current = next(observed)
                         payload = {'result': {'agent': {'agent_status': current, 'completion_seq': 2 if current == 'done' else 1, 'name': json.loads(STATE.read_text()).get('agent_name', OLD_NAME), 'cwd': str(PROJECT), 'agent': 'codex'}}}
                 elif command[:2] == ['pane', 'get']:
+                    if recovery_pane and command[2] == recovery_pane:
+                        return subprocess.CompletedProcess(args, 0, json.dumps({'result':{'pane':{'pane_id':recovery_pane,'workspace_id':'w-test','tab_id':'w-test:t-owned','cwd':str(pane_cwd or PROJECT)}}}), '')
                     if not pane_exists:
                         return error(args, 'pane_not_found')
                     payload = {'result': {'pane': {'pane_id': 'w-test:p-test', 'workspace_id': 'w-test', 'tab_id': 'w-test:t-task', 'cwd': str(pane_cwd or PROJECT)}}}
@@ -139,9 +143,9 @@ class HerdrChecks(unittest.TestCase):
                 with patch('pathlib.Path.cwd', return_value=PROJECT):
                     with self.assertRaises(SystemExit) as result, redirect_stdout(self.output), patch('time.sleep'):
                         if prompt_context is None:
-                            runpy.run_path(str(SCRIPT), run_name='__main__', init_globals={'EXECUTION_REQUEST': {**REQUEST, 'reconcile_only': reconcile_only, 'continuation_prompt': continuation_prompt, 'continuation_id': continuation_id}})
+                            runpy.run_path(str(SCRIPT), run_name='__main__', init_globals={'EXECUTION_REQUEST': {**REQUEST, 'reconcile_only': reconcile_only, 'continuation_prompt': continuation_prompt, 'continuation_id': continuation_id, 'recover_closed': recover_closed, 'recovery_pane': recovery_pane}})
                         else:
-                            launcher = runpy.run_path(str(SCRIPT), init_globals={'EXECUTION_REQUEST': {**REQUEST, 'reconcile_only': reconcile_only, 'continuation_prompt': continuation_prompt, 'continuation_id': continuation_id}})
+                            launcher = runpy.run_path(str(SCRIPT), init_globals={'EXECUTION_REQUEST': {**REQUEST, 'reconcile_only': reconcile_only, 'continuation_prompt': continuation_prompt, 'continuation_id': continuation_id, 'recover_closed': recover_closed, 'recovery_pane': recovery_pane}})
                             raise SystemExit(launcher['main'](prompt_context=prompt_context))
         return result.exception.code
 
@@ -570,6 +574,42 @@ class HerdrChecks(unittest.TestCase):
         self.calls = []
         self.assertEqual(self.execute(previous='done', reconcile_only=True, continuation_prompt='Continue the original batch'), 0)
         self.assertFalse(any('prompt' in args for args, _ in self.calls))
+
+    def test_explicit_recovery_recreates_closed_agent_with_recovery_prompt_and_receipt(self):
+        self.save_previous('completed')
+        old = json.loads(STATE.read_text())
+        self.assertEqual(self.execute(missing_agent=True, reconcile_only=True, recover_closed=True,
+                                     continuation_prompt='Recover current request without replaying writes'), 0)
+        state = json.loads(STATE.read_text())
+        self.assertNotEqual(state['agent_name'], old['agent_name'])
+        self.assertEqual(json.loads(Path(state['recovery']['previous_checkpoint']).read_text()), old)
+        self.assertEqual(state['recovery']['status'], 'submitted')
+        self.assertEqual(sum('start' in args for args, _ in self.calls), 1)
+        sent = [args[args.index('prompt')+2] for args, _ in self.calls if 'prompt' in args]
+        self.assertEqual(sent, ['Recover current request without replaying writes'])
+        self.calls = []
+        self.execute(missing_agent=True, reconcile_only=True, recover_closed=True, continuation_prompt='Recover')
+        self.assertFalse(any('start' in args or 'create' in args for args, _ in self.calls))
+
+    def test_recovery_uses_callers_owned_empty_pane_without_creating_another_tab(self):
+        self.save_previous('completed')
+        self.assertEqual(self.execute(missing_agent=True, reconcile_only=True, recover_closed=True,
+            recovery_pane='allocated', continuation_prompt='Recover in owned layout'), 0)
+        self.assertEqual(json.loads(STATE.read_text())['pane'], 'allocated')
+        self.assertFalse(any('create' in args or 'split' in args for args, _ in self.calls))
+        self.calls=[]
+        self.save_previous('completed')
+        self.execute(missing_agent=True, reconcile_only=True, recover_closed=True, recovery_pane='allocated',
+                     pane_cwd=PROJECT/'other',continuation_prompt='Recover')
+        self.assertFalse(any('start' in args for args, _ in self.calls))
+
+    def test_recovery_refuses_uncertain_delivery_and_existing_shell(self):
+        for phase, exists in [('attention', False), ('completed', True)]:
+            self.save_previous(phase)
+            self.calls = []
+            self.execute(missing_agent=True, pane_exists=exists, reconcile_only=True,
+                         recover_closed=True, continuation_prompt='Recover')
+            self.assertFalse(any('start' in args or 'create' in args for args, _ in self.calls))
 
     def test_continuation_never_replaces_missing_or_busy_agent(self):
         for missing, status in [(True, 'done'), (False, 'working'), (False, 'unknown'), (False, 'blocked')]:

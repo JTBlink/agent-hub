@@ -14,6 +14,8 @@ enum LaunchCommand {
     Reconcile,
     /// 在已核实的原会话继续；不创建新 Agent，同一续作 ID 不重复投递。
     Continue,
+    /// 恢复已关闭的任务面板；须提供恢复提示及唯一续作 ID。
+    Recover,
     /// 只读查看指定状态目录中的 Agent 执行检查点。
     Status {
         #[arg(long)]
@@ -77,7 +79,10 @@ enum RuntimeModule {
 
 pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
     match args.command {
-        command @ (LaunchCommand::Execute | LaunchCommand::Reconcile | LaunchCommand::Continue) => {
+        command @ (LaunchCommand::Execute
+        | LaunchCommand::Reconcile
+        | LaunchCommand::Continue
+        | LaunchCommand::Recover) => {
             use std::io::Read;
             let mut bytes = Vec::new();
             std::io::stdin()
@@ -92,8 +97,10 @@ pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
             if matches!(command, LaunchCommand::Reconcile) {
                 request.reconcile_only = true;
                 request.continuation_prompt.clear();
+                request.recover_closed = false;
             }
-            if matches!(command, LaunchCommand::Continue) {
+            if matches!(command, LaunchCommand::Continue | LaunchCommand::Recover) {
+                request.recover_closed = matches!(command, LaunchCommand::Recover);
                 request.reconcile_only = true;
                 anyhow::ensure!(
                     !request.continuation_prompt.trim().is_empty(),

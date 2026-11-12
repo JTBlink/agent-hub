@@ -208,7 +208,7 @@ def continue_existing(invoke, previous, agent, cwd, prompt, continuation_id):
 
 
 def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_timeout_seconds=1800,
-        reconcile_only=False, continuation_prompt="", continuation_id=""):
+        reconcile_only=False, continuation_prompt="", continuation_id="", recover_closed=False, recovery_pane=""):
     sessions = command(binary, ["session", "list", "--json"])["sessions"]
     if not any(item.get("name") == session and item.get("running") for item in sessions):
         raise HerdrError(f"Herdr 会话 {session} 未运行，请先在 Herdr 中启动该会话。")
@@ -260,7 +260,35 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
         if status not in ("idle", "done") or previous.get("phase") == "attention":
             print(f"保留上次会话：{previous['pane']}，状态 {status}；不重复发起。", flush=True)
             return 1
-    if reconcile_only:
+    recovery = None
+    if recover_closed and not agent:
+        if not previous or available_pane or previous.get("session") != session or previous.get("cwd") != str(cwd):
+            raise HerdrError("恢复须核实原任务已关闭的面板及项目；不接管现有 Shell。")
+        prior = previous.get("continuation", {})
+        if prior.get("status") in ("requested", "uncertain") or previous.get("phase") not in ("completed", "submitted"):
+            raise HerdrError("原执行或提示词送达未决，不能创建恢复 Agent。")
+        if previous.get("recovery", {}).get("id") == continuation_id:
+            raise HerdrError("同一恢复已尝试，不重复创建 Agent；先核验原回执。")
+        if not continuation_prompt or not continuation_id:
+            raise HerdrError("恢复须提供明确提示词与唯一 ID。")
+        try:
+            invoke(["agent", "get", previous["agent_name"]])
+        except HerdrError as error:
+            if error.code != "agent_not_found":
+                raise
+        else:
+            raise HerdrError("原 Agent 仍存在，不能创建第二个执行者。")
+        archive = STATE_DIR / ("closed-agent-" + uuid.uuid4().hex + ".json")
+        # The shared caller lock is held; preserve the original receipt before layout changes.
+        save_state(previous, archive)
+        recovery = {"id": continuation_id, "previous_checkpoint": str(archive), "status": "requested"}
+        prompt = continuation_prompt
+        if recovery_pane:
+            available_pane = invoke(["pane", "get", recovery_pane])["pane"]
+            actual = available_pane.get("foreground_cwd") or available_pane.get("cwd")
+            if available_pane.get("agent") or not actual or Path(actual).resolve() != cwd:
+                raise HerdrError("恢复目标面板非空或项目不匹配，未启动。")
+    if reconcile_only and not recovery:
         print("本次仅核对已有执行，不创建面板、启动 Agent 或投递提示词。", flush=True)
         return 1 if previous and previous.get("phase") != "completed" else 0
     created = create_task_pane(invoke, previous, agent, session, cwd, title, available_pane)
@@ -268,6 +296,9 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
     name = "ah-" + hashlib.sha256(str(HERE).encode()).hexdigest()[:8] + "-" + uuid.uuid4().hex[:6]
     state = {"session": session, "pane": pane, "cwd": str(cwd), "workspace": created["workspace_id"],
              "tab": created.get("tab_id"), "agent_name": name, "phase": "starting", "prompt_attempted": False}
+    if recovery:
+        state["recovery"] = recovery
+        state["continuation"] = {"id": continuation_id, "status": "uncertain"}
     if agent:
         state["replacement_pending"] = previous["pane"]
     save_state(state)
@@ -288,7 +319,14 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
     state["completion_seq"] = started.get("agent", {}).get("completion_seq") or 0
     save_state(state)
     try:
-        submit_prompt(invoke, state, prompt)
+        delivered = submit_prompt(invoke, state, prompt)
+        if recovery:
+            if not delivered:
+                return 1
+            state["recovery"]["status"] = "submitted"
+            state["continuation"]["status"] = "submitted"
+            save_state(state)
+            return 0
         result = wait_for_result(invoke, name, state["completion_seq"], wait_timeout_seconds)
     except (HerdrError, subprocess.TimeoutExpired):
         state["phase"] = "attention"

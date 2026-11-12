@@ -46,11 +46,19 @@ def command(binary, args, timeout=40, text_output=False):
     return response.get("result", response)
 
 
-def save_state(state):
-    STATE.parent.mkdir(parents=True, exist_ok=True)
-    temporary = STATE.with_suffix(".tmp")
-    temporary.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
-    temporary.replace(STATE)
+def save_state(state, path=None):
+    path = Path(path) if path is not None else STATE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".tmp")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        with os.fdopen(os.open(temporary, flags, 0o600), "w", encoding="utf-8") as handle:
+            json.dump(state, handle, ensure_ascii=False)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def read_bundle(path):
@@ -231,7 +239,7 @@ def main(prompt_context=""):
     return backend['run'](binary, config, session, kind, extra, prompt, cwd, bridge,
                           title,
                           wait_timeout_seconds, REQUEST.get("reconcile_only", False),
-                          continuation, REQUEST.get("continuation_id", ""))
+                          continuation, REQUEST.get("continuation_id", ""), REQUEST.get("recover_closed", False), REQUEST.get("recovery_pane", ""))
 
 
 if __name__ == "__main__":

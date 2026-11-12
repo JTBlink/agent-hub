@@ -27,6 +27,12 @@ pub struct ExecutionRequest {
     pub continuation_prompt: String,
     #[serde(default)]
     pub continuation_id: String,
+    /// Explicitly authorize recovery after proving the owned Agent and pane are gone.
+    #[serde(default)]
+    pub recover_closed: bool,
+    /// Optional empty pane allocated by the caller in its owned layout.
+    #[serde(default)]
+    pub recovery_pane: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -48,6 +54,11 @@ pub fn run(request: &ExecutionRequest, mut output: impl FnMut(&str)) -> Result<E
                 && request.continuation_id.len() <= 100
                 && request.continuation_prompt.len() <= 64 * 1024),
         "Continuation requires an existing execution and a unique bounded ID"
+    );
+    anyhow::ensure!(
+        !request.recover_closed
+            || (request.reconcile_only && !request.continuation_prompt.trim().is_empty()),
+        "Closed Agent recovery requires an explicit continuation request"
     );
     for path in [
         &request.config_file,
