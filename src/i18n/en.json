@@ -348,7 +348,7 @@
     "promptAdvanced": "Advanced settings",
     "promptVariantBehavior": "Behavior marker",
     "promptVariantBehaviorOptional": "Behavior and variables, optional",
-    "promptVariantBehaviorPlaceholder": "For example: review_then_repair",
+    "promptVariantBehaviorPlaceholder": "For example: daily_summary",
     "promptVariantsEditHint": "Edit on the right and choose the prompt to use on the left. All changes apply when you save the task.",
     "deletePromptVariantConfirm": "Delete {{name}}? Changes apply when the task is saved. If it is active, the first remaining variant will be selected.",
     "defaultPromptVariant": "Default prompt",
