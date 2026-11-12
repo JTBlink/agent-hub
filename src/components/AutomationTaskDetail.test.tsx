@@ -94,3 +94,64 @@ it("disables title copying when the task is unavailable", async () => {
   await act(async () => button.click());
   expect(api.writeText).not.toHaveBeenCalled();
 });
+
+it("explains an enabled launchd interval when the system exposes no next timestamp", async () => {
+  await render({
+    ...task,
+    source: "launchd",
+    status: "active",
+    can_run: true,
+    definition: {
+      name: task.name,
+      provider: "system",
+      content: "pwd",
+      workdir: null,
+      enabled: true,
+      schedule: { kind: "interval", minutes: 10 },
+    },
+  });
+  const metric = [...container.querySelectorAll("dt")].find(
+    (label) => label.textContent === "下次运行",
+  )!;
+  expect(metric.nextElementSibling?.textContent).toBe(
+    "由系统调度（每 10 分钟）",
+  );
+});
+
+it("retains paused, manual and unavailable states and prefers a provided next timestamp", async () => {
+  const scheduled: AutomationTask = {
+    ...task,
+    source: "launchd",
+    status: "active",
+    is_package: true,
+    can_run: true,
+    definition: {
+      name: task.name,
+      provider: "system",
+      content: "pwd",
+      workdir: null,
+      enabled: true,
+      schedule: { kind: "interval", minutes: 10 },
+    },
+  };
+  const next = () =>
+    [...container.querySelectorAll("dt")].find(
+      (label) => label.textContent === "下次运行",
+    )!.nextElementSibling?.textContent;
+  await render({ ...scheduled, status: "paused" });
+  expect(next()).toBe("已停用");
+  await render({ ...scheduled, can_run: false });
+  expect(next()).toBe("未知");
+  await render({ ...scheduled, status: "unknown" });
+  expect(next()).toBe("未知");
+  await render({ ...scheduled, source: "systemd" });
+  expect(next()).toBe("未知");
+  const timestamp = "2026-11-12T07:00:00+08:00";
+  await render({ ...scheduled, next_run: timestamp });
+  expect(next()).toBe(new Date(timestamp).toLocaleString("zh"));
+  await render({
+    ...scheduled,
+    definition: { ...scheduled.definition!, schedule: { kind: "manual" } },
+  });
+  expect(next()).toBe("仅手动触发");
+});

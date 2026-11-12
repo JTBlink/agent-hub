@@ -145,6 +145,31 @@ export function automationTime(value: string | null, locale: string) {
   return Number.isNaN(time) ? value : new Date(time).toLocaleString(locale);
 }
 
+/** launchd interval jobs expose a cadence, not an authoritative next timestamp. */
+export function automationNextRun(
+  task: AutomationTask | undefined,
+  locale: string,
+  t: TFunction,
+): string {
+  if (task?.status === "paused" || task?.definition?.enabled === false)
+    return t("automation.states.paused");
+  if (task?.definition?.schedule.kind === "manual")
+    return t("automation.schedules.manual");
+  const timestamp = automationTime(task?.next_run ?? null, locale);
+  if (timestamp) return timestamp;
+  if (
+    task?.source === "launchd" &&
+    ["active", "running", "error"].includes(task.status) &&
+    (!task.is_package || task.can_run) &&
+    task.definition?.schedule.kind === "interval" &&
+    task.definition.schedule.minutes > 0
+  )
+    return t("automation.systemScheduledInterval", {
+      schedule: automationSchedule(task, t),
+    });
+  return t("automation.unknown");
+}
+
 /** Presentation uses the saved schedule; raw provider text remains searchable. */
 export function automationSchedule(task: AutomationTask, t: TFunction): string {
   const schedule = task.definition?.schedule;

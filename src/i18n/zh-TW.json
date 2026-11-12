@@ -474,6 +474,7 @@
     "externalReadOnly": "此任務的範圍或排程設定暫不支援管理，請在原工具中修改。",
     "resumeBeforeRun": "Hermes 任務需先恢復排程，才能手動執行。",
     "everyMinutes": "每 {{count}} 分鐘",
+    "systemScheduledInterval": "由系統排程（{{schedule}}）",
     "workdirPlaceholder": "選擇專案或指定執行工作目錄",
     "defaultWorkdir": "任務在此目錄執行。留空時使用腳本目錄；不會向所選專案寫入任務腳本。",
     "chooseWorkdir": "選擇工作目錄",

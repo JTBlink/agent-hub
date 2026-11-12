@@ -2,7 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AutomationTask } from "../lib/tauri";
-import { automationTime, automationSchedule } from "../lib/automation";
+import {
+  automationTime,
+  automationSchedule,
+  automationNextRun,
+} from "../lib/automation";
 import { AutomationTaskIcon } from "./AutomationTaskIcon";
 import { AutomationTaskSource } from "./AutomationTaskSource";
 import { AutomationStatusBadge } from "./AutomationStatusBadge";
@@ -63,12 +67,7 @@ export function AutomationTaskDetail({
   const sourceDirectory =
     task?.definition?.script_dir ?? task?.definition?.workdir;
   const unknown = t("automation.unknown");
-  const nextRun =
-    task?.status === "paused"
-      ? t("automation.states.paused")
-      : task?.definition?.schedule.kind === "manual"
-        ? t("automation.schedules.manual")
-        : automationTime(task?.next_run ?? null, i18n.language) || unknown;
+  const nextRun = automationNextRun(task, i18n.language, t);
   const lastResult =
     task?.status === "running"
       ? t("automation.states.running")

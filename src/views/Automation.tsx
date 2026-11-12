@@ -37,6 +37,7 @@ import { AutomationTaskIcon } from "../components/AutomationTaskIcon";
 import {
   automationProjectName,
   automationTime,
+  automationNextRun,
   automationSchedule,
   filterAutomationTasks,
   type AutomationSourceFilter,
@@ -507,11 +508,7 @@ export function Automation() {
                   {t("automation.localHost")}
                 </td>
                 <td className="max-w-[170px] px-4 py-4 text-tertiary">
-                  {task.definition?.schedule.kind === "manual"
-                    ? t("automation.schedules.manual")
-                    : task.status === "paused"
-                      ? t("automation.states.paused")
-                      : automationTime(task.next_run, i18n.language) || unknown}
+                  {automationNextRun(task, i18n.language, t)}
                 </td>
                 <td className="max-w-[170px] px-4 py-4 text-tertiary">
                   {automationTime(task.last_run, i18n.language) || unknown}

@@ -474,6 +474,7 @@
     "externalReadOnly": "This task’s scope or schedule is not supported for management. Edit it in its original tool.",
     "resumeBeforeRun": "Resume the Hermes schedule before running this task.",
     "everyMinutes": "Every {{count}} minutes",
+    "systemScheduledInterval": "System scheduled ({{schedule}})",
     "workdirPlaceholder": "Choose a project or an execution directory",
     "defaultWorkdir": "The task runs here. Leave empty to use the script directory. Task scripts are kept outside the selected project.",
     "chooseWorkdir": "Choose working directory",

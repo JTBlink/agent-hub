@@ -6,12 +6,13 @@ import zh from "../../src/i18n/zh.json";
 import en from "../../src/i18n/en.json";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { AutomationTaskDetail } from "../../src/components/AutomationTaskDetail";
 import { AutomationPromptEditor } from "../../src/components/AutomationPromptEditor";
 import {
   automationPrompts,
   updateAutomationPrompts,
 } from "../../src/lib/automationPrompts";
-import type { AutomationDraft } from "../../src/lib/tauri";
+import type { AutomationDraft, AutomationTask } from "../../src/lib/tauri";
 import "../../src/index.css";
 
 const params = new URLSearchParams(location.search);
@@ -79,9 +80,50 @@ const initial = {
   ...draft,
   ...updateAutomationPrompts(draft, variants, "review"),
 };
+const intervalTask: AutomationTask = {
+  id: "preview-interval",
+  name: "项目巡检",
+  identifier: null,
+  bundle_id: null,
+  icon: null,
+  source: "launchd",
+  origin: "agent_hub",
+  can_edit: false,
+  can_run: true,
+  requires_admin: false,
+  is_package: true,
+  is_builtin: false,
+  definition: {
+    ...draft,
+    enabled: true,
+    schedule: { kind: "interval", minutes: 10 },
+  },
+  revision: 1,
+  schedule: "every 10m",
+  project: null,
+  status: "active",
+  next_run: null,
+  last_run: null,
+  last_result: null,
+  command: null,
+  prompt: null,
+  location: "preview.plist",
+};
 export function Fixture() {
   const [value, setValue] = useState(initial);
   const state = automationPrompts(value, "默认提示词");
+  if (params.has("next-run"))
+    return (
+      <AutomationTaskDetail
+        task={intervalTask}
+        projectName={null}
+        refreshKey={0}
+        loading={false}
+        readFailed={false}
+        onBack={() => {}}
+        onRefresh={() => {}}
+      />
+    );
   return (
     <main
       className="mx-auto min-h-screen max-w-full bg-background p-4 text-primary"

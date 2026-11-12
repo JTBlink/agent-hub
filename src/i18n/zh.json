@@ -474,6 +474,7 @@
     "externalReadOnly": "此任务的作用域或调度配置暂不支持管理，请在原工具中修改。",
     "resumeBeforeRun": "Hermes 任务需先恢复计划，才能手动运行。",
     "everyMinutes": "每 {{count}} 分钟",
+    "systemScheduledInterval": "由系统调度（{{schedule}}）",
     "workdirPlaceholder": "选择项目或指定执行工作目录",
     "defaultWorkdir": "任务在此目录执行。留空时使用脚本目录；不会向所选项目写入任务脚本。",
     "chooseWorkdir": "选择工作目录",
