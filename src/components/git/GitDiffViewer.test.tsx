@@ -236,3 +236,24 @@ it("shows full context by default and toggles unchanged regions in both layouts"
     editors()[0].state.doc.lineAt(editors()[0].state.selection.main.head).text,
   ).toBe("-old");
 });
+
+it("renders a new XML file as source text in the working side", async () => {
+  await act(async () =>
+    root.render(
+      <GitDiffViewer
+        patch={
+          'diff --git a/qt.xml b/qt.xml\nnew file mode 100644\n--- /dev/null\n+++ b/qt.xml\n@@ -0,0 +1,3 @@\n+<?xml version="1.0" encoding="UTF-8"?>\n+<testsuite>\n+  <testcase name="renders" />\n'
+        }
+        staged={false}
+        path="qt.xml"
+      />,
+    ),
+  );
+  const [left, right] = editors();
+  expect(left.state.sliceDoc()).toBe("");
+  expect(right.state.sliceDoc()).toContain(
+    '<?xml version="1.0" encoding="UTF-8"?>',
+  );
+  expect(right.state.sliceDoc()).toContain('<testcase name="renders" />');
+  expect(host.textContent).not.toContain("git.noDiff");
+});
