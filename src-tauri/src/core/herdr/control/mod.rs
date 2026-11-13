@@ -6,6 +6,7 @@ mod operations;
 mod shortcuts;
 mod snapshot;
 mod worktree_open;
+mod worktree_refresh;
 mod worktree_removal;
 use anyhow::{bail, Context, Result};
 pub use models::*;

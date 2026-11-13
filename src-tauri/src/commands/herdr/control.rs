@@ -101,11 +101,16 @@ pub async fn herdr_snapshot(
     window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
     session: String,
+    refresh_worktrees: Option<bool>,
 ) -> Result<Snapshot, AppError> {
     crate::commands::terminal::owner(&window)?;
     let tools = tools.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        controller(&tools)?.snapshot(&session).map_err(AppError::io)
+        let control = controller(&tools)?;
+        if refresh_worktrees.unwrap_or(false) {
+            control.refresh_worktrees(&session).map_err(AppError::io)?;
+        }
+        control.snapshot(&session).map_err(AppError::io)
     })
     .await?
 }

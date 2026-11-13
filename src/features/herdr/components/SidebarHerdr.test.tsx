@@ -52,6 +52,7 @@ vi.mock("../api", async (original) => ({
   ...(await original<typeof import("../api")>()),
   getHerdrInventory: vi.fn(),
   getHerdrSnapshot: vi.fn(),
+  refreshHerdrWorktrees: vi.fn(),
   openHerdrWorkspace: vi.fn(),
   ensureHerdrWorkspace: vi.fn(),
   installHerdr: vi.fn(),
@@ -64,6 +65,13 @@ beforeEach(() => {
   vi.mocked(getSettings).mockResolvedValue(null);
   vi.mocked(setSettings).mockResolvedValue(undefined);
   vi.mocked(api.prepareHerdrSession).mockResolvedValue("default");
+  vi.mocked(api.refreshHerdrWorktrees).mockResolvedValue({
+    version: "test",
+    workspaces: [],
+    tabs: [],
+    panes: [],
+    agents: [],
+  });
   vi.mocked(api.getHerdrInventory).mockResolvedValue({
     installed: true,
     sessions: [{ name: "default", default: true, running: true }],
@@ -81,7 +89,7 @@ function Location() {
   return <output>{l.pathname + l.search}</output>;
 }
 
-it("only observes Herdr when mounting, refreshing and following project changes", async () => {
+it("refreshes native worktrees only on manual refresh without opening or focusing", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.spyOn(document, "hasFocus").mockReturnValue(true);
   vi.clearAllMocks();
@@ -99,6 +107,7 @@ it("only observes Herdr when mounting, refreshing and following project changes"
     await act(async () => render());
     expect(api.prepareHerdrSession).not.toHaveBeenCalled();
     expect(api.ensureHerdrWorkspace).not.toHaveBeenCalled();
+    expect(api.refreshHerdrWorktrees).not.toHaveBeenCalled();
     app.projects[0] = {
       ...app.projects[0],
       id: "other",
@@ -111,6 +120,10 @@ it("only observes Herdr when mounting, refreshing and following project changes"
         .click(),
     );
     expect(api.getHerdrSnapshot).toHaveBeenCalled();
+    expect(api.refreshHerdrWorktrees).toHaveBeenCalledExactlyOnceWith(
+      "default",
+    );
+    expect(app.refreshWorktrees).not.toHaveBeenCalled();
     expect(api.prepareHerdrSession).not.toHaveBeenCalled();
     expect(api.ensureHerdrWorkspace).not.toHaveBeenCalled();
     expect(api.openHerdrWorkspace).not.toHaveBeenCalled();

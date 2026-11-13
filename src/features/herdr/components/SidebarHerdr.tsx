@@ -306,7 +306,16 @@ export function SidebarHerdr({
             className={button}
             aria-label={t("common.refresh")}
             disabled={busy || source.loading}
-            onClick={source.refresh}
+            onClick={() =>
+              void transact(async () => {
+                if (
+                  source.inventory?.sessions.some(
+                    (s) => s.name === session && s.running,
+                  )
+                )
+                  await api.refreshHerdrWorktrees(session);
+              })
+            }
           >
             <RefreshCw size={14} />
           </button>

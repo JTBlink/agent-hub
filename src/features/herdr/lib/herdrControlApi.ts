@@ -31,6 +31,10 @@ export const getHerdrInventory = () =>
   );
 export const getHerdrSnapshot = (session: string) =>
   invoke<HerdrSnapshot>("herdr_snapshot", { session });
+
+/** Explicit worktree scan; ordinary snapshot polling stays read-only. */
+export const refreshHerdrWorktrees = (session: string) =>
+  invoke<HerdrSnapshot>("herdr_snapshot", { session, refreshWorktrees: true });
 export const openHerdrWorkspace = (
   session: string,
   workspaceId: string,
