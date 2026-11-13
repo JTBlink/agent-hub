@@ -1,5 +1,6 @@
 import { isPreviewableImage } from "../features/image-preview";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState, useContext } from "react";
@@ -521,7 +522,13 @@ export function Git() {
                 role="alert"
                 className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border-subtle bg-danger-bg px-3 py-2 text-xs text-danger"
               >
-                {actionError || error}
+                <Link
+                  to="/settings#logs"
+                  className="min-w-0 flex-1 cursor-pointer text-left whitespace-pre-wrap break-words underline decoration-dotted underline-offset-2"
+                  title={t("git.openLogsHint")}
+                >
+                  {actionError || error}
+                </Link>
                 <button
                   type="button"
                   disabled={loading || busy}

@@ -14,6 +14,7 @@ import { AboutSettings } from "../components/settings/AboutSettings";
 import { AppDataDirectorySetting } from "../components/settings/AppDataDirectorySetting";
 import { SettingsAlerts } from "../components/settings/SettingsAlerts";
 import { useSettingsDiagnostics } from "../components/settings/useSettingsDiagnostics";
+import { LogsSettings } from "../components/settings/LogsSettings";
 
 export function Settings() {
   const { t } = useTranslation();
@@ -45,6 +46,7 @@ export function Settings() {
               <AppDataDirectorySetting />
             </>
           ),
+          logs: <LogsSettings />,
         }}
       </SettingsTabs>
     </div>

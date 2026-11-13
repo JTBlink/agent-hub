@@ -1,5 +1,5 @@
 //! Explicit index changes and commits. Git CLI preserves hooks and signing configuration.
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use std::path::Path;
 use std::process::Command;
 
@@ -50,10 +50,17 @@ pub(super) fn git_command(root: &Path) -> Command {
 pub(crate) fn run_git(root: &Path, args: &[&str]) -> Result<()> {
     let mut command = git_command(root);
     command.args(args);
-    super::super::cli_process::capture_prepared(command, "git", 120, None)
-        .map_err(anyhow::Error::msg)
-        .context("Unable to complete Git operation")?;
-    Ok(())
+    match super::super::cli_process::capture_prepared(command, "git", 120, None) {
+        Ok(_) => Ok(()),
+        Err(error) => {
+            let message = format!(
+                "Unable to complete Git operation: {}",
+                super::super::log_sanitize::sanitize(&error)
+            );
+            log::error!("project git operation failed: {message}");
+            Err(anyhow::anyhow!(message))
+        }
+    }
 }
 
 /// Update only the explicitly selected paths; unstaging never changes working files.

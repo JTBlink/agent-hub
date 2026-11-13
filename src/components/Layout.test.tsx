@@ -128,6 +128,7 @@ async function render() {
                     hosts: "Hosts",
                     permissions: "permissions",
                     about: "About",
+                    logs: "Logs",
                   }}
                 </SettingsTabs>
               }

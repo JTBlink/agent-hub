@@ -149,6 +149,7 @@ function TestSidebar({ withSettings = false }: { withSettings?: boolean }) {
             hosts: "Hosts",
             permissions: "permissions",
             about: "About",
+            logs: "Logs",
           }}
         </SettingsTabs>
       )}

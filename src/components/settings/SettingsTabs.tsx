@@ -15,6 +15,7 @@ const tabs = [
   "hosts",
   "permissions",
   "about",
+  "logs",
 ] as const;
 type SettingsTab = (typeof tabs)[number];
 

@@ -100,6 +100,11 @@ it("blocks duplicate syncs and never pushes after a pull failure", async () => {
   expect(host.querySelector('[role="alert"]')?.textContent).toContain(
     "Fast-forward required",
   );
+  expect(
+    host
+      .querySelector<HTMLAnchorElement>('[role="alert"] a')
+      ?.getAttribute("href"),
+  ).toBe("/settings#logs");
   expect(syncButton()!.disabled).toBe(false);
 });
 it.each(["up_to_date", "no_upstream", "dirty"])(

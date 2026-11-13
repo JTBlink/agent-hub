@@ -33,6 +33,7 @@ const api = vi.hoisted(() => ({
   getCentralRepoWarnings: vi.fn(),
   getSkillsDirectory: vi.fn(),
   getBackupDirectory: vi.fn(),
+  getRecentLogExcerpt: vi.fn(),
 }));
 vi.mock("../lib/tauri", () => api);
 vi.mock("@tauri-apps/api/app", () => ({ getVersion: async () => "0.1.6" }));

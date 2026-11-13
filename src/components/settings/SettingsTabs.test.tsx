@@ -37,6 +37,7 @@ function Subject({ backup = true }: { backup?: boolean }) {
           hosts: <p>Hosts editor</p>,
           permissions: "permissions",
           about: <p>About</p>,
+          logs: <p>Logs</p>,
         }}
       </SettingsTabs>
     </>
@@ -61,7 +62,7 @@ const tabs = () => [
 
 it("opens the Agent deep link and preserves drafts and scroll across tab switches and back", async () => {
   await render();
-  expect(tabs()).toHaveLength(8);
+  expect(tabs()).toHaveLength(9);
   expect(tabs()[0].getAttribute("aria-selected")).toBe("true");
   const panel = container.querySelector<HTMLElement>('[role="tabpanel"]')!;
   const input = panel.querySelector<HTMLInputElement>("input")!;
@@ -86,16 +87,16 @@ it("supports keyboard navigation and opens the update deep link directly", async
       new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
     ),
   );
-  expect(tabs()[0].getAttribute("aria-selected")).toBe("true");
-  expect(document.activeElement).toBe(tabs()[0]);
+  expect(tabs()[8].getAttribute("aria-selected")).toBe("true");
+  expect(document.activeElement).toBe(tabs()[8]);
   await act(async () =>
     tabs()[0].dispatchEvent(
       new KeyboardEvent("keydown", { key: "End", bubbles: true }),
     ),
   );
-  expect(document.activeElement).toBe(tabs()[7]);
+  expect(document.activeElement).toBe(tabs()[8]);
   await act(async () =>
-    tabs()[7].dispatchEvent(
+    tabs()[8].dispatchEvent(
       new KeyboardEvent("keydown", { key: "Home", bubbles: true }),
     ),
   );
