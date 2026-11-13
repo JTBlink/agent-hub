@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.22.0"
+  version: "1.23.0"
 description: Create and manage local scheduled tasks through agent-hub-cli, including scripts, schedules, prompt variants, persistent state, execution limits and run inspection. Also manage the shared agent-skill library, deployments and skill groups, open local files in the desktop, and operate the preview browser or Hosts profiles. Use when creating or maintaining an AgentHub automation or managing managed skills across coding agents.
 ---
 
@@ -447,6 +447,15 @@ When sync misbehaves or a command errors in a confusing way:
 `repo status` and `agents list` are read-only and are the first checks for "why isn't this skill showing up in Cursor" questions. `agents disable` is a real mutation: it removes every managed deployment for that agent. `agents enable` makes the agent globally available again and re-syncs the legacy active skill group, if one exists; use explicit skill or skill group deployment afterward when the requested state is additive.
 
 Use `agents disable <agent>` when the user wants the whole Agent integration turned off or wants every managed skill removed from it. If they only want one skill or skill group removed while keeping the Agent available for future deployments, use `skills undeploy` or `skill-groups undeploy` instead.
+
+## View application logs
+
+When a Git operation in the desktop app fails, click the error text in the Git
+page to open **Settings → Application logs** (`/settings#logs`). The page shows
+the recent sanitized application log excerpt, log path and line count, and can
+refresh the excerpt without opening a dialog. Git command failures preserve
+their stderr in both the visible error and the application log, so inspect this
+page before retrying or reporting the issue.
 
 ## Typical workflows
 
