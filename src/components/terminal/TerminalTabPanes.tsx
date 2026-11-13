@@ -100,8 +100,15 @@ export function TerminalTabPanes({
               nativeTask={tab.nativeTask}
               nativeAgent={tab.nativeAgent}
               development={pane === tab.panes[0] ? tab.development : undefined}
-              visible={visible}
-              active={visible && tab.activePane === pane}
+              visible={
+                visible &&
+                (!tab.panes.includes(zoomedPane) || zoomedPane === pane)
+              }
+              active={
+                visible &&
+                tab.activePane === pane &&
+                (!tab.panes.includes(zoomedPane) || zoomedPane === pane)
+              }
               onReady={(control) => {
                 if (control) {
                   controls.current.set(pane, control);

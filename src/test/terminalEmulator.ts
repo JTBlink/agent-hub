@@ -41,6 +41,9 @@ export class TerminalEmulator {
   focus() {
     this.textarea?.focus();
   }
+  blur() {
+    this.textarea?.blur();
+  }
   hasSelection() {
     return false;
   }

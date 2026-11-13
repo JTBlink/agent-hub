@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FitAddon } from "@xterm/addon-fit";
+import { createTerminalOutput } from "./terminalOutput";
 import { createTerminalRenderer } from "./terminalRenderer";
 import {
   bindTerminalPaste,
@@ -179,6 +180,15 @@ export function TerminalPane({
     let fontsReady = false;
     let sessionId: string | null = null;
     let pendingAck = 0;
+    let appliedSize: api.TerminalSize | null = null;
+    const output = createTerminalOutput(
+      (bytes, parsed) => terminal.write(bytes, parsed),
+      (seq) => {
+        if (sessionId) void api.ackTerminal(sessionId, seq).catch(fail);
+        else pendingAck = seq;
+      },
+      () => screenCallback.current?.(readScreen(true)),
+    );
     let frame = 0;
     let revision = 0;
     const fail = (reason: unknown) => {
@@ -204,18 +214,25 @@ export function TerminalPane({
           return;
         fit.fit();
         terminal.refresh(0, terminal.rows - 1);
-        if (sessionId)
-          void api
-            .resizeTerminal(sessionId, {
-              rows: terminal.rows,
-              cols: terminal.cols,
-            })
-            .catch(fail);
+        const size = { rows: terminal.rows, cols: terminal.cols };
+        if (
+          sessionId &&
+          (appliedSize?.rows !== size.rows || appliedSize?.cols !== size.cols)
+        ) {
+          appliedSize = size;
+          void api.resizeTerminal(sessionId, size).catch((reason) => {
+            if (appliedSize === size) appliedSize = null;
+            fail(reason);
+          });
+        }
       });
     };
     fitNow.current = measure;
     showNow.current = () => {
-      renderer.setVisible(fontsReady && visibleRef.current);
+      const shown = fontsReady && visibleRef.current;
+      terminal.options.cursorBlink = shown;
+      if (!shown) terminal.blur();
+      renderer.setVisible(shown);
       if (visibleRef.current) measure();
     };
     const focus = () => {
@@ -287,20 +304,15 @@ export function TerminalPane({
             const bytes = Uint8Array.from(atob(event.data), (character) =>
               character.charCodeAt(0),
             );
-            terminal.write(bytes, () => {
-              if (disposed) return;
-              if (screenCallback.current)
-                screenCallback.current(readScreen(true));
-              if (sessionId)
-                void api.ackTerminal(sessionId, event.seq).catch(fail);
-              else pendingAck = event.seq;
-            });
+            output.enqueue(bytes, event.seq);
           } else if (event.kind === "exit") {
-            setExitCode(event.code);
-            exitCallback.current?.(event.code);
-            development?.failed(
-              new Error(translate.current("fileTree.developmentExited")),
-            );
+            output.whenDrained(() => {
+              setExitCode(event.code);
+              exitCallback.current?.(event.code);
+              development?.failed(
+                new Error(translate.current("fileTree.developmentExited")),
+              );
+            });
           } else fail(new Error(event.message));
         };
         const session = createSession
@@ -324,6 +336,7 @@ export function TerminalPane({
               return;
             }
             sessionId = session.id;
+            appliedSize = size;
             development?.started();
             nativeTask?.started();
             setStarted(true);
@@ -369,6 +382,7 @@ export function TerminalPane({
       keyboard.dispose();
       unbindPaste();
       inputQueue.dispose();
+      output.dispose();
       showNow.current = () => {};
       renderer.dispose();
       unbindWebLinks();

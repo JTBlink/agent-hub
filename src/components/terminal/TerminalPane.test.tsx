@@ -468,3 +468,44 @@ it("retains fast keystrokes received before the PTY creation response", async ()
     "git branch",
   );
 });
+
+it("does not resize the PTY again when the measured grid is unchanged", async () => {
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  const geometry = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockReturnValue({
+      width: 800,
+      height: 400,
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      bottom: 400,
+      right: 800,
+      toJSON: () => ({}),
+    });
+  try {
+    await act(async () =>
+      root.render(
+        <TerminalPane projectId="demo" active visible onReady={() => {}} />,
+      ),
+    );
+    await act(async () => finishFonts());
+    await act(async () => {
+      frames.splice(0).forEach((frame) => frame(0));
+    });
+    expect(api.resizeTerminal).not.toHaveBeenCalled();
+    await act(async () => fontEvents.dispatchEvent(new Event("loadingdone")));
+    await act(async () => {
+      frames.splice(0).forEach((frame) => frame(0));
+    });
+    expect(api.resizeTerminal).not.toHaveBeenCalled();
+    expect(api.createTerminal).toHaveBeenCalledOnce();
+  } finally {
+    geometry.mockRestore();
+  }
+});
