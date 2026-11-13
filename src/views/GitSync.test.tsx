@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Git } from "./Git";
@@ -61,7 +62,13 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 async function render() {
-  await act(async () => root.render(<Git />));
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <Git />
+      </MemoryRouter>,
+    ),
+  );
 }
 const syncButton = () =>
   host.querySelector<HTMLButtonElement>('[aria-label^="git.syncChanges"]');

@@ -60,10 +60,12 @@ function WorkspaceControl() {
 }
 function TestGit() {
   return (
-    <WorkspaceFilesProvider>
-      <WorkspaceControl />
-      <Git />
-    </WorkspaceFilesProvider>
+    <MemoryRouter>
+      <WorkspaceFilesProvider>
+        <WorkspaceControl />
+        <Git />
+      </WorkspaceFilesProvider>
+    </MemoryRouter>
   );
 }
 

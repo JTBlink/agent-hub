@@ -78,7 +78,7 @@ it("opens the Agent deep link and preserves drafts and scroll across tab switche
   expect(panel.scrollTop).toBe(120);
 });
 
-it("supports keyboard navigation and opens the update deep link directly", async () => {
+it("supports keyboard navigation and opens the logs deep link directly", async () => {
   await render("/settings#about");
   expect(tabs()[7].getAttribute("aria-selected")).toBe("true");
   tabs()[7].focus();
