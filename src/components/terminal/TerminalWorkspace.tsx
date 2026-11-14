@@ -169,6 +169,8 @@ export function TerminalWorkspace({
     tabs: tabsRef,
     setTabs,
     setActiveIds,
+    activeId,
+    controls,
     rememberActive,
     initializedRef: initialized,
     onError: setBridgeError,

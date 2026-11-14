@@ -108,6 +108,78 @@ function RouteMarker() {
     </output>
   );
 }
+
+it.each([
+  { ready: true, typed: false, expected: 1 },
+  { ready: false, typed: false, expected: 2 },
+  { ready: true, typed: true, expected: 2 },
+  { ready: true, typed: "during", expected: 2 },
+])(
+  "reuses only an untouched idle shell when a Herdr attachment arrives: %o",
+  async ({ ready, typed, expected }) => {
+    const original = vi.mocked(invoke).getMockImplementation()!;
+    let finishCheck!: () => void;
+    vi.mocked(invoke).mockImplementation(async (command, args) =>
+      command === "terminal_launch_state"
+        ? typed === "during"
+          ? new Promise((resolve) => {
+              finishCheck = () =>
+                resolve({ ready, revision: 0, herdr_active: false });
+            })
+          : { ready, revision: 0, herdr_active: false }
+        : original(command, args),
+    );
+    const target = {
+      session: "default",
+      workspace_id: "w1",
+      pane_id: "w1:p1",
+      terminal_id: "native",
+      revision: 1,
+      agent_session: null,
+    };
+    const path = worktreeUrl(project.id, project.path);
+    await act(async () =>
+      root.render(
+        <MemoryRouter initialEntries={[path]}>
+          <Link
+            to={path}
+            state={{
+              herdrAttachment: {
+                project_id: project.id,
+                path: project.path,
+                target,
+              },
+            }}
+          >
+            Attach Herdr
+          </Link>
+          <TerminalWorkspace projects={[project]} />
+        </MemoryRouter>,
+      ),
+    );
+    expect(readTerminalLayout().tabs).toHaveLength(1);
+    const typeInput = () =>
+      act(async () => {
+        const input = host.querySelector("textarea")!;
+        input.value = "keep this input";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    if (typed === true) await typeInput();
+    await click("Attach Herdr");
+    if (typed === "during") {
+      await typeInput();
+      await act(async () => finishCheck());
+    }
+    expect(readTerminalLayout().tabs).toHaveLength(expected);
+    expect(creations().at(-1)?.[0]).toBe("herdr_terminal_create");
+    if (expected === 1)
+      expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-1" });
+    else
+      expect(invoke).not.toHaveBeenCalledWith("terminal_close", {
+        id: "new-1",
+      });
+  },
+);
 async function render(
   path = "/",
   projects: Project[] = [project],

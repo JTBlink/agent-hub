@@ -84,7 +84,9 @@ it("opens Herdr directly from the new menu and reports startup failures inline",
     if (command === "terminal_list") return [];
     if (command === "terminal_create")
       return { id: "shell", cwd: project.path, project_id: project.id };
-    if (command === "agent_launch_settings")
+    if (command === "herdr_inventory") return { installed: true, sessions: [] };
+    if (command === "herdr_prepare_session") return "default";
+    if (command === "herdr_ensure")
       throw new Error("Herdr startup unavailable");
   });
   const host = document.createElement("div");
@@ -98,9 +100,19 @@ it("opens Herdr directly from the new menu and reports startup failures inline",
         </MemoryRouter>,
       ),
     );
-    expect(invoke).not.toHaveBeenCalledWith("agent_launch_settings");
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.some(([command]) => command === "herdr_ensure"),
+    ).toBe(false);
     await openNew(host, "terminal.openHerdr Codex");
-    expect(invoke).toHaveBeenCalledWith("agent_launch_settings");
+    expect(invoke).toHaveBeenCalledWith(
+      "herdr_ensure",
+      expect.objectContaining({
+        projectId: project.id,
+        worktreePath: project.path,
+      }),
+    );
     expect(document.querySelector('[role="dialog"]')).toBeNull();
     expect(host.querySelector('[role="alert"]')?.textContent).toBe(
       "Herdr startup unavailable",
@@ -109,7 +121,7 @@ it("opens Herdr directly from the new menu and reports startup failures inline",
     expect(
       vi
         .mocked(invoke)
-        .mock.calls.filter(([command]) => command === "agent_launch_settings"),
+        .mock.calls.filter(([command]) => command === "herdr_ensure"),
     ).toHaveLength(2);
   } finally {
     await act(async () => root.unmount());
