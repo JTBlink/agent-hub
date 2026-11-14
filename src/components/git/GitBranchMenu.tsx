@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Check, Loader2, Plus, X } from "lucide-react";
+import { Check, GitBranch, Loader2, Plus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CardActionMenu, type CardAction } from "../CardActionMenu";
 import { getProjectGitReferences } from "../../lib/gitApi";
@@ -114,7 +114,12 @@ export function GitBranchMenu({
     ].map((branch) => ({
       key: `branch:${branch}`,
       label: branch,
-      icon: branch === current ? <Check size={14} /> : undefined,
+      icon:
+        branch === current ? (
+          <Check size={14} />
+        ) : (
+          <GitBranch size={14} aria-label={t("git.graph.localBranch")} />
+        ),
       disabled: branch === current,
       onSelect: () => void run("switch_branch", branch),
     })),
