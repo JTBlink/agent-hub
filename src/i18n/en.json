@@ -120,7 +120,7 @@
     "agentLaunch": "Agent launch settings",
     "settings": "Herdr settings",
     "followProject": "Follow project changes",
-    "followProjectHelp": "Off by default. When enabled, switching projects or worktrees also switches Herdr workspaces while the Herdr sidebar is open. When off, Herdr switches only on a manual click.",
+    "followProjectHelp": "Off by default. When enabled and the Herdr sidebar is open, Herdr automatically starts or attaches in the terminal and follows project or worktree changes. When disabled, switch manually.",
     "settingsFailed": "Could not load or save settings. Reopen the sidebar or try saving again.",
     "projectActions": "Project actions",
     "copyName": "Copy name",

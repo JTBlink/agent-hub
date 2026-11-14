@@ -86,7 +86,11 @@ beforeEach(() => {
 });
 function Location() {
   const l = useLocation();
-  return <output>{l.pathname + l.search}</output>;
+  return (
+    <output data-attachment={JSON.stringify(l.state?.herdrAttachment)}>
+      {l.pathname + l.search}
+    </output>
+  );
 }
 
 it("refreshes native worktrees only on manual refresh without opening or focusing", async () => {
@@ -170,6 +174,7 @@ it("opens full-sidebar settings, saves opt-in, coalesces project changes and sto
     root.render(
       <MemoryRouter>
         <SidebarHerdr active request={panelRequest} />
+        <Location />
       </MemoryRouter>,
     );
   const click = (selector: string) =>
@@ -209,6 +214,20 @@ it("opens full-sidebar settings, saves opt-in, coalesces project changes and sto
       "demo",
       "/projects/feature",
     );
+    expect(
+      JSON.parse(host.querySelector("output")!.dataset.attachment ?? "null"),
+    ).toEqual({
+      project_id: "demo",
+      path: "/projects/feature",
+      target: {
+        session: "default",
+        workspace_id: "w1",
+        pane_id: "w1:p1",
+        terminal_id: "native",
+        revision: 1,
+        agent_session: null,
+      },
+    });
     await click('[aria-label="common.back"]');
     expect(document.activeElement?.getAttribute("aria-label")).toBe(
       "herdr.moreActions",

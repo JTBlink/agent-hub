@@ -15,7 +15,7 @@ export function useHerdrProjectWorkspace({
   session: string;
   projectId?: string;
   path?: string;
-  onReady: (value: api.HerdrOpenedWorkspace) => void;
+  onReady: (value: api.HerdrOpenedWorkspace) => void | Promise<void>;
   onError: (error: unknown) => void;
   refresh: () => void;
 }) {
@@ -43,7 +43,7 @@ export function useHerdrProjectWorkspace({
             path,
           );
           if (!cancelled) {
-            callbacks.current.onReady(value);
+            await callbacks.current.onReady(value);
             callbacks.current.refresh();
           }
         } catch (error) {

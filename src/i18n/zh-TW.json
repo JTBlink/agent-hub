@@ -120,7 +120,7 @@
     "agentLaunch": "Agent 啟動設定",
     "settings": "Herdr 設定",
     "followProject": "跟隨專案切換",
-    "followProjectHelp": "預設關閉。開啟後，在 Herdr 側邊欄開啟時，切換專案或工作樹會同步切換 Herdr 工作空間。關閉時僅透過手動點擊切換。",
+    "followProjectHelp": "預設關閉。開啟後，在 Herdr 側邊欄開啟時，會自動啟動或掛接終端中的 Herdr，並跟隨專案或工作樹切換工作空間。關閉時僅透過手動點選切換。",
     "settingsFailed": "設定讀取或儲存失敗，請重新開啟側邊欄或重試儲存。",
     "projectActions": "專案操作",
     "copyName": "複製名稱",

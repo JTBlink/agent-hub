@@ -97,22 +97,7 @@ export function SidebarHerdr({
   const [opened, setOpened] = useState<api.HerdrOpenedWorkspace | null>(() =>
     lastHerdrAttachment(readTerminalLayout()),
   );
-  useHerdrProjectWorkspace({
-    enabled:
-      follow.enabled &&
-      active &&
-      !unavailable &&
-      !projectFiles.loading &&
-      projectFiles.worktrees.length > 0 &&
-      !!source.inventory?.installed &&
-      session === DEFAULT_HERDR_SESSION,
-    session,
-    projectId: workspace.project?.id,
-    path: workspace.path,
-    onReady: setOpened,
-    onError: () => setNotice(t("herdr.workspaceUnavailable")),
-    refresh: source.refresh,
-  });
+
   const [dialog, setDialog] = useState<HerdrDialogRequest | null>(null);
   const mounted = useRef(false);
   useLayoutEffect(() => {
@@ -154,7 +139,10 @@ export function SidebarHerdr({
         (!filterId || a.workspace_id === filterId),
     ) ?? [];
 
-  const move = async (value: api.HerdrOpenedWorkspace) => {
+  const move = async (
+    value: api.HerdrOpenedWorkspace,
+    navigation?: { replace: boolean },
+  ) => {
     const scope = latest.current;
     if (!mounted.current) return;
     await refreshProjects();
@@ -170,9 +158,26 @@ export function SidebarHerdr({
       value.target.pane_id,
     );
     navigate(worktreeUrl(value.project_id, value.path), {
+      ...navigation,
       state: { preserveSidebar: true, herdrAttachment: value },
     });
   };
+  useHerdrProjectWorkspace({
+    enabled:
+      follow.enabled &&
+      active &&
+      !unavailable &&
+      !projectFiles.loading &&
+      projectFiles.worktrees.length > 0 &&
+      !!source.inventory?.installed &&
+      session === DEFAULT_HERDR_SESSION,
+    session,
+    projectId: workspace.project?.id,
+    path: workspace.path,
+    onReady: (value) => move(value, { replace: true }),
+    onError: () => setNotice(t("herdr.workspaceUnavailable")),
+    refresh: source.refresh,
+  });
   const transact = async (job: () => Promise<void>) => {
     if (inFlight.current) return;
     const scope = latest.current;
@@ -245,7 +250,7 @@ export function SidebarHerdr({
     <>
       {settingsOpen && (
         <HerdrSettingsPanel
-          key={location.key}
+          key={panelRequest?.id}
           onBack={() => setSettingsOpen(false)}
           follow={follow}
         />
