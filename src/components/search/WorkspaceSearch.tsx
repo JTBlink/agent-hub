@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useMatch, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Loader2 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
 import { useWorkspaceFiles } from "../../hooks/useWorkspaceFiles";
@@ -262,8 +263,21 @@ export function WorkspaceSearch({
             {t("workspaceSearch.noWorkspace")}
           </p>
         ) : treeLoading || search.loading || replacing ? (
-          <p role="status" className="px-3 py-2 text-xs text-muted">
-            {t(replacing ? "workspaceSearch.replacing" : "common.loading")}
+          <p
+            role="status"
+            className="flex items-center gap-2 px-3 py-2 text-xs text-muted"
+          >
+            <Loader2
+              aria-hidden="true"
+              className="h-3.5 w-3.5 shrink-0 animate-spin motion-reduce:animate-none"
+            />
+            {t(
+              replacing
+                ? "workspaceSearch.replacing"
+                : search.loading
+                  ? "workspaceSearch.searching"
+                  : "common.loading",
+            )}
           </p>
         ) : !path ? (
           <p role="alert" className="px-3 py-3 text-xs text-danger">
@@ -276,7 +290,9 @@ export function WorkspaceSearch({
                 {t(
                   search.data.count
                     ? "workspaceSearch.summary"
-                    : "workspaceSearch.noResults",
+                    : search.data.truncated
+                      ? "workspaceSearch.incompleteNoResults"
+                      : "workspaceSearch.noResults",
                   { count: search.data.count, files: search.data.files.length },
                 )}
               </p>

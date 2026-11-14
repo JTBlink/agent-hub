@@ -2885,6 +2885,8 @@
     "openMatch": "開啟 {{path}} 第 {{line}} 行，第 {{column}} 欄",
     "noWorkspace": "請先開啟專案工作區。",
     "hint": "搜尋目前工作區 / Worktree 中的檔案內容。",
+    "searching": "正在搜尋…",
+    "incompleteNoResults": "搜尋尚未完成，已掃描的檔案中暫未找到符合項目。",
     "noResults": "目前 Worktree 中沒有符合項目。",
     "summary": "{{files}} 個檔案中有 {{count}} 處符合項目",
     "truncated": "搜尋已達結果、掃描量或時間限制，請縮小範圍後重試。部分結果不能全部取代。",

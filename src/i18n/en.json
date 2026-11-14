@@ -2928,6 +2928,8 @@
     "openMatch": "Open {{path}} at line {{line}}, column {{column}}",
     "noWorkspace": "Open a project workspace to search its files.",
     "hint": "Search file contents in the current workspace / worktree.",
+    "searching": "Searching…",
+    "incompleteNoResults": "The search is incomplete. No matches found in the files scanned so far.",
     "noResults": "No matches in the current worktree.",
     "summary": "{{count}} matches in {{files}} files",
     "truncated": "The search reached its result, scan or time limit. Narrow the scope and try again. Replace all is disabled for partial results.",

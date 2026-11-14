@@ -236,6 +236,39 @@ it("disables replacement for incomplete search results", async () => {
   expect(host.textContent).toContain("workspaceSearch.truncated");
 });
 
+it("announces searching until the pending request completes", async () => {
+  let finish!: (value: WorktreeSearchResult) => void;
+  vi.mocked(searchWorktree).mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  await render();
+  await fill("[data-workspace-search-input]", "needle");
+  await tick();
+  const pendingStatus = host.querySelector('[role="status"]')?.textContent;
+  expect(host.querySelector('[aria-busy="true"]')).not.toBeNull();
+  await act(async () => finish(found));
+  expect(pendingStatus).toContain("workspaceSearch.searching");
+  expect(host.textContent).not.toContain("workspaceSearch.searching");
+  expect(host.querySelector("mark")?.textContent).toBe("needle");
+});
+
+it("does not claim there are no matches when the scan was incomplete", async () => {
+  vi.mocked(searchWorktree).mockResolvedValue({
+    files: [],
+    count: 0,
+    truncated: true,
+    skipped: 118,
+  });
+  await render();
+  await fill("[data-workspace-search-input]", "ci-pull");
+  await tick();
+  expect(host.textContent).toContain("workspaceSearch.incompleteNoResults");
+  expect(host.textContent).not.toContain("workspaceSearch.noResults");
+  expect(host.textContent).toContain("workspaceSearch.truncated");
+});
+
 it("keeps the active checkout when search opens from another workbench page", async () => {
   await render();
   await click("[data-remember]");

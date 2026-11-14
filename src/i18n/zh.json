@@ -2925,6 +2925,8 @@
     "openMatch": "打开 {{path}} 第 {{line}} 行，第 {{column}} 列",
     "noWorkspace": "请先打开一个项目工作区。",
     "hint": "搜索当前工作区 / Worktree 中的文件内容。",
+    "searching": "正在搜索…",
+    "incompleteNoResults": "搜索尚未完成，已扫描的文件中暂未找到匹配。",
     "noResults": "当前 Worktree 中没有匹配结果。",
     "summary": "{{files}} 个文件中有 {{count}} 处匹配",
     "truncated": "搜索已达到结果、扫描量或时间限制，请缩小范围后重试。当前结果不能批量替换。",
