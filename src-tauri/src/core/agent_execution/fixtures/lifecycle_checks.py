@@ -343,6 +343,10 @@ class HerdrChecks(unittest.TestCase):
                 else:
                     self.assertEqual(state['agent_started_at'], recorded)
                 self.assertIn('原会话继续', self.output.getvalue())
+                # The log must answer "where did this round run, and when will it rotate".
+                self.assertIn('w-test:t-task', self.output.getvalue())
+                self.assertIn('未新建标签页', self.output.getvalue())
+                self.assertIn('换新时间', self.output.getvalue())
 
     def test_aged_or_unreliable_session_is_replaced_in_the_same_tab(self):
         now = time.time()
@@ -367,6 +371,9 @@ class HerdrChecks(unittest.TestCase):
                 self.assertAlmostEqual(state['agent_started_at'], time.time(), delta=60)
                 self.assertIn(expected, self.output.getvalue())
                 self.assertIn('换新 Agent', self.output.getvalue())
+                # Rotation stays inside the existing tab; the log must say so.
+                self.assertIn('未新建标签页', self.output.getvalue())
+                self.assertIn('w-test:t-task', self.output.getvalue())
 
     def test_session_reuse_never_prompts_busy_uncertain_or_reconciled_sessions(self):
         for phase, status, reconcile in [('completed', 'working', False), ('completed', 'blocked', False),

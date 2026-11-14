@@ -133,13 +133,17 @@ def verify_previous_agent(agent, previous, cwd):
 
 def create_task_pane(invoke, previous, agent, session, cwd, title, available_pane=None):
     if available_pane:
+        print(f"沿用原面板 {available_pane['pane_id']}；标签页不变，未新建标签页。", flush=True)
         return available_pane
     if agent:
         verify_previous_agent(agent, previous, cwd)
         save_state({**previous, "phase": "attention"})
         # Replace only this task's finished agent pane, keeping its tab and sidecars.
-        return invoke(["pane", "split", previous["pane"], "--direction", "right",
+        pane = invoke(["pane", "split", previous["pane"], "--direction", "right",
                        "--cwd", str(cwd), "--no-focus"])["pane"]
+        print(f"换新布局：在原标签页 {pane.get('tab_id') or previous.get('tab') or '未记录'} 新建面板 "
+              f"{pane['pane_id']}，关闭旧面板 {previous['pane']}；未新建标签页。", flush=True)
+        return pane
     workspaces = invoke(["workspace", "list"])["workspaces"]
     matches = [item for item in workspaces if (
         item.get("worktree") and Path(item["worktree"]["checkout_path"]).resolve() == cwd
@@ -151,10 +155,18 @@ def create_task_pane(invoke, previous, agent, session, cwd, title, available_pan
         raise HerdrError("多个 Herdr 工作区对应此项目，请保留一个目标工作区后重试。")
     save_state({"session": session, "cwd": str(cwd), "phase": "attention"})
     if matches:
-        return invoke(["tab", "create", "--workspace", matches[0]["workspace_id"],
-                       "--cwd", str(cwd), "--label", title, "--no-focus"])["root_pane"]
-    return invoke(["workspace", "create", "--cwd", str(cwd),
-                   "--label", cwd.name, "--no-focus"])["root_pane"]
+        created = invoke(["tab", "create", "--workspace", matches[0]["workspace_id"],
+                          "--cwd", str(cwd), "--label", title, "--no-focus"])
+        pane = created["root_pane"]
+        print(f"新建标签页 {pane.get('tab_id') or '未记录'}（工作区 {pane['workspace_id']}），"
+              f"面板 {pane['pane_id']}；本轮新建标签页。", flush=True)
+        return pane
+    created = invoke(["workspace", "create", "--cwd", str(cwd),
+                      "--label", cwd.name, "--no-focus"])
+    pane = created["root_pane"]
+    print(f"新建工作区 {pane['workspace_id']} 与标签页 {pane.get('tab_id') or '未记录'}，"
+          f"面板 {pane['pane_id']}；本轮新建标签页。", flush=True)
+    return pane
 
 
 def wait_for_result(invoke, name, baseline_seq, timeout_seconds=1800):
@@ -223,6 +235,29 @@ def session_age(previous, now):
 def describe_duration(seconds):
     minutes = int(seconds // 60)
     return f"{minutes // 60} 小时 {minutes % 60} 分钟" if minutes >= 60 else f"{minutes} 分钟"
+
+
+def describe_moment(epoch):
+    """Absolute local time; a session can outlive the day it started on."""
+    return time.strftime("%Y-%m-%d %H:%M", time.localtime(epoch))
+
+
+def describe_rotation(previous, limit_seconds, now):
+    """Say when this conversation will be replaced, so the run log answers it directly."""
+    started = previous.get("agent_started_at")
+    if not isinstance(started, (int, float)) or isinstance(started, bool):
+        return "会话开始时间未知，无法给出换新时间"
+    due = started + limit_seconds
+    if due <= now:
+        return f"换新已到期（{describe_moment(due)}）"
+    return f"换新时间 {describe_moment(due)}（{describe_duration(due - now)}后）"
+
+
+def describe_start(previous):
+    started = previous.get("agent_started_at")
+    if not isinstance(started, (int, float)) or isinstance(started, bool):
+        return "开始时间未记录"
+    return f"{describe_moment(started)} 开始"
 
 
 def reuse_agent(invoke, previous, agent, cwd, prompt, wait_timeout_seconds, started):
@@ -311,17 +346,23 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
         # Only a named Agent can be addressed again; older records are replaced instead.
         age = session_age(previous, now) if previous.get("agent_name") else None
         limit = describe_duration(reuse_seconds)
+        tab = previous.get("tab") or "未记录"
         if age is not None and age < reuse_seconds:
             note = "" if "agent_started_at" in previous else "（旧记录没有启动时间，从本轮开始计时）"
-            print(f"复用原 Agent {previous['agent_name']}（面板 {previous['pane']}）：会话已运行 "
-                  f"{describe_duration(age)}{note}，复用上限 {limit}；本轮在原会话继续。", flush=True)
+            print(f"复用原 Agent {previous['agent_name']}（标签页 {tab}，面板 {previous['pane']}）："
+                  f"会话{describe_moment(previous.get('agent_started_at', now))}开始，已运行 "
+                  f"{describe_duration(age)}{note}，复用上限 {limit}；"
+                  f"{describe_rotation(previous, reuse_seconds, now)}。"
+                  "本轮在原会话继续，未新建标签页或面板。", flush=True)
             return reuse_agent(invoke, previous, agent, cwd, prompt, wait_timeout_seconds,
                                previous.get("agent_started_at", int(now)))
         if age is None:
-            print("原 Agent 记录无法确认运行时长；本轮在原标签页换新 Agent。", flush=True)
+            print(f"原 Agent 记录无法确认运行时长（标签页 {tab}，面板 {previous['pane']}）；"
+                  "本轮在原标签页换新 Agent，未新建标签页。", flush=True)
         else:
-            print(f"原 Agent 会话已运行 {describe_duration(age)}，达到复用上限 {limit}；"
-                  "本轮在原标签页换新 Agent。", flush=True)
+            print(f"原 Agent 会话{describe_start(previous)}开始，已运行 "
+                  f"{describe_duration(age)}，达到复用上限 {limit}；"
+                  "本轮在原标签页换新 Agent，未新建标签页。", flush=True)
     recovery = None
     if recover_closed and not agent:
         if not previous or available_pane or previous.get("session") != session or previous.get("cwd") != str(cwd):
