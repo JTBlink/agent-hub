@@ -7,6 +7,7 @@ export * from "./terminal/api";
 export { useHerdrShortcut } from "./terminal/useHerdrShortcut";
 export { useHerdrSessions } from "./terminal/useHerdrSessions";
 export { useHerdrAttachment } from "./terminal/useHerdrAttachment";
+export { useHerdrWorkspaceSelection } from "./hooks/useHerdrWorkspaceSelection";
 export { HerdrTerminalTools } from "./terminal/HerdrTerminalTools";
 export { SidebarHerdr } from "./components/LazySidebarHerdr";
 export { HerdrIcon } from "./components/HerdrIcon";

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getSettings, setSettings } from "../../../lib/tauri";
+import { getSettings, setSettings } from "../../../lib/settingsApi";
 
-const SETTING_KEY = "herdr_follow_project";
+export const HERDR_FOLLOW_PROJECT_SETTING = "herdr_follow_project";
+const CHANGE_EVENT = "agent-hub:herdr-follow-project-changed";
 
 /** Missing/invalid settings fail closed; changes take effect only after saving. */
 export function useHerdrFollowProject() {
@@ -14,12 +15,21 @@ export function useHerdrFollowProject() {
   useEffect(() => {
     mounted.current = true;
     let cancelled = false;
-    void getSettings(SETTING_KEY)
+    let changed = false;
+    const receive = (event: Event) => {
+      if (!(event instanceof CustomEvent) || typeof event.detail !== "boolean")
+        return;
+      changed = true;
+      setEnabled(event.detail);
+      setError(false);
+    };
+    window.addEventListener(CHANGE_EVENT, receive);
+    void getSettings(HERDR_FOLLOW_PROJECT_SETTING)
       .then((value) => {
-        if (!cancelled) setEnabled(value === "true");
+        if (!cancelled && !changed) setEnabled(value === "true");
       })
       .catch(() => {
-        if (!cancelled) setError(true);
+        if (!cancelled && !changed) setError(true);
       })
       .finally(() => {
         if (!cancelled) setReady(true);
@@ -27,6 +37,7 @@ export function useHerdrFollowProject() {
     return () => {
       cancelled = true;
       mounted.current = false;
+      window.removeEventListener(CHANGE_EVENT, receive);
     };
   }, []);
   const change = useCallback(async (next: boolean) => {
@@ -35,8 +46,8 @@ export function useHerdrFollowProject() {
     setSaving(true);
     setError(false);
     try {
-      await setSettings(SETTING_KEY, String(next));
-      if (mounted.current) setEnabled(next);
+      await setSettings(HERDR_FOLLOW_PROJECT_SETTING, String(next));
+      window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: next }));
     } catch {
       if (mounted.current) setError(true);
     } finally {

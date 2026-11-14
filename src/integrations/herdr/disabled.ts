@@ -97,6 +97,9 @@ export function useHerdrSessions(..._args: unknown[]): {
 export function useHerdrAttachment(..._args: unknown[]) {
   void _args;
 }
+export function useHerdrWorkspaceSelection() {
+  return () => false;
+}
 export function SidebarHerdr(_props: { active: boolean }) {
   void _props;
   return null;

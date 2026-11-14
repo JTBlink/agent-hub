@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { Link, MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import type { Project } from "../../../lib/tauri";
-import { getSettings, setSettings } from "../../../lib/tauri";
+import { getSettings, setSettings } from "../../../lib/settingsApi";
 import * as api from "../api";
 import { SidebarHerdr } from "./SidebarHerdr";
 
@@ -20,10 +20,14 @@ const app = vi.hoisted(() => {
   };
 });
 vi.mock("../../../context/AppContext", () => ({ useApp: () => app }));
-vi.mock("../../../lib/tauri", async (original) => ({
-  ...(await original<typeof import("../../../lib/tauri")>()),
+vi.mock("../../../lib/settingsApi", () => ({
   getSettings: vi.fn(),
   setSettings: vi.fn(),
+}));
+vi.mock("../../../lib/tauri", async (original) => ({
+  ...(await original<typeof import("../../../lib/tauri")>()),
+  getSettings: (await import("../../../lib/settingsApi")).getSettings,
+  setSettings: (await import("../../../lib/settingsApi")).setSettings,
 }));
 vi.mock("../../../hooks/useActiveWorkspace", () => ({
   useActiveWorkspace: () => ({

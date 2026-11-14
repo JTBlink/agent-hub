@@ -6,6 +6,7 @@ import { worktreeDirectoryName, worktreeUrl } from "../lib/worktreeApi";
 import { useActiveWorkspace } from "./useActiveWorkspace";
 import { useProjectWorktrees } from "./useProjectWorktrees";
 import { WorkspaceFilesContext } from "./useWorkspaceFiles";
+import { useHerdrWorkspaceSelection } from "@app/herdr";
 
 function checkoutLabel(project: Project, path: string) {
   const directory = worktreeDirectoryName(path);
@@ -19,6 +20,7 @@ export function useWorkspaceSelection(projects: readonly Project[]) {
   const route = useMatch("/project/:id/*");
   const { search } = useLocation();
   const navigate = useNavigate();
+  const followSelection = useHerdrWorkspaceSelection();
   const workspace = useContext(WorkspaceFilesContext);
   const active = useActiveWorkspace(projects);
   const routeProject = projects.find(
@@ -76,7 +78,10 @@ export function useWorkspaceSelection(projects: readonly Project[]) {
   const openWorktree = (projectId: string, worktreePath: string) => {
     workspace?.setCheckout({ projectId, worktreePath });
     void touchProjectVisited(projectId).catch(() => {});
-    navigate(worktreeUrl(projectId, worktreePath));
+    const followHerdr = followSelection();
+    navigate(worktreeUrl(projectId, worktreePath), {
+      state: followHerdr ? { preserveSidebar: true } : undefined,
+    });
   };
   const select = (nextValue: string) => {
     const option = options.find(

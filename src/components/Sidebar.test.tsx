@@ -14,11 +14,18 @@ import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 import { createTerminalTab, writeTerminalLayout } from "../lib/terminalLayout";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { Sidebar } from "./Sidebar";
+import { WindowTitleBar } from "./WindowTitleBar";
+import { getSettings } from "../lib/settingsApi";
+import type { SidebarPanelRequest } from "../lib/sidebarSections";
 import { SettingsTabs } from "./settings/SettingsTabs";
 import { workspaceSkillsCache } from "../lib/workspaceSkillsCache";
 
 const worktreeMocks = vi.hoisted(() => ({
   list: vi.fn().mockResolvedValue([]),
+}));
+vi.mock("../lib/settingsApi", () => ({
+  getSettings: vi.fn().mockResolvedValue(null),
+  setSettings: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../lib/worktreeApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/worktreeApi")>()),
@@ -66,6 +73,7 @@ let root: Root;
 let container: HTMLDivElement;
 beforeEach(async () => {
   vi.clearAllMocks();
+  vi.mocked(getSettings).mockResolvedValue(null);
   workspaceSkillsCache.clear();
   await i18n.changeLanguage("zh");
   app.skillGroups = [];
@@ -82,6 +90,92 @@ beforeEach(async () => {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
+});
+
+it("opens the actual Herdr sidebar from the title-bar project picker while the file sidebar is selected", async () => {
+  const projects = [
+    makeProject(),
+    {
+      ...makeProject(),
+      id: "other",
+      name: "Other workspace",
+      path: "<workspace>/other",
+    },
+  ];
+  Object.assign(app, { projects });
+  vi.mocked(getSettings).mockImplementation(async (key) =>
+    key === "herdr_follow_project" ? "true" : null,
+  );
+  worktreeMocks.list.mockImplementation(async (id: string) =>
+    projects
+      .filter((item) => item.id === id)
+      .map((item) => ({
+        path: item.path,
+        is_main: true,
+        available: true,
+        branch: "main",
+      })),
+  );
+  function Workbench() {
+    const location = useLocation();
+    const [panelRequest, setRequest] = useState<SidebarPanelRequest | null>(
+      null,
+    );
+    return (
+      <SidebarVisibilityContext.Provider
+        value={{
+          resourcePanelVisible: true,
+          setResourcePanelVisible: vi.fn(),
+          panelRequest,
+          openSidebarPanel: (panel) =>
+            setRequest((previous) => ({ id: (previous?.id ?? 0) + 1, panel })),
+        }}
+      >
+        <WorkspaceFilesProvider
+          projects={projects}
+          pathname={location.pathname}
+          search={location.search}
+        >
+          <WindowTitleBar onOpenCommands={vi.fn()} />
+          <Sidebar />
+          <output data-panel={panelRequest?.panel}>{location.pathname}</output>
+        </WorkspaceFilesProvider>
+      </SidebarVisibilityContext.Provider>
+    );
+  }
+  await act(async () =>
+    root.render(
+      <MemoryRouter initialEntries={["/project/demo"]}>
+        <Workbench />
+      </MemoryRouter>,
+    ),
+  );
+  expect(
+    container
+      .querySelector('[data-sidebar-panel="herdr"]')
+      ?.getAttribute("aria-expanded"),
+  ).toBe("false");
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>(
+        'header [role="combobox"][aria-label="切换项目"]',
+      )!
+      .click(),
+  );
+  await act(async () =>
+    [...document.querySelectorAll<HTMLButtonElement>('[role="option"]')]
+      .find((item) => item.textContent?.includes("Other workspace"))!
+      .click(),
+  );
+  expect(container.querySelector("output")?.textContent).toBe("/project/other");
+  expect(container.querySelector("output")?.getAttribute("data-panel")).toBe(
+    "herdr",
+  );
+  expect(
+    container
+      .querySelector('[data-sidebar-panel="herdr"]')
+      ?.getAttribute("aria-expanded"),
+  ).toBe("true");
 });
 afterEach(async () => {
   await act(async () => root.unmount());

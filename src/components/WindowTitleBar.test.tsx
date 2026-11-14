@@ -13,9 +13,11 @@ import { CommandPalette } from "./CommandPalette";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { ProjectSwitcher } from "./worktree/ProjectSwitcher";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
+import { useHerdrFollowProject } from "../features/herdr/hooks/useHerdrFollowProject";
 import { getProjectGitReferences, runProjectGitAction } from "../lib/gitApi";
 import { createProjectWorktree, getProjectWorktrees } from "../lib/worktreeApi";
 import { removeProject } from "../lib/tauri";
+import { getSettings, setSettings } from "../lib/settingsApi";
 
 const defaultProjects = [
   { ...makeProject(), id: "demo", name: "Demo workspace" },
@@ -27,6 +29,11 @@ const defaultProjects = [
   },
 ];
 let titleProjects = defaultProjects;
+
+vi.mock("../lib/settingsApi", () => ({
+  getSettings: vi.fn().mockResolvedValue(null),
+  setSettings: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("../lib/gitApi", () => ({
   getProjectGitReferences: vi.fn(),
@@ -97,6 +104,7 @@ let container: HTMLDivElement;
 beforeEach(() => {
   titleProjects = defaultProjects;
   vi.clearAllMocks();
+  vi.mocked(getSettings).mockResolvedValue(null);
   Object.defineProperties(HTMLDialogElement.prototype, {
     showModal: {
       configurable: true,
@@ -134,6 +142,17 @@ function Shell() {
       <CommandPalette open={open} onOpenChange={setOpen} />
       <output>{useLocation().pathname}</output>
     </>
+  );
+}
+function FollowPreference() {
+  const follow = useHerdrFollowProject();
+  return (
+    <button
+      data-toggle-follow
+      onClick={() => void follow.change(!follow.enabled)}
+    >
+      Toggle follow
+    </button>
   );
 }
 async function render(path = "/tasks") {
@@ -261,6 +280,67 @@ it("lists projects in the title bar and switches from a child checkout to anothe
     )!.value,
   ).toBe(JSON.stringify(["other", "~/projects/other"]));
 });
+
+it.each([
+  { initial: true, toggle: false },
+  { initial: false, toggle: false },
+  { initial: false, toggle: true },
+  { initial: true, toggle: true },
+])(
+  "uses the saved follow preference when selecting a project with the Herdr sidebar closed: %o",
+  async ({ initial, toggle }) => {
+    const enabled = toggle ? !initial : initial;
+    let saved = initial;
+    vi.mocked(getSettings).mockImplementation(async (key) =>
+      key === "herdr_follow_project" && saved ? "true" : null,
+    );
+    vi.mocked(setSettings).mockImplementation(async (key, value) => {
+      if (key === "herdr_follow_project") saved = value === "true";
+    });
+    const openSidebarPanel = vi.fn();
+    await act(async () =>
+      root.render(
+        <MemoryRouter initialEntries={["/project/demo"]}>
+          <SidebarVisibilityContext.Provider
+            value={{
+              resourcePanelVisible: false,
+              setResourcePanelVisible: vi.fn(),
+              openSidebarPanel,
+            }}
+          >
+            <Shell />
+            <FollowPreference />
+          </SidebarVisibilityContext.Provider>
+        </MemoryRouter>,
+      ),
+    );
+    if (toggle)
+      await act(async () =>
+        container
+          .querySelector<HTMLButtonElement>("[data-toggle-follow]")!
+          .click(),
+      );
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>(
+          'header [role="combobox"][aria-label="切换项目"]',
+        )!
+        .click(),
+    );
+    await act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('[role="option"]')]
+        .find((item) => item.textContent?.includes("Other workspace"))!
+        .click(),
+    );
+    expect(container.querySelector("output")?.textContent).toBe(
+      "/project/other",
+    );
+    if (enabled)
+      expect(openSidebarPanel).toHaveBeenCalledExactlyOnceWith("herdr");
+    else expect(openSidebarPanel).not.toHaveBeenCalled();
+    vi.mocked(getSettings).mockResolvedValue(null);
+  },
+);
 
 it("shows at most 15 workspaces in recent-open order instead of project registration order", async () => {
   titleProjects = Array.from({ length: 20 }, (_, index) => ({

@@ -867,11 +867,7 @@ export const searchSkillssh = (query: string, limit?: number) =>
 
 // ── Settings ──
 
-export const getSettings = (key: string) =>
-  invoke<string | null>("get_settings", { key });
-
-export const setSettings = (key: string, value: string) =>
-  invoke<void>("set_settings", { key, value });
+export { getSettings, setSettings } from "./settingsApi";
 
 export const getCentralRepoPath = () => invoke<string>("get_central_repo_path");
 
