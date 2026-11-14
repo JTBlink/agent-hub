@@ -179,6 +179,32 @@ it("navigates a deletion on the original side and disables navigation for a non-
   ).toBe(true);
 });
 
+it("explains identical YAML versions and lets the user open the file", async () => {
+  const open = vi.fn();
+  await act(async () =>
+    root.render(
+      <GitDiffViewer
+        patch=""
+        path="change-record.yaml"
+        staged={false}
+        onOpenFile={open}
+      />,
+    ),
+  );
+  expect(host.textContent).toContain("git.identicalContent");
+  expect(host.textContent).not.toContain("git.noDiff");
+  const button = [...host.querySelectorAll<HTMLButtonElement>("button")].find(
+    (item) => item.textContent === "git.file",
+  )!;
+  await act(async () => button.click());
+  expect(open).toHaveBeenCalledOnce();
+  await act(async () =>
+    root.render(<GitDiffViewer patch="Binary files differ" staged={false} />),
+  );
+  expect(host.textContent).toContain("git.noDiff");
+  expect(host.textContent).not.toContain("git.identicalContent");
+});
+
 it("keeps unified decorations and navigation valid for CRLF patches", async () => {
   const changes = "@@ -1,2 +1,2 @@\r\n context\r\n-old\r\n+new\r\n";
   await act(async () =>
@@ -237,23 +263,27 @@ it("shows full context by default and toggles unchanged regions in both layouts"
   ).toBe("-old");
 });
 
-it("renders a new XML file as source text in the working side", async () => {
-  await act(async () =>
-    root.render(
-      <GitDiffViewer
-        patch={
-          'diff --git a/qt.xml b/qt.xml\nnew file mode 100644\n--- /dev/null\n+++ b/qt.xml\n@@ -0,0 +1,3 @@\n+<?xml version="1.0" encoding="UTF-8"?>\n+<testsuite>\n+  <testcase name="renders" />\n'
-        }
-        staged={false}
-        path="qt.xml"
-      />,
-    ),
-  );
-  const [left, right] = editors();
-  expect(left.state.sliceDoc()).toBe("");
-  expect(right.state.sliceDoc()).toContain(
-    '<?xml version="1.0" encoding="UTF-8"?>',
-  );
-  expect(right.state.sliceDoc()).toContain('<testcase name="renders" />');
-  expect(host.textContent).not.toContain("git.noDiff");
-});
+it.each([
+  {
+    path: "qt.xml",
+    content:
+      '<?xml version="1.0" encoding="UTF-8"?>\n<testsuite>\n  <testcase name="renders" />',
+  },
+  {
+    path: "change-record.yaml",
+    content: 'version: 1\nchanges:\n  - summary: "更新输入界面"',
+  },
+])(
+  "renders a new $path as source text in the working side",
+  async ({ path, content }) => {
+    const lines = content.split("\n");
+    const patch = `diff --git a/${path} b/${path}\nnew file mode 100644\n--- /dev/null\n+++ b/${path}\n@@ -0,0 +1,${lines.length} @@\n${lines.map((line) => `+${line}`).join("\n")}\n`;
+    await act(async () =>
+      root.render(<GitDiffViewer patch={patch} staged={false} path={path} />),
+    );
+    const [left, right] = editors();
+    expect(left.state.sliceDoc()).toBe("");
+    expect(right.state.sliceDoc()).toBe(content);
+    expect(host.textContent).not.toContain("git.noDiff");
+  },
+);

@@ -2812,6 +2812,7 @@
     "truncated": "文件过多，仅显示前 1000 项",
     "file": "查看文件",
     "chooseFile": "选择文件查看更改",
+    "identicalContent": "当前比较没有内容差异。文件可能已暂存、提交或还原。",
     "noDiff": "无文本差异，可能是二进制文件或文件模式变化",
     "states": {
       "untracked": "未跟踪",

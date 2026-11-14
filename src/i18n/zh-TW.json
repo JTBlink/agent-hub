@@ -2772,6 +2772,7 @@
     "truncated": "檔案過多，僅顯示前 1000 項",
     "file": "檢視檔案",
     "chooseFile": "選擇檔案查看變更",
+    "identicalContent": "目前比較沒有內容差異。檔案可能已暫存、提交或還原。",
     "noDiff": "無文字差異，可能是二進位檔案或檔案模式變更",
     "states": {
       "untracked": "未追蹤",

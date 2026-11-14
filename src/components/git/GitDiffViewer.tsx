@@ -173,9 +173,20 @@ export function GitDiffViewer({
         onOpenFile={onOpenFile}
       />
       {!rows.length ? (
-        <p role="status" className="p-6 text-xs text-muted">
-          {t("git.noDiff")}
-        </p>
+        <div className="space-y-3 p-6 text-xs text-muted">
+          <p role="status">
+            {t(patch.trim() ? "git.noDiff" : "git.identicalContent")}
+          </p>
+          {onOpenFile && (
+            <button
+              type="button"
+              className="app-button-secondary px-3 py-1.5 text-xs"
+              onClick={onOpenFile}
+            >
+              {t("git.file")}
+            </button>
+          )}
+        </div>
       ) : split ? (
         <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
           <section

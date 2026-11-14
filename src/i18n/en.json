@@ -2815,6 +2815,7 @@
     "truncated": "Showing the first 1,000 changed files",
     "file": "View file",
     "chooseFile": "Select a file to review changes",
+    "identicalContent": "No content differences in this comparison. The file may have been staged, committed or reverted.",
     "noDiff": "No text diff; this may be a binary or file mode change",
     "states": {
       "untracked": "Untracked",
