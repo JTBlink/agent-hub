@@ -46,7 +46,7 @@ pub async fn export_automation_package(id: String, path: String) -> Result<(), A
 #[tauri::command]
 pub async fn migrate_automation_package(id: String) -> Result<String, AppError> {
     tauri::async_runtime::spawn_blocking(move || {
-        automation::package::migrate(&id).map_err(AppError::invalid_input)
+        automation::package::migrate(&id, None).map_err(AppError::invalid_input)
     })
     .await?
 }

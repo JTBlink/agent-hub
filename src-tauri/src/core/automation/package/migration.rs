@@ -2,29 +2,42 @@
 use super::super::{managed, native, Provider};
 use super::*;
 
-pub fn migrate(id: &str) -> Result<String, String> {
+pub fn migrate(id: &str, directory: Option<&str>) -> Result<String, String> {
     let state = store::root();
     let _lock = lock(&state, id)?;
     let provider = find(&state, id)
         .map(|record| record.draft.provider)
         .unwrap_or(Provider::System);
-    migrate_using(&state, id, &mut *super::registration::adapter(provider))
+    migrate_using(
+        &state,
+        id,
+        &mut *super::registration::adapter(provider),
+        directory,
+    )
 }
 
 pub(super) fn migrate_using(
     state: &Path,
     id: &str,
     scheduler: &mut dyn super::registration::Registration,
+    directory: Option<&str>,
 ) -> Result<String, String> {
     let Some(old) = store::legacy_task(state, id)? else {
         let record = find(state, id)?;
         let path = checked(state, &record)?;
-        if path.file_name().is_some_and(|name| name.is_ascii()) {
+        let ascii = path.file_name().is_some_and(|name| name.is_ascii());
+        let unchanged = match directory {
+            None => true,
+            Some(name) => path
+                .file_name()
+                .is_some_and(|current| current.to_str() == Some(name)),
+        };
+        if ascii && unchanged {
             return Ok(id.into());
         }
         // Detach references before moving, then rebuild them at the resulting path.
         super::lifecycle::cleanup_using(state, &record, scheduler)?;
-        let result = super::relocation::migrate(state, id);
+        let result = super::relocation::migrate(state, id, directory);
         let mut current = find(state, id)?;
         current.draft.enabled = record.draft.enabled;
         let manifest = super::layout::read_manifest(&checked(state, &current)?)?;

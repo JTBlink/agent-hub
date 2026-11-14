@@ -80,7 +80,10 @@ Windows 任务使用 `shell: "powershell"` 和相应的 `.ps1` 入口。Python �
 
 ```sh
 agent-hub-cli automations migrate <task-id>
+agent-hub-cli automations migrate <task-id> --directory <portable-name>
 ```
+
+`--directory` 显式把已有 ASCII 包目录改为指定名称，名称须已是规范化的小写 ASCII（与自动分配规则一致）。目标已存在时拒绝，不追加 `-2` 后缀；任务 ID、日程、启停状态、版本、运行记录和本地状态随目录保留，配置修订号递增一次。
 
 ## TASK.md 与配置布局
 

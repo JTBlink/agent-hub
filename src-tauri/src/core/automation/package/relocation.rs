@@ -82,7 +82,21 @@ fn restore(state: &Path, journal: &Journal) -> Result<(), String> {
     fs::remove_file(journal_path(state, &journal.id)).map_err(|e| e.to_string())
 }
 
-pub(super) fn migrate(state: &Path, id: &str) -> Result<String, String> {
+/// Portable directory name a caller may request explicitly; the slug rules keep it ASCII.
+fn requested_name(name: &str) -> Result<String, String> {
+    if name.trim().is_empty() || name != name.trim() {
+        return Err("Directory name must be a portable ASCII name".into());
+    }
+    let normalized = super::super::workspace::directory_name(name);
+    if normalized != name {
+        return Err(format!(
+            "Directory name must already be normalized, for example {normalized}"
+        ));
+    }
+    Ok(normalized)
+}
+
+pub(super) fn migrate(state: &Path, id: &str, directory: Option<&str>) -> Result<String, String> {
     let journal_file = journal_path(state, id);
     if journal_file.exists() {
         let previous: Journal = super::storage::json(&journal_file)?;
@@ -97,10 +111,18 @@ pub(super) fn migrate(state: &Path, id: &str) -> Result<String, String> {
         .file_name()
         .and_then(|name| name.to_str())
         .ok_or("Invalid task directory name")?;
-    // Existing ASCII paths remain stable when a display name is edited.
-    if current.is_ascii() {
-        return Ok(id.into());
-    }
+    // Existing ASCII paths remain stable unless an explicit rename is requested.
+    let target_name = match directory {
+        Some(name) => {
+            if name == current {
+                return Ok(id.into());
+            }
+            Some(requested_name(name)?)
+        }
+        // Existing ASCII paths remain stable when a display name is edited.
+        None if current.is_ascii() => return Ok(id.into()),
+        None => None,
+    };
     let old_receipt = receipt(&record)?;
     verify_idle(&path)?;
     if store::read_registry(state)?.tasks.iter().any(|other| {
@@ -119,7 +141,22 @@ pub(super) fn migrate(state: &Path, id: &str) -> Result<String, String> {
         .max(record.revision)
         .checked_add(1)
         .ok_or("Automation revision exhausted")?;
-    let target = super::super::workspace::allocate(&root(state), &record.draft.name)?;
+    let root = root(state);
+    let target = match target_name {
+        // An explicit name reserves exactly that directory; never silently pick name-2.
+        Some(name) => {
+            let target = root.join(&name);
+            if let Err(error) = fs::create_dir(&target) {
+                return Err(if error.kind() == std::io::ErrorKind::AlreadyExists {
+                    format!("Directory {name} already exists; choose another name")
+                } else {
+                    format!("Cannot reserve the requested directory: {error}")
+                });
+            }
+            target
+        }
+        None => super::super::workspace::allocate(&root, &record.draft.name)?,
+    };
     let journal = Journal {
         id: id.into(),
         from: path.clone(),

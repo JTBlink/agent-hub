@@ -69,7 +69,12 @@ enum AutomationCommand {
         file: PathBuf,
     },
     /// 迁移旧任务或规范任务目录；保留任务 ID、日程和原脚本。
-    Migrate { id: String },
+    Migrate {
+        id: String,
+        /// 把任务包目录改为此名称；须为已规范化的小写 ASCII 名称。
+        #[arg(long)]
+        directory: Option<String>,
+    },
     /// 默认列出 AgentHub 创建的任务；使用 --origin all 查看所有来源。
     List {
         #[arg(long, value_enum, default_value = "all")]
@@ -223,8 +228,9 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
             automation::package::export_package(id, file).map_err(anyhow::Error::msg)?;
             result(json, id, "exported");
         }
-        AutomationCommand::Migrate { id } => {
-            let new_id = automation::package::migrate(id).map_err(anyhow::Error::msg)?;
+        AutomationCommand::Migrate { id, directory } => {
+            let new_id = automation::package::migrate(id, directory.as_deref())
+                .map_err(anyhow::Error::msg)?;
             result(json, &new_id, "saved");
         }
         AutomationCommand::List {

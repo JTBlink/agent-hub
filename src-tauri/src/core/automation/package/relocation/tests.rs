@@ -28,7 +28,7 @@ fn migrates_chinese_directory_without_changing_identity_schedule_content_or_hist
     )
     .unwrap();
     let old = find(state, &old.id).unwrap();
-    migrate(state, &old.id).unwrap();
+    migrate(state, &old.id, None).unwrap();
     let next = find(state, &old.id).unwrap();
     let target = directory(&next).unwrap();
     assert_eq!(target.file_name().unwrap(), "agent-mr-processing");
@@ -51,7 +51,7 @@ fn migrates_chinese_directory_without_changing_identity_schedule_content_or_hist
     assert_eq!(receipt(&next).unwrap().state, "pending");
     assert!(receipt(&next).unwrap().pending_backup);
     assert!(!journal_path(state, &old.id).exists());
-    migrate(state, &old.id).unwrap();
+    migrate(state, &old.id, None).unwrap();
     assert_eq!(find(state, &old.id).unwrap().revision, next.revision);
 }
 #[test]
@@ -62,12 +62,12 @@ fn refuses_installed_running_and_unowned_environments_without_moving_data() {
     let mut installed = receipt(&old).unwrap();
     installed.state = "ready".into();
     write_receipt(&old, &installed).unwrap();
-    assert!(migrate(temp.path(), &old.id).is_err());
+    assert!(migrate(temp.path(), &old.id, None).is_err());
     installed.state = "removed".into();
     write_receipt(&old, &installed).unwrap();
     for name in ["run.claim", "ready", "env"] {
         fs::create_dir(path.join(".local").join(name)).unwrap();
-        assert!(migrate(temp.path(), &old.id).is_err());
+        assert!(migrate(temp.path(), &old.id, None).is_err());
         assert!(manifest_path(&path).is_file());
         fs::remove_dir(path.join(".local").join(name)).unwrap();
     }
@@ -81,11 +81,11 @@ fn another_tasks_project_binding_blocks_migration_and_occupied_names_are_preserv
     shared.script_dir = None;
     shared.workdir = Some(path.to_string_lossy().into_owned());
     let other = super::super::creation::stage(temp.path(), shared, vec![]).unwrap();
-    assert!(migrate(temp.path(), &old.id).is_err());
+    assert!(migrate(temp.path(), &old.id, None).is_err());
     let other = find(temp.path(), &other).unwrap();
     let occupied = directory(&other).unwrap();
     store::write(&occupied.join(".local/binding.json"), b"{\"workdir\":null}").unwrap();
-    migrate(temp.path(), &old.id).unwrap();
+    migrate(temp.path(), &old.id, None).unwrap();
     assert_eq!(
         directory(&find(temp.path(), &old.id).unwrap())
             .unwrap()
@@ -110,13 +110,48 @@ fn recovers_an_interrupted_move_before_retrying_and_rejects_foreign_journals() {
     };
     json_write(&journal_path(temp.path(), &old.id), &journal).unwrap();
     fs::rename(&from, &to).unwrap();
-    migrate(temp.path(), &old.id).unwrap();
+    migrate(temp.path(), &old.id, None).unwrap();
     let next = find(temp.path(), &old.id).unwrap();
     assert_eq!(next.revision, 2);
     assert_eq!(directory(&next).unwrap(), to);
     let mut foreign = journal;
     foreign.to = temp.path().join("outside");
     json_write(&journal_path(temp.path(), &old.id), &foreign).unwrap();
-    assert!(migrate(temp.path(), &old.id).is_err());
+    assert!(migrate(temp.path(), &old.id, None).is_err());
     assert!(manifest_path(&directory(&next).unwrap()).is_file());
+}
+#[test]
+fn explicit_directory_renames_an_ascii_package_and_refuses_occupied_or_unnormalized_names() {
+    let temp = tempfile::tempdir().unwrap();
+    let state = temp.path();
+    let old = legacy(state);
+    migrate(state, &old.id, None).unwrap();
+    let placed = find(state, &old.id).unwrap();
+    let from = directory(&placed).unwrap();
+    store::write(&from.join(".local/runs/saved.log"), b"retained output").unwrap();
+    fs::create_dir(root(state).join("taken")).unwrap();
+    for rejected in ["taken", "Upper Case", "../escape", ""] {
+        assert!(
+            migrate(state, &old.id, Some(rejected)).is_err(),
+            "{rejected}"
+        );
+        assert_eq!(directory(&find(state, &old.id).unwrap()).unwrap(), from);
+    }
+    assert!(root(state).join("taken").is_dir());
+    migrate(state, &old.id, Some("automation-maintenance")).unwrap();
+    let next = find(state, &old.id).unwrap();
+    let target = directory(&next).unwrap();
+    assert_eq!(target.file_name().unwrap(), "automation-maintenance");
+    assert!(!from.exists());
+    assert_eq!(next.id, old.id);
+    assert_eq!(next.revision, placed.revision + 1);
+    assert_eq!(next.draft.schedule, old.draft.schedule);
+    assert_eq!(next.draft.files, old.draft.files);
+    assert_eq!(
+        fs::read(target.join(".local/runs/saved.log")).unwrap(),
+        b"retained output"
+    );
+    assert!(!journal_path(state, &old.id).exists());
+    migrate(state, &old.id, Some("automation-maintenance")).unwrap();
+    assert_eq!(find(state, &old.id).unwrap().revision, next.revision);
 }

@@ -259,7 +259,7 @@ fn explicit_migration_preserves_identity_schedule_and_original_project_files() {
     let original = legacy(temp.path());
     let mut scheduler = Scheduler::default();
     assert_eq!(
-        migration::migrate_using(temp.path(), &original.id, &mut scheduler).unwrap(),
+        migration::migrate_using(temp.path(), &original.id, &mut scheduler, None).unwrap(),
         original.id
     );
     assert!(store::legacy_task(temp.path(), &original.id)
@@ -279,7 +279,7 @@ fn explicit_migration_preserves_identity_schedule_and_original_project_files() {
     );
     assert_eq!(scheduler.calls.last().unwrap(), "register:true");
     let calls = scheduler.calls.len();
-    migration::migrate_using(temp.path(), &original.id, &mut scheduler).unwrap();
+    migration::migrate_using(temp.path(), &original.id, &mut scheduler, None).unwrap();
     assert_eq!(scheduler.calls.len(), calls);
 }
 
@@ -291,14 +291,14 @@ fn migration_failure_restores_legacy_metadata_and_can_resume_without_another_pac
         fail_on_call: Some(4),
         ..Default::default()
     };
-    assert!(migration::migrate_using(temp.path(), &original.id, &mut scheduler).is_err());
+    assert!(migration::migrate_using(temp.path(), &original.id, &mut scheduler, None).is_err());
     assert!(store::legacy_task(temp.path(), &original.id)
         .unwrap()
         .is_some());
     let path = directory(&find(temp.path(), &original.id).unwrap()).unwrap();
     assert!(!path.join(".local/ready").exists());
     scheduler.fail_on_call = None;
-    migration::migrate_using(temp.path(), &original.id, &mut scheduler).unwrap();
+    migration::migrate_using(temp.path(), &original.id, &mut scheduler, None).unwrap();
     assert_eq!(
         directory(&find(temp.path(), &original.id).unwrap()).unwrap(),
         path
@@ -772,7 +772,7 @@ fn directory_migration_automatically_rebuilds_runtime_and_preserves_enablement()
             root(temp.path()).join("旧任务"),
         )
         .unwrap();
-        migration::migrate_using(temp.path(), &id, &mut scheduler).unwrap();
+        migration::migrate_using(temp.path(), &id, &mut scheduler, None).unwrap();
         let migrated = find(temp.path(), &id).unwrap();
         assert_eq!(migrated.draft.enabled, enabled && !legacy_uninstalled);
         assert_eq!(migrated.draft.schedule, original.draft.schedule);
