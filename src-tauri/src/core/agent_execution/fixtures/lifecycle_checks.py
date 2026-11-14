@@ -7,6 +7,7 @@ import json
 import runpy
 import subprocess
 import sys
+import time
 import unittest
 from unittest.mock import patch
 
@@ -308,6 +309,76 @@ class HerdrChecks(unittest.TestCase):
         self.assertEqual(json.loads(STATE.read_text())['tab'], 'w-test:t-task')
         self.assertEqual(json.loads(STATE.read_text())['pane'], 'w-test:p-next')
 
+    def reuse_config(self, seconds=21600):
+        config = json.loads(ORIGINAL_CONFIG)
+        config['execution']['session_reuse_seconds'] = seconds
+        return config
+
+    def save_started(self, phase='completed', started=None):
+        self.save_previous(phase)
+        if started is not None:
+            state = json.loads(STATE.read_text())
+            state['agent_started_at'] = started
+            STATE.write_text(json.dumps(state))
+
+    def test_completed_agent_continues_its_conversation_within_the_reuse_window(self):
+        recorded = time.time() - 3600
+        for label, started in [('recorded', recorded), ('legacy', None)]:
+            with self.subTest(started=label):
+                self.save_started(started=started)
+                self.calls, self.output = [], io.StringIO()
+                self.assertEqual(self.execute(config=self.reuse_config(), previous_completion=1), 0)
+                calls = [args for args, _ in self.calls]
+                self.assertFalse(any(word in args for args in calls
+                                     for word in ('split', 'close', 'start', 'create')))
+                sent = [args for args in calls if 'prompt' in args]
+                self.assertEqual(len(sent), 1)
+                self.assertEqual(sent[0][sent[0].index('prompt') + 1], OLD_NAME)
+                state = json.loads(STATE.read_text())
+                self.assertEqual((state['agent_name'], state['pane'], state['tab'], state['phase']),
+                                 (OLD_NAME, 'w-test:p-test', 'w-test:t-task', 'completed'))
+                self.assertEqual(state['completion_seq'], 1)
+                if started is None:
+                    self.assertAlmostEqual(state['agent_started_at'], time.time(), delta=60)
+                else:
+                    self.assertEqual(state['agent_started_at'], recorded)
+                self.assertIn('原会话继续', self.output.getvalue())
+
+    def test_aged_or_unreliable_session_is_replaced_in_the_same_tab(self):
+        now = time.time()
+        for label, started, expected in [('expired', now - 21601, '达到复用上限'),
+                                         ('future', now + 3600, '无法确认运行时长'),
+                                         ('invalid', 'yesterday', '无法确认运行时长'),
+                                         ('nameless', now - 60, '无法确认运行时长')]:
+            with self.subTest(started=label):
+                self.save_started(started=started)
+                if label == 'nameless':
+                    state = json.loads(STATE.read_text())
+                    del state['agent_name']
+                    STATE.write_text(json.dumps(state))
+                self.calls, self.output = [], io.StringIO()
+                self.assertEqual(self.execute(config=self.reuse_config()), 0)
+                calls = [args for args, _ in self.calls]
+                self.assertEqual(sum('split' in args for args in calls), 1)
+                self.assertEqual(next(args for args in calls if 'close' in args)[-1], 'w-test:p-test')
+                state = json.loads(STATE.read_text())
+                self.assertNotEqual(state['agent_name'], OLD_NAME)
+                self.assertEqual((state['pane'], state['tab']), ('w-test:p-next', 'w-test:t-task'))
+                self.assertAlmostEqual(state['agent_started_at'], time.time(), delta=60)
+                self.assertIn(expected, self.output.getvalue())
+                self.assertIn('换新 Agent', self.output.getvalue())
+
+    def test_session_reuse_never_prompts_busy_uncertain_or_reconciled_sessions(self):
+        for phase, status, reconcile in [('completed', 'working', False), ('completed', 'blocked', False),
+                                         ('attention', 'done', False), ('submitted', 'idle', False),
+                                         ('completed', 'done', True)]:
+            with self.subTest(phase=phase, status=status, reconcile=reconcile):
+                self.save_started(phase, time.time())
+                self.calls = []
+                self.execute(config=self.reuse_config(), previous=status, reconcile_only=reconcile)
+                self.assertFalse(any(word in args for args, _ in self.calls
+                                     for word in ('prompt', 'split', 'close', 'start', 'create')))
+
     def test_replaced_or_newly_working_agent_is_never_closed(self):
         for options in [{'replacement_name': 'user-agent'}, {'previous_after': 'working'}]:
             with self.subTest(options=options):
@@ -395,6 +466,10 @@ class HerdrChecks(unittest.TestCase):
             {'runner': {'kind': 'codex', 'session': 'default', 'title': 'Test'},
              'launch': {'arguments': []}, 'execution': {'wait_timeout_seconds': 1800},
              'unexpected': True},
+            *[{'runner': {'kind': 'codex', 'session': 'default', 'title': 'Test'},
+               'launch': {'arguments': []},
+               'execution': {'wait_timeout_seconds': 1800, 'session_reuse_seconds': value}}
+              for value in (-1, 86401, True, '21600')],
         ]
         for config in configs:
             with self.subTest(config=config):

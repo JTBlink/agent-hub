@@ -18,7 +18,11 @@ export function automationPromptFile(draft: AutomationDraft) {
 export type AutomationAgentConfig = {
   runner: { kind: string; session: string; title: string };
   launch: { arguments: string[] };
-  execution: { wait_timeout_seconds: number; include_task_variables?: boolean };
+  execution: {
+    wait_timeout_seconds: number;
+    include_task_variables?: boolean;
+    session_reuse_seconds?: number;
+  };
 };
 
 export function automationAgentConfig(draft: AutomationDraft) {
@@ -77,7 +81,12 @@ export function automationAgentConfig(draft: AutomationDraft) {
       executionValue.wait_timeout_seconds < 60 ||
       executionValue.wait_timeout_seconds > 7200 ||
       (executionValue.include_task_variables !== undefined &&
-        typeof executionValue.include_task_variables !== "boolean")
+        typeof executionValue.include_task_variables !== "boolean") ||
+      (executionValue.session_reuse_seconds !== undefined &&
+        (typeof executionValue.session_reuse_seconds !== "number" ||
+          !Number.isInteger(executionValue.session_reuse_seconds) ||
+          executionValue.session_reuse_seconds < 0 ||
+          executionValue.session_reuse_seconds > 86400))
     )
       return null;
     return {

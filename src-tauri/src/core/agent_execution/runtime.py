@@ -83,7 +83,8 @@ def read_agent_config(path):
         raise HerdrError("Agent runner 配置无效。")
     if not isinstance(launch, dict) or set(launch) - {"arguments"}:
         raise HerdrError("Agent launch 配置无效。")
-    if not isinstance(execution, dict) or set(execution) - {"wait_timeout_seconds", "include_task_variables"}:
+    if not isinstance(execution, dict) or set(execution) - {
+            "wait_timeout_seconds", "include_task_variables", "session_reuse_seconds"}:
         raise HerdrError("Agent execution 配置无效。")
     kind = runner.get("kind", "default")
     session = runner.get("session", "default")
@@ -109,11 +110,17 @@ def read_agent_config(path):
     include_task_variables = execution.get("include_task_variables", True)
     if not isinstance(include_task_variables, bool):
         raise HerdrError("include_task_variables 必须是布尔值。")
+    # 0 keeps the original contract: every round starts a fresh Agent.
+    session_reuse_seconds = execution.get("session_reuse_seconds", 0)
+    if (isinstance(session_reuse_seconds, bool) or not isinstance(session_reuse_seconds, int)
+            or not 0 <= session_reuse_seconds <= 86400):
+        raise HerdrError("Agent 会话复用时长必须是 0–86400 秒的整数。")
     return {
         "runner": {"kind": kind, "session": session, "title": title},
         "launch": {"arguments": list(arguments)},
         "execution": {"wait_timeout_seconds": wait_timeout_seconds,
-                      "include_task_variables": include_task_variables},
+                      "include_task_variables": include_task_variables,
+                      "session_reuse_seconds": session_reuse_seconds},
     }
 
 

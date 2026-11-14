@@ -5,6 +5,7 @@ Startup is delegated to the same configured Rust launcher used by interactive en
 """
 from pathlib import Path
 import hashlib
+import math
 import subprocess
 import time
 import uuid
@@ -188,6 +189,50 @@ def finish_result(invoke, state, result, target):
     return 0 if state["phase"] == "completed" else 1
 
 
+def submit_and_collect(invoke, state, prompt, wait_timeout_seconds, recovery=None):
+    # Persist before submission: timeout does not prove the prompt was not delivered.
+    save_state(state)
+    try:
+        delivered = submit_prompt(invoke, state, prompt)
+        if recovery:
+            if not delivered:
+                return 1
+            state["recovery"]["status"] = "submitted"
+            state["continuation"]["status"] = "submitted"
+            save_state(state)
+            return 0
+        result = wait_for_result(invoke, state["agent_name"], state["completion_seq"], wait_timeout_seconds)
+    except (HerdrError, subprocess.TimeoutExpired):
+        state["phase"] = "attention"
+        save_state(state)
+        raise
+    return finish_result(invoke, state, result, state["agent_name"])
+
+
+def session_age(previous, now):
+    """Seconds since this task started the Agent; records from before the start time existed count from now."""
+    if "agent_started_at" not in previous:
+        return 0
+    started = previous["agent_started_at"]
+    if isinstance(started, bool) or not isinstance(started, (int, float)):
+        return None
+    age = now - started
+    return age if math.isfinite(age) and age >= 0 else None
+
+
+def describe_duration(seconds):
+    minutes = int(seconds // 60)
+    return f"{minutes // 60} 小时 {minutes % 60} 分钟" if minutes >= 60 else f"{minutes} 分钟"
+
+
+def reuse_agent(invoke, previous, agent, cwd, prompt, wait_timeout_seconds, started):
+    """Continue a finished round in the same conversation; identity and layout stay unchanged."""
+    verify_previous_agent(agent, previous, cwd)
+    state = {**previous, "phase": "submitted", "prompt_attempted": True,
+             "completion_seq": agent.get("completion_seq") or 0, "agent_started_at": started}
+    return submit_and_collect(invoke, state, prompt, wait_timeout_seconds)
+
+
 def continue_existing(invoke, previous, agent, cwd, prompt, continuation_id):
     verify_previous_agent(agent, previous, cwd)
     prior = previous.get("continuation", {})
@@ -260,6 +305,23 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
         if status not in ("idle", "done") or previous.get("phase") == "attention":
             print(f"保留上次会话：{previous['pane']}，状态 {status}；不重复发起。", flush=True)
             return 1
+    reuse_seconds = config["execution"].get("session_reuse_seconds", 0)
+    if agent and reuse_seconds and not reconcile_only and previous.get("phase") == "completed":
+        now = time.time()
+        # Only a named Agent can be addressed again; older records are replaced instead.
+        age = session_age(previous, now) if previous.get("agent_name") else None
+        limit = describe_duration(reuse_seconds)
+        if age is not None and age < reuse_seconds:
+            note = "" if "agent_started_at" in previous else "（旧记录没有启动时间，从本轮开始计时）"
+            print(f"复用原 Agent {previous['agent_name']}（面板 {previous['pane']}）：会话已运行 "
+                  f"{describe_duration(age)}{note}，复用上限 {limit}；本轮在原会话继续。", flush=True)
+            return reuse_agent(invoke, previous, agent, cwd, prompt, wait_timeout_seconds,
+                               previous.get("agent_started_at", int(now)))
+        if age is None:
+            print("原 Agent 记录无法确认运行时长；本轮在原标签页换新 Agent。", flush=True)
+        else:
+            print(f"原 Agent 会话已运行 {describe_duration(age)}，达到复用上限 {limit}；"
+                  "本轮在原标签页换新 Agent。", flush=True)
     recovery = None
     if recover_closed and not agent:
         if not previous or available_pane or previous.get("session") != session or previous.get("cwd") != str(cwd):
@@ -295,7 +357,8 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
     pane = created["pane_id"]
     name = "ah-" + hashlib.sha256(str(HERE).encode()).hexdigest()[:8] + "-" + uuid.uuid4().hex[:6]
     state = {"session": session, "pane": pane, "cwd": str(cwd), "workspace": created["workspace_id"],
-             "tab": created.get("tab_id"), "agent_name": name, "phase": "starting", "prompt_attempted": False}
+             "tab": created.get("tab_id"), "agent_name": name, "phase": "starting", "prompt_attempted": False,
+             "agent_started_at": int(time.time())}
     if recovery:
         state["recovery"] = recovery
         state["continuation"] = {"id": continuation_id, "status": "uncertain"}
@@ -313,23 +376,7 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
     started = command(bridge, ["--json", "agents", "launch", "start", kind,
                               "--session", session, "--pane", pane, "--name", name,
                               "--arguments-json", json.dumps(extra)], timeout=80)
-    # Persist before submission: timeout does not prove the prompt was not delivered.
     state["phase"] = "submitted"
     state["prompt_attempted"] = True
     state["completion_seq"] = started.get("agent", {}).get("completion_seq") or 0
-    save_state(state)
-    try:
-        delivered = submit_prompt(invoke, state, prompt)
-        if recovery:
-            if not delivered:
-                return 1
-            state["recovery"]["status"] = "submitted"
-            state["continuation"]["status"] = "submitted"
-            save_state(state)
-            return 0
-        result = wait_for_result(invoke, name, state["completion_seq"], wait_timeout_seconds)
-    except (HerdrError, subprocess.TimeoutExpired):
-        state["phase"] = "attention"
-        save_state(state)
-        raise
-    return finish_result(invoke, state, result, name)
+    return submit_and_collect(invoke, state, prompt, wait_timeout_seconds, recovery)
