@@ -15,6 +15,7 @@ const app = vi.hoisted(() => {
     tools: [],
     refreshProjects: vi.fn().mockResolvedValue(undefined),
     missing: false,
+    worktreesLoading: false,
     refreshWorktrees: vi.fn().mockResolvedValue(undefined),
   };
 });
@@ -39,7 +40,7 @@ vi.mock("../../../hooks/useProjectWorktrees", () => ({
         is_main: true,
         available: !app.missing || project.id !== app.projects[0]?.id,
       })),
-    loading: false,
+    loading: app.worktreesLoading,
     error: "",
     refresh: app.refreshWorktrees,
   }),
@@ -62,6 +63,7 @@ vi.mock("../api", async (original) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   app.missing = false;
+  app.worktreesLoading = false;
   vi.mocked(getSettings).mockResolvedValue(null);
   vi.mocked(setSettings).mockResolvedValue(undefined);
   vi.mocked(api.prepareHerdrSession).mockResolvedValue("default");
@@ -152,19 +154,25 @@ it("opens full-sidebar settings, saves opt-in, coalesces project changes and sto
   vi.mocked(setSettings).mockImplementation(async (key, value) => {
     stored.set(key, value);
   });
+  let finishWorkspace!: () => void;
   vi.mocked(api.ensureHerdrWorkspace).mockImplementation(
-    async (session, projectId, path) => ({
-      project_id: projectId,
-      path: path!,
-      target: {
-        session,
-        workspace_id: "w1",
-        pane_id: "w1:p1",
-        terminal_id: "native",
-        revision: 1,
-        agent_session: null,
-      },
-    }),
+    async (session, projectId, path) => {
+      await new Promise<void>((resolve) => {
+        finishWorkspace = resolve;
+      });
+      return {
+        project_id: projectId,
+        path: path!,
+        target: {
+          session,
+          workspace_id: "w1",
+          pane_id: "w1:p1",
+          terminal_id: "native",
+          revision: 1,
+          agent_session: null,
+        },
+      };
+    },
   );
   const host = document.createElement("div");
   document.body.append(host);
@@ -207,6 +215,16 @@ it("opens full-sidebar settings, saves opt-in, coalesces project changes and sto
     app.projects[0] = { ...app.projects[0], path: "/projects/intermediate" };
     await act(async () => render());
     app.projects[0] = { ...app.projects[0], path: "/projects/feature" };
+    await act(async () => render());
+    await act(async () => vi.advanceTimersByTimeAsync(250));
+    // A focus-triggered worktree refresh temporarily disables follow while the
+    // native workspace request is still running. Its successful target must
+    // still reach the terminal after the refresh finishes.
+    app.worktreesLoading = true;
+    await act(async () => render());
+    await act(async () => finishWorkspace());
+    expect(host.querySelector("output")!.dataset.attachment).toBeUndefined();
+    app.worktreesLoading = false;
     await act(async () => render());
     await act(async () => vi.advanceTimersByTimeAsync(250));
     expect(api.ensureHerdrWorkspace).toHaveBeenCalledExactlyOnceWith(

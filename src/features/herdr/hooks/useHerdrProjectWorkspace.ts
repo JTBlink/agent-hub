@@ -23,29 +23,42 @@ export function useHerdrProjectWorkspace({
   useLayoutEffect(() => {
     callbacks.current = { onReady, onError, refresh };
   });
-  const lastRequested = useRef("");
+  const lastRequest = useRef<{
+    key: string;
+    delivered: boolean;
+    outcome?: { value: api.HerdrOpenedWorkspace } | { error: unknown };
+  } | null>(null);
   const tail = useRef(Promise.resolve());
   useEffect(() => {
     if (!enabled || !session || !projectId) return;
     const key = JSON.stringify([session, projectId, path]);
-    if (lastRequested.current === key) return;
+    if (lastRequest.current?.key === key && lastRequest.current.delivered)
+      return;
     let cancelled = false;
     const timer = setTimeout(() => {
       tail.current = tail.current.then(async () => {
         if (cancelled) return;
         try {
-          await api.prepareHerdrSession();
-          if (cancelled) return;
-          lastRequested.current = key;
-          const value = await api.ensureHerdrWorkspace(
-            session,
-            projectId,
-            path,
-          );
-          if (!cancelled) {
-            await callbacks.current.onReady(value);
-            callbacks.current.refresh();
+          let request = lastRequest.current;
+          if (!request || request.key !== key) {
+            await api.prepareHerdrSession();
+            if (cancelled) return;
+            request = { key, delivered: false };
+            lastRequest.current = request;
+            try {
+              request.outcome = {
+                value: await api.ensureHerdrWorkspace(session, projectId, path),
+              };
+            } catch (error) {
+              // A cancelled UI request must not cause an uncertain native write to repeat.
+              request.outcome = { error };
+            }
           }
+          if (cancelled || request.delivered || !request.outcome) return;
+          if ("error" in request.outcome) throw request.outcome.error;
+          await callbacks.current.onReady(request.outcome.value);
+          request.delivered = true;
+          callbacks.current.refresh();
         } catch (error) {
           if (!cancelled) callbacks.current.onError(error);
         }

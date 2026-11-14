@@ -10,6 +10,83 @@ vi.mock("../api", () => ({
   ensureHerdrWorkspace: vi.fn(),
 }));
 
+it.each([
+  { failed: false, restoreBeforeResult: false },
+  { failed: false, restoreBeforeResult: true },
+  { failed: true, restoreBeforeResult: false },
+])(
+  "recovers an interrupted follow request without repeating native writes: %o",
+  async ({ failed, restoreBeforeResult }) => {
+    vi.clearAllMocks();
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.useFakeTimers();
+    vi.mocked(api.prepareHerdrSession).mockResolvedValue("default");
+    const opened: api.HerdrOpenedWorkspace = {
+      project_id: "demo",
+      path: "/projects/demo",
+      target: {
+        session: "default",
+        workspace_id: "w1",
+        pane_id: "w1:p1",
+        terminal_id: "native",
+        revision: 1,
+        agent_session: null,
+      },
+    };
+    let finish!: () => void;
+    vi.mocked(api.ensureHerdrWorkspace).mockReturnValueOnce(
+      new Promise((resolve, reject) => {
+        finish = () =>
+          failed ? reject(new Error("Native result unknown")) : resolve(opened);
+      }),
+    );
+    const onReady = vi.fn();
+    const onError = vi.fn();
+    const root = createRoot(document.createElement("div"));
+    function Harness({ enabled }: { enabled: boolean }) {
+      useHerdrProjectWorkspace({
+        enabled,
+        session: "default",
+        projectId: "demo",
+        path: opened.path,
+        onReady,
+        onError,
+        refresh: vi.fn(),
+      });
+      return null;
+    }
+    const render = async (enabled: boolean) => {
+      await act(async () => root.render(<Harness enabled={enabled} />));
+      await act(async () => vi.advanceTimersByTimeAsync(250));
+    };
+    try {
+      await render(true);
+      await render(false);
+      if (restoreBeforeResult) await render(true);
+      await act(async () => finish());
+      if (!restoreBeforeResult) {
+        expect(onReady).not.toHaveBeenCalled();
+        await render(true);
+      }
+      if (failed) {
+        expect(onReady).not.toHaveBeenCalled();
+        expect(onError).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({ message: "Native result unknown" }),
+        );
+      } else {
+        expect(onReady).toHaveBeenCalledExactlyOnceWith(opened);
+        expect(onError).not.toHaveBeenCalled();
+      }
+      expect(api.ensureHerdrWorkspace).toHaveBeenCalledOnce();
+    } finally {
+      await act(async () => root.unmount());
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+      vi.clearAllMocks();
+    }
+  },
+);
+
 it("serializes focus changes, drops superseded requests and ignores stale results", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.useFakeTimers();
