@@ -2936,6 +2936,8 @@
     "replacing": "Replacing…"
   },
   "preview": {
+    "loadFailed": "The preview could not load. Reload the app, then open the file again.",
+    "reloadApp": "Reload app",
     "reopen": "Discard the old form and reopen",
     "reopenHint": "Reopen discards the old form and loads the last verified address. The browser restores persistent local login data; guest or lost remote sessions may require signing in again.",
     "reopenBusy": "This profile is creating or restoring a page. Try again shortly.",

@@ -5,6 +5,9 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { expect, it, vi } from "vitest";
 import { PreviewHost } from "./PreviewHost";
 import { consumePreviewRequests, queuePreviewWeb } from "./shared/openRequests";
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
 vi.mock("./PreviewWorkspace", () => ({
   PreviewWorkspace: function Workspace() {
     useEffect(

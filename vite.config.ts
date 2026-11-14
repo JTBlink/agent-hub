@@ -9,6 +9,11 @@ const product = productViteConfig(import.meta.dirname);
 
 export default defineConfig({
   ...product,
+  optimizeDeps: {
+    ...product.optimizeDeps,
+    // Discover Markdown's lazy preview dependencies before a live session starts.
+    include: ["github-slugger", "unified", "remark-parse"],
+  },
   plugins: [
     ...(product.plugins ?? []),
     react(),
