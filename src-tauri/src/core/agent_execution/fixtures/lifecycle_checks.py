@@ -734,5 +734,52 @@ class HerdrChecks(unittest.TestCase):
         self.assertEqual(self.execute(previous='idle', previous_completion=1), 1)
         self.assertFalse(any('prompt' in args or 'split' in args or 'start' in args or 'close' in args for args, _ in self.calls))
 
+    CLAUDE_REFUSAL = ('⏺ 先读取任务列表。\n\n  Ran 1 shell command\n\n'
+                      "⏺ API Error: The model's safeguards flagged this message.\n\n"
+                      '✻ Cooked for 30s · done 10:15 PM\n\n──────────\n❯\n──────────\n  ~/projects/demo  [main]\n')
+
+    def test_turn_ending_in_provider_error_is_not_completed_and_next_round_replaces_session(self):
+        self.assertEqual(self.execute(config=self.reuse_config(), output=self.CLAUDE_REFUSAL), 1)
+        refused = json.loads(STATE.read_text())
+        self.assertEqual((refused['phase'], refused['provider_error'], refused['completion_seq']), ('attention', True, 2))
+        self.assertIn('不计为完成', self.output.getvalue())
+        self.calls, self.output = [], io.StringIO()
+        self.assertEqual(self.execute(config=self.reuse_config(), previous_completion=2), 0)
+        calls = [args for args, _ in self.calls]
+        self.assertEqual(next(args for args in calls if 'close' in args)[-1], 'w-test:p-test')
+        sent = [args for args in calls if 'prompt' in args]
+        self.assertEqual(len(sent), 1)
+        self.assertNotEqual(sent[0][sent[0].index('prompt') + 1], refused['agent_name'])
+        state = json.loads(STATE.read_text())
+        self.assertEqual((state['phase'], state['pane'], state['tab']), ('completed', 'w-test:p-next', 'w-test:t-task'))
+        self.assertNotIn('provider_error', state)
+        self.assertIn('换新 Agent', self.output.getvalue())
+
+    def test_only_the_last_top_level_response_decides_a_provider_error(self):
+        for output, expected in [
+            ('• Ran checks\n■ This content was flagged for possible cybersecurity risk.\n› Ask Codex\n', 'attention'),
+            ('⏺ API Error: an earlier refusal\n\n⏺ 已重新核对，结论正常。\n', 'completed'),
+            ('• 本轮仅观察。\n  • 旧会话的 This content was flagged for possible cybersecurity risk 保留。\n', 'completed'),
+        ]:
+            with self.subTest(output=output):
+                STATE.unlink(missing_ok=True)
+                self.assertEqual(self.execute(output=output), 0 if expected == 'completed' else 1)
+                self.assertEqual(json.loads(STATE.read_text())['phase'], expected)
+
+    def test_refused_session_is_only_observed_when_reconciled_and_collected_after_manual_progress(self):
+        self.save_previous('attention')
+        state = json.loads(STATE.read_text())
+        state.update(provider_error=True, completion_seq=2, prompt_attempted=True)
+        STATE.write_text(json.dumps(state))
+        original = STATE.read_bytes()
+        self.assertEqual(self.execute(previous='done', previous_completion=2, reconcile_only=True), 1)
+        self.assertEqual(STATE.read_bytes(), original)
+        self.assertFalse(any(word in args for args, _ in self.calls for word in ('prompt', 'split', 'close', 'start')))
+        self.calls = []
+        self.assertEqual(self.execute(previous='done', previous_completion=3), 0)
+        self.assertFalse(any(word in args for args, _ in self.calls for word in ('prompt', 'split', 'close', 'start')))
+        self.assertEqual(json.loads(STATE.read_text())['phase'], 'completed')
+        self.assertNotIn('provider_error', json.loads(STATE.read_text()))
+
 
 unittest.main()

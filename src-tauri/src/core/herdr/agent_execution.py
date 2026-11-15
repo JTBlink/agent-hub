@@ -189,14 +189,33 @@ def wait_for_result(invoke, name, baseline_seq, timeout_seconds=1800):
     raise HerdrError("等待 Herdr 任务结果超时；会话已保留，请在 Herdr 查看进展。", "timeout")
 
 
+# Claude Code marks responses with ⏺, Codex with • and its errors with ■.
+RESPONSE_MARKERS = ("⏺", "•", "■")
+PROVIDER_ERROR = re.compile(r"API Error:|This content was flagged for possible", re.IGNORECASE)
+
+
+def ended_with_provider_error(output):
+    """Judge only the last top-level response; errors quoted earlier or in sub-items never count."""
+    heads = [line[1:].strip() for line in output.splitlines() if line[:1] in RESPONSE_MARKERS]
+    return bool(heads) and PROVIDER_ERROR.match(heads[-1]) is not None
+
+
 def finish_result(invoke, state, result, target):
     status = result["agent"]["agent_status"]
     state["phase"] = "completed" if status in ("idle", "done") else "attention"
+    state.pop("provider_error", None)
     save_state(state)
     # Scrolling application history is only safe once the agent is idle.
     source = ["--source", "recent-unwrapped", "--lines", "160"] if state["phase"] == "completed" else ["--source", "visible"]
     output = invoke(["agent", "read", target, *source], text_output=True)
     print(output, flush=True)
+    if state["phase"] == "completed" and ended_with_provider_error(output):
+        # This turn's completion becomes the baseline, so the next round replaces
+        # the session instead of collecting the same refusal again.
+        state.update(phase="attention", provider_error=True,
+                     completion_seq=result["agent"].get("completion_seq") or state.get("completion_seq", 0))
+        save_state(state)
+        print("Agent 回合以提供方报错结束，本轮不计为完成；下一轮在原标签页换新 Agent，不向该会话重发。", flush=True)
     print(f"Herdr 会话状态：{status}。请在 Herdr 查看任务结果；会话就绪不代表验证已通过。")
     return 0 if state["phase"] == "completed" else 1
 
@@ -337,7 +356,14 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
         if previous.get("phase") == "submitted" and status in ("idle", "done"):
             print('旧提示词已尝试投递，但还没有可核实的完成记录；保留原 Agent，不重复发起。', flush=True)
             return 1
-        if status not in ("idle", "done") or previous.get("phase") == "attention":
+        if previous.get("provider_error") and previous.get("phase") == "attention" and status in ("idle", "done"):
+            if reconcile_only:
+                print("上轮回合以提供方报错结束，保留原会话；下一次执行在原标签页换新 Agent，不向该会话重发。", flush=True)
+                return 1
+            print("上轮回合以提供方报错结束：本轮在原标签页换新 Agent，不复用该会话。", flush=True)
+            # A failed replacement leaves an ordinary attention record and is not retried every round.
+            previous = {key: value for key, value in previous.items() if key != "provider_error"}
+        elif status not in ("idle", "done") or previous.get("phase") == "attention":
             print(f"保留上次会话：{previous['pane']}，状态 {status}；不重复发起。", flush=True)
             return 1
     reuse_seconds = config["execution"].get("session_reuse_seconds", 0)
