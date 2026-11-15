@@ -36,7 +36,7 @@ mod process;
 pub mod runtime_audit;
 mod script_sync;
 mod store;
-pub use script_sync::sync_workspace_scripts;
+pub use script_sync::{sync_workspace_scripts, sync_workspace_scripts_for_read};
 mod templates;
 mod workspace;
 pub use backup::{shell as command_shell, AutomationBackup};

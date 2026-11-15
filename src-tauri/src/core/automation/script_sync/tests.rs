@@ -84,3 +84,20 @@ fn edited_files_increment_revision_and_queue_the_custom_script_for_backup() {
     );
     assert_eq!(store::load(&root).unwrap()[0].revision, 2);
 }
+
+#[test]
+fn reads_wait_out_a_busy_store_then_fall_back_while_writes_still_refuse() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    // Synchronization only runs for a store that has a registry file.
+    std::fs::write(root.join("tasks.json"), r#"{"version":1,"tasks":[]}"#).unwrap();
+    let held = store::Lock::acquire(root).unwrap();
+    assert!(!sync_for_read(root, std::time::Duration::from_millis(200)).unwrap());
+    assert!(sync_at(root).is_err());
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(150));
+        drop(held);
+    });
+    assert!(sync_for_read(root, std::time::Duration::from_secs(5)).unwrap());
+    release.join().unwrap();
+}

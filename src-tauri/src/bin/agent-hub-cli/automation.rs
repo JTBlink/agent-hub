@@ -179,8 +179,10 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
     if matches!(
         args.command,
         AutomationCommand::List { .. } | AutomationCommand::Show { .. }
-    ) {
-        automation::sync_workspace_scripts().map_err(anyhow::Error::msg)?;
+    ) && !automation::sync_workspace_scripts_for_read().map_err(anyhow::Error::msg)?
+    {
+        // stderr keeps --json stdout as the command result.
+        eprintln!("另一个自动化操作正在进行，本次未同步工作区脚本，按已保存的定义读取。");
     }
     match &args.command {
         AutomationCommand::Libraries { command } => libraries::run(command)?,
