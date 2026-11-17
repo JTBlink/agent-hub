@@ -87,3 +87,12 @@ it("offers distinct branch kinds and emits the chosen remote ref", async () => {
     vi.unstubAllGlobals();
   }
 });
+
+it("offers branch tips beyond the loaded commits", () => {
+  expect(
+    graphBranchOptions(commits, [
+      { name: "older", remote: false, sha: "outside-page" },
+      { name: "origin/older", remote: true, sha: "outside-page" },
+    ]).map((option) => option.name),
+  ).toEqual(["older", "origin/older"]);
+});

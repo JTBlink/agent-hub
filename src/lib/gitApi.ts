@@ -218,7 +218,13 @@ export interface GitGraphCommit {
   }[];
   head?: boolean;
 }
+export interface GitGraphBranch {
+  name: string;
+  remote: boolean;
+  sha: string;
+}
 export interface GitGraphData {
+  branches?: GitGraphBranch[];
   commits: GitGraphCommit[];
   has_more: boolean;
 }
@@ -227,10 +233,12 @@ export const getProjectGitGraph = (
   worktreePath: string | undefined,
   includeRemotes: boolean,
   limit: number,
+  branch?: string,
 ) =>
   invoke<GitGraphData>("get_project_git_graph", {
     projectId,
     worktreePath,
     includeRemotes,
     limit,
+    branch,
   });

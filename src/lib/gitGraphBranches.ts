@@ -1,8 +1,15 @@
-import type { GitGraphCommit } from "./gitApi";
+import type { GitGraphCommit, GitGraphBranch } from "./gitApi";
 
-export function graphBranchOptions(commits: GitGraphCommit[]) {
-  return commits
-    .flatMap((commit) =>
+export function graphBranchOptions(
+  commits: GitGraphCommit[],
+  branches?: GitGraphBranch[],
+) {
+  return (
+    branches?.map((branch) => ({
+      ...branch,
+      value: JSON.stringify([branch.remote, branch.name]),
+    })) ??
+    commits.flatMap((commit) =>
       commit.refs
         .filter((ref) => ref.kind !== "tag")
         .map((ref) => ({
@@ -12,10 +19,10 @@ export function graphBranchOptions(commits: GitGraphCommit[]) {
           sha: commit.sha,
         })),
     )
-    .sort(
-      (a, b) =>
-        Number(a.remote) - Number(b.remote) || a.name.localeCompare(b.name),
-    );
+  ).sort(
+    (a, b) =>
+      Number(a.remote) - Number(b.remote) || a.name.localeCompare(b.name),
+  );
 }
 
 /** Keep every loaded ancestor, including both sides of merges. */

@@ -1,21 +1,23 @@
 import { GitBranch, Cloud } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ThemedSelect } from "../ThemedSelect";
-import type { GitGraphCommit } from "../../lib/gitApi";
+import type { GitGraphCommit, GitGraphBranch } from "../../lib/gitApi";
 
 import { graphBranchOptions } from "../../lib/gitGraphBranches";
 
 export function GitGraphBranchFilter({
   commits,
+  branches,
   value,
   onChange,
 }: {
   commits: GitGraphCommit[];
+  branches?: GitGraphBranch[];
   value: string;
   onChange: (value: string) => void;
 }) {
   const { t } = useTranslation();
-  const options = graphBranchOptions(commits);
+  const options = graphBranchOptions(commits, branches);
   const byValue = new Map(options.map((option) => [option.value, option]));
   return (
     <label

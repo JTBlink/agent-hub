@@ -20,17 +20,36 @@ pub struct GraphCommit {
     pub head: bool,
 }
 #[derive(Serialize)]
+pub struct GraphBranch {
+    pub name: String,
+    pub remote: bool,
+    pub sha: String,
+}
+
+#[derive(Serialize)]
 pub struct GitGraph {
     pub commits: Vec<GraphCommit>,
     pub has_more: bool,
+    pub branches: Vec<GraphBranch>,
 }
 
-pub fn graph(root: &Path, include_remotes: bool, limit: usize) -> Result<GitGraph> {
+#[cfg(test)]
+fn graph(root: &Path, include_remotes: bool, limit: usize) -> Result<GitGraph> {
+    graph_for_branch(root, include_remotes, limit, None)
+}
+
+pub fn graph_for_branch(
+    root: &Path,
+    include_remotes: bool,
+    limit: usize,
+    branch: Option<&str>,
+) -> Result<GitGraph> {
     let repo =
         git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
     let mut walk = repo.revwalk()?;
     walk.set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::TIME)?;
     let mut refs: HashMap<git2::Oid, Vec<GraphReference>> = HashMap::new();
+    let mut branches = Vec::new();
     let head = repo.head().ok();
     let head_id = head.as_ref().and_then(|head| head.target());
     let remote_names = repo.remotes()?;
@@ -47,6 +66,13 @@ pub fn graph(root: &Path, include_remotes: bool, limit: usize) -> Result<GitGrap
         };
         walk.push(commit.id())?;
         let name = reference.shorthand().unwrap_or_default();
+        if !reference.is_tag() && reference.symbolic_target().is_none() {
+            branches.push(GraphBranch {
+                name: name.into(),
+                remote: reference.is_remote(),
+                sha: commit.id().to_string(),
+            });
+        }
         let remote_name = if reference.is_remote() {
             remote_names
                 .iter()
@@ -79,6 +105,22 @@ pub fn graph(root: &Path, include_remotes: bool, limit: usize) -> Result<GitGrap
     if let Ok(head) = repo.head().and_then(|head| head.peel_to_commit()) {
         walk.push(head.id())?;
     }
+    if let Some(branch) = branch {
+        // Accept only a branch tip from this repository's visible references.
+        let selected = branches
+            .iter()
+            .find(|candidate| {
+                let prefix = if candidate.remote {
+                    "refs/remotes/"
+                } else {
+                    "refs/heads/"
+                };
+                branch.strip_prefix(prefix) == Some(candidate.name.as_str())
+            })
+            .ok_or_else(|| anyhow::anyhow!("Selected branch is no longer available"))?;
+        walk.reset()?;
+        walk.push(git2::Oid::from_str(&selected.sha)?)?;
+    }
     let limit = limit.clamp(100, 5000);
     let mut commits = Vec::new();
     for id in walk.take(limit + 1) {
@@ -87,6 +129,7 @@ pub fn graph(root: &Path, include_remotes: bool, limit: usize) -> Result<GitGrap
             return Ok(GitGraph {
                 commits,
                 has_more: true,
+                branches,
             });
         }
         let commit = repo.find_commit(id)?;
@@ -102,6 +145,7 @@ pub fn graph(root: &Path, include_remotes: bool, limit: usize) -> Result<GitGrap
     Ok(GitGraph {
         commits,
         has_more: false,
+        branches,
     })
 }
 

@@ -2779,7 +2779,7 @@
       "filterBranches": "筛选分支…",
       "clearBranchSearch": "清空分支搜索",
       "noMatchingBranches": "没有匹配的分支",
-      "loadedBranchesHint": "可筛选当前已加载历史中的分支；加载更多可显示更早的分支。",
+      "loadedBranchesHint": "筛选全部本地分支和已缓存的远程分支。",
       "tools": "Git Graph 常用功能",
       "search": "搜索提交",
       "terminal": "打开工作树终端",

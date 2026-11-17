@@ -2739,7 +2739,7 @@
       "filterBranches": "篩選分支…",
       "clearBranchSearch": "清空分支搜尋",
       "noMatchingBranches": "沒有符合的分支",
-      "loadedBranchesHint": "可篩選目前已載入歷史中的分支；載入更多可顯示較早的分支。",
+      "loadedBranchesHint": "篩選全部本機分支和已快取的遠端分支。",
       "tools": "Git Graph 常用功能",
       "search": "搜尋提交",
       "terminal": "開啟工作樹終端",

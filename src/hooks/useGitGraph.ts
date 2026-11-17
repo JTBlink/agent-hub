@@ -7,6 +7,7 @@ export function useGitGraph(
   remotes: boolean,
   limit: number,
   revision: number,
+  branch?: string,
 ) {
   const scope = JSON.stringify([projectId, worktreePath, remotes]);
   const key = JSON.stringify([
@@ -15,6 +16,7 @@ export function useGitGraph(
     remotes,
     limit,
     revision,
+    branch,
   ]);
   const [result, setResult] = useState<{
     key: string;
@@ -24,7 +26,13 @@ export function useGitGraph(
   }>();
   useEffect(() => {
     let cancelled = false;
-    void getProjectGitGraph(projectId, worktreePath, remotes, limit).then(
+    void getProjectGitGraph(
+      projectId,
+      worktreePath,
+      remotes,
+      limit,
+      ...(branch ? [branch] : []),
+    ).then(
       (data) => {
         if (!cancelled) setResult({ key, scope, data });
       },
@@ -41,7 +49,7 @@ export function useGitGraph(
     return () => {
       cancelled = true;
     };
-  }, [projectId, worktreePath, remotes, limit, revision, key, scope]);
+  }, [projectId, worktreePath, remotes, limit, revision, branch, key, scope]);
   return result?.scope === scope
     ? { ...result, loading: result.key !== key }
     : undefined;

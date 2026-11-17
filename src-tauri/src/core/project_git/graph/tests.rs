@@ -65,3 +65,37 @@ fn empty_repository_has_no_commits() {
     git2::Repository::init(dir.path()).unwrap();
     assert!(graph(dir.path(), true, 100).unwrap().commits.is_empty());
 }
+
+#[test]
+fn lists_branch_tips_outside_loaded_history_and_loads_selected_ancestry() {
+    let dir = tempfile::tempdir().unwrap();
+    let repo = git2::Repository::init(dir.path()).unwrap();
+    let base = repo.find_commit(commit(&repo, "base", &[])).unwrap();
+    repo.branch("older", &base, true).unwrap();
+    repo.remote("origin", "https://example.invalid/demo.git")
+        .unwrap();
+    repo.reference("refs/remotes/origin/older", base.id(), true, "test")
+        .unwrap();
+    let mut tip = base.id();
+    for _ in 0..110 {
+        let parent = repo.find_commit(tip).unwrap();
+        tip = commit(&repo, "newer", &[&parent]);
+    }
+    repo.branch("main", &repo.find_commit(tip).unwrap(), true)
+        .unwrap();
+    repo.set_head("refs/heads/main").unwrap();
+    let page = graph(dir.path(), true, 100).unwrap();
+    assert!(page.has_more);
+    assert!(!page
+        .commits
+        .iter()
+        .any(|c| c.commit.sha == base.id().to_string()));
+    assert!(page.branches.iter().any(|b| b.name == "older"));
+    assert!(page.branches.iter().any(|b| b.name == "origin/older"));
+    let local = graph(dir.path(), false, 100).unwrap();
+    assert!(local.branches.iter().all(|b| !b.remote));
+    let selected = graph_for_branch(dir.path(), true, 100, Some("refs/heads/older")).unwrap();
+    assert_eq!(selected.commits.len(), 1);
+    assert_eq!(selected.commits[0].commit.sha, base.id().to_string());
+    assert_eq!(selected.branches.len(), page.branches.len());
+}

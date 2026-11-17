@@ -45,6 +45,7 @@ export function GitGraph({
   const { t } = useTranslation();
   const sharedTabs = useContext(GitEditorTabsContext);
   const [branchFilter, setBranchFilter] = useState("");
+  const [branchRef, setBranchRef] = useState<string>();
   const [remotes, setRemotes] = useState(true);
   const [limit, setLimit] = useState(200);
   const [refresh, setRefresh] = useState(0);
@@ -58,6 +59,7 @@ export function GitGraph({
     setSelected(focusCommit?.sha);
     setQuery("");
     setBranchFilter("");
+    setBranchRef(undefined);
   }
   const result = useGitGraph(
     target.projectId,
@@ -65,11 +67,13 @@ export function GitGraph({
     remotes,
     limit,
     revision + refresh,
+    branchRef,
   );
   const commits = result?.data?.commits;
-  const branchOption = graphBranchOptions(commits ?? []).find(
-    (option) => option.value === branchFilter,
-  );
+  const branchOption = graphBranchOptions(
+    commits ?? [],
+    result?.data?.branches,
+  ).find((option) => option.value === branchFilter);
   const visibleCommits = graphBranchHistory(commits ?? [], branchOption?.sha);
   return (
     <section
@@ -86,14 +90,29 @@ export function GitGraph({
         branchControl={
           <GitGraphBranchFilter
             commits={commits ?? []}
+            branches={result?.data?.branches}
             value={branchOption ? branchFilter : ""}
-            onChange={setBranchFilter}
+            onChange={(value) => {
+              setBranchFilter(value);
+              const option = graphBranchOptions(
+                commits ?? [],
+                result?.data?.branches,
+              ).find((candidate) => candidate.value === value);
+              setBranchRef(
+                option
+                  ? `${option.remote ? "refs/remotes/" : "refs/heads/"}${option.name}`
+                  : undefined,
+              );
+            }}
           />
         }
         remotes={remotes}
         onRemotes={(next) => {
           setRemotes(next);
-          if (!next && branchOption?.remote) setBranchFilter("");
+          if (!next && branchOption?.remote) {
+            setBranchFilter("");
+            setBranchRef(undefined);
+          }
         }}
         query={query}
         onQuery={setQuery}

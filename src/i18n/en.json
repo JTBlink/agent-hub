@@ -2782,7 +2782,7 @@
       "filterBranches": "Filter branches…",
       "clearBranchSearch": "Clear branch search",
       "noMatchingBranches": "No matching branches",
-      "loadedBranchesHint": "Filter branches in the loaded history; load more to include older branch tips.",
+      "loadedBranchesHint": "Filter all local and cached remote branches.",
       "tools": "Git Graph tools",
       "search": "Search commits",
       "terminal": "Open worktree terminal",
