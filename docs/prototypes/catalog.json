@@ -1,5 +1,14 @@
 [
   {
+    "id": "subagents",
+    "title": "Subagent 管理",
+    "description": "中性角色契约、按 Agent 渲染原生定义、链接或复制到各自命名目录，以及项目中央库的团队入口。",
+    "status": "仅原型",
+    "path": "/docs/prototypes/subagents/",
+    "source": "docs/prototypes/subagents/",
+    "implementation": "当前只有交互原型：复用工作台主题、app-* 组件类与 DetailSheet、AppDialog、ThemedSelect、ToggleSwitch。契约库、原生渲染、部署清单与 CLI 尚未接入正式应用。"
+  },
+  {
     "id": "ai-native",
     "title": "AI Native",
     "description": "需求与开发、缺陷、Issue、MR、发布检查等场景的 Skill / 脚本流程编排独立原型。",
@@ -58,7 +67,10 @@
     "status": "已有实现",
     "path": "/docs/prototypes/install/",
     "source": "docs/prototypes/install/",
-    "aliases": ["/prototypes/install/", "/docs/prototypes/install.html"],
+    "aliases": [
+      "/prototypes/install/",
+      "/docs/prototypes/install.html"
+    ],
     "implementation": "正式发现页已分为 Skills 和自动化任务，分别选择来源；任务支持推荐模板、本地目录 / JSON 和 Git 仓库导入，配置项目与日程后创建，默认暂停。"
   },
   {
@@ -68,7 +80,9 @@
     "status": "已有实现",
     "source": "docs/prototypes/hosts/",
     "path": "/docs/prototypes/hosts/",
-    "aliases": ["/tests/browser/settings-hosts-prototype.html"],
+    "aliases": [
+      "/tests/browser/settings-hosts-prototype.html"
+    ],
     "implementation": "设置页已采用方案列表与编辑器，支持系统 Hosts 编辑、方案新建 / 复制 / 重命名 / 删除、保存和显式应用。保存不修改系统，应用时校验修订并按需授权；方案接入统一 Git 备份，CLI 共用实现。"
   },
   {
@@ -78,7 +92,9 @@
     "status": "已有实现",
     "path": "/docs/prototypes/agent-settings/",
     "source": "docs/prototypes/agent-settings/",
-    "aliases": ["/tests/browser/settings-agents-prototype.html"],
+    "aliases": [
+      "/tests/browser/settings-agents-prototype.html"
+    ],
     "implementation": "设置页已支持按安装 / 启用状态筛选、搜索名称与指令、自定义 Agent、拖动排序、编辑启动指令、切换常用参数及设置默认 Agent；可恢复默认指令，并沿用统一 Git 备份与同步。"
   }
 ]

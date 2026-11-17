@@ -16,6 +16,7 @@
 
 | 名称             | 目录                                         | 用途                               |
 | ---------------- | -------------------------------------------- | ---------------------------------- |
+| `subagents`      | [subagents/](subagents/index.html)           | Subagent 契约库与原生入口部署      |
 | `ai-native`      | [ai-native/](ai-native/README.md)            | 实验性入口与场景流程编排（单文件） |
 | `preview`        | [preview/](preview/README.md)                | 网页、HTML 与 Markdown 预览和检查  |
 | `tasks-terminal` | [tasks-terminal/](tasks-terminal/index.html) | 任务与项目终端的历史交互方案       |

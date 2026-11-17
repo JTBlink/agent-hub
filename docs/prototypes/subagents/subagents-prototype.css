@@ -1,0 +1,13 @@
+/* Requirements prototype: only host-level layout lives here; every color,
+   border and type scale comes from the shared workbench tokens. */
+:root {
+  /* DetailSheet and the dialogs anchor to these two variables. */
+  --app-sidebar-width: 200px;
+}
+
+html,
+body,
+#root {
+  height: 100vh;
+  overflow: hidden;
+}

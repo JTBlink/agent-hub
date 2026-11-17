@@ -41,7 +41,8 @@
     "website:build": "npm run homepage:build -- _site/index.html && npm run docs:build",
     "prototype:preview": "vite --host 127.0.0.1 --port 4176 --strictPort",
     "prototype:hosts": "vite --host 127.0.0.1 --port 4177 --strictPort --open /docs/prototypes/hosts/",
-    "prototype:agents": "vite --host 127.0.0.1 --port 4178 --strictPort --open /docs/prototypes/agent-settings/"
+    "prototype:agents": "vite --host 127.0.0.1 --port 4178 --strictPort --open /docs/prototypes/agent-settings/",
+    "prototype:subagents": "vite --host 127.0.0.1 --port 4179 --strictPort --open /docs/prototypes/subagents/"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",

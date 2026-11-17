@@ -46,9 +46,10 @@ it("opens the sidebar from catalog and CLI preview links while keeping the bare 
     `const entries = ${JSON.stringify(catalog)};`,
   );
   index.window.eval(script);
-  const links = [
-    ...index.window.document.querySelectorAll("article:first-child a"),
-  ];
+  const article = index.window.document
+    .querySelector('a[aria-label="打开AI Native原型"]')
+    .closest("article");
+  const links = [...article.querySelectorAll("a")];
   expect(new URL(links[0].href).searchParams.get("view")).toBe("sidebar");
   expect(links.some((link) => /^方案 [ABC]$/.test(link.textContent))).toBe(
     false,
