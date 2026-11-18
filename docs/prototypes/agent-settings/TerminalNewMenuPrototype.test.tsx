@@ -72,10 +72,8 @@ it("keeps Herdr schemes selectable through mouse down and returns one level on E
         new MouseEvent("mouseover", { bubbles: true }),
       );
     });
-    expect(
-      document.querySelector('[aria-label="Herdr 启动方案"]'),
-    ).not.toBeNull();
-    const submenu = document.querySelector('[aria-label="Herdr 启动方案"]')!;
+    expect(document.querySelector('[aria-label="启动方案"]')).not.toBeNull();
+    const submenu = document.querySelector('[aria-label="启动方案"]')!;
     expect(submenu.parentElement?.textContent).toBe(submenu.textContent);
     expect(submenu.parentElement?.textContent).not.toContain(
       "通过 Herdr 启动 · Codex",
@@ -88,24 +86,22 @@ it("keeps Herdr schemes selectable through mouse down and returns one level on E
         }),
       );
     });
-    expect(
-      document.querySelector('[aria-label="Herdr 启动方案"]'),
-    ).not.toBeNull();
+    expect(document.querySelector('[aria-label="启动方案"]')).not.toBeNull();
     await act(async () => {
       custom().dispatchEvent(
         new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
       );
     });
     expect(labelled("通过 Herdr 启动 Codex")).not.toBeNull();
-    expect(document.querySelector('[aria-label="Herdr 启动方案"]')).toBeNull();
+    expect(document.querySelector('[aria-label="启动方案"]')).toBeNull();
     await mouse(labelled("通过 Herdr 启动 Codex"));
     await mouse(custom());
     expect(launch).toHaveBeenCalledExactlyOnceWith(
       { agentKey: "codex", groupId: "custom" },
-      "herdr",
+      "terminal",
       "Codex",
     );
-    expect(document.querySelector('[aria-label="Herdr 启动方案"]')).toBeNull();
+    expect(document.querySelector('[aria-label="启动方案"]')).toBeNull();
     await mouse(labelled("新建标签"));
     await act(async () => {
       labelled("在内嵌终端启动 Codex").dispatchEvent(

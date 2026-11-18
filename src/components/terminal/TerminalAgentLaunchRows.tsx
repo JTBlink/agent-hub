@@ -205,7 +205,6 @@ export function TerminalAgentLaunchRows({
           disabled={disabled}
           herdrDisabled={!!herdrBusy}
           label={selected.label}
-          backend={panel.backend}
           config={selected.schemes}
           focusFirst={panel.focus}
           onBack={() => {

@@ -2426,7 +2426,7 @@
     "error": "Terminal operation failed",
     "inputFull": "Terminal input queue is full; try again shortly",
     "herdrSettings": "Herdr settings…",
-    "launchSchemes": "{{backend}} launch schemes",
+    "launchSchemes": "Launch schemes",
     "schemeCount": "{{count}} schemes"
   },
   "tasks": {

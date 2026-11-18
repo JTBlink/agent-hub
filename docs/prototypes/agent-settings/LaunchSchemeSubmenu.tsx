@@ -10,7 +10,6 @@ import type { LaunchBackend } from "./TerminalNewMenuPrototype";
 export function LaunchSchemeSubmenu({
   anchor,
   label,
-  backend,
   config,
   focusFirst,
   onSelect,
@@ -18,7 +17,6 @@ export function LaunchSchemeSubmenu({
 }: {
   anchor: HTMLElement | null;
   label: string;
-  backend: LaunchBackend;
   config: AgentGroups;
   focusFirst: boolean;
   onSelect: (id: string, backend: LaunchBackend) => void;
@@ -80,10 +78,7 @@ export function LaunchSchemeSubmenu({
         }
       }}
     >
-      <div
-        role="menu"
-        aria-label={`${backend === "herdr" ? "Herdr" : "终端"} 启动方案`}
-      >
+      <div role="menu" aria-label="启动方案">
         {config.groups.map((group) => (
           <div key={group.id} className="relative flex items-center rounded-md">
             <button
@@ -91,9 +86,9 @@ export function LaunchSchemeSubmenu({
               role="menuitemradio"
               aria-checked={group.id === config.defaultId}
               disabled={!group.command.trim()}
-              title={`${backend === "herdr" ? "通过 Herdr" : "在内嵌终端"}启动 ${label} · ${group.name}`}
+              title={`在内嵌终端启动 ${label} · ${group.name}`}
               className="flex min-h-8 min-w-0 flex-1 items-center gap-2 rounded-md py-1.5 pl-2 pr-11 text-left text-sm text-secondary outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40"
-              onClick={() => onSelect(group.id, backend)}
+              onClick={() => onSelect(group.id, "terminal")}
             >
               <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-accent">
                 {group.id === config.defaultId && <Check size={14} />}

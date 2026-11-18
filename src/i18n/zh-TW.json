@@ -2383,7 +2383,7 @@
     "error": "終端操作失敗",
     "inputFull": "終端輸入佇列已滿，請稍後重試",
     "herdrSettings": "Herdr 設定…",
-    "launchSchemes": "{{backend}} 啟動方案",
+    "launchSchemes": "啟動方案",
     "schemeCount": "{{count}} 套"
   },
   "tasks": {

@@ -76,7 +76,13 @@ impl Client<'_> {
     }
 
     pub fn call(&self, args: &[&str], timeout: u64) -> Result<Value> {
-        let data: Value = serde_json::from_str(&self.text(args, timeout)?)
+        let output = self.text(args, timeout)?;
+        // Herdr's pane run CLI can acknowledge admission with only its exit
+        // status. Structured reads still require a valid JSON response.
+        if matches!(args, ["pane", "run", ..]) && output.trim().is_empty() {
+            return Ok(Value::Null);
+        }
+        let data: Value = serde_json::from_str(&output)
             .context("Invalid Herdr response; check client/server compatibility")?;
         if data.get("error").is_some() {
             if let Some(error) = command_failure(&data.to_string()) {

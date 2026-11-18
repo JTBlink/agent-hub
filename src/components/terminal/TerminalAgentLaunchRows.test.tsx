@@ -9,7 +9,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-it("keeps Herdr schemes selectable through mouse down and returns one level on Escape", async () => {
+it("routes scheme names to terminals and Herdr icons to Herdr regardless of the opener", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const host = document.createElement("div");
   document.body.append(host);
@@ -102,7 +102,11 @@ it("keeps Herdr schemes selectable through mouse down and returns one level on E
     ).toBeNull();
     await mouse(labelled("terminal.openHerdr Codex"));
     await mouse(custom());
-    expect(launch).toHaveBeenCalledExactlyOnceWith("codex", "custom", "herdr");
+    expect(launch).toHaveBeenCalledExactlyOnceWith(
+      "codex",
+      "custom",
+      "terminal",
+    );
     expect(
       document.querySelector('[aria-label="terminal.launchSchemes"]'),
     ).toBeNull();

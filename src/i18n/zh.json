@@ -2423,7 +2423,7 @@
     "error": "终端操作失败",
     "inputFull": "终端输入队列已满，请稍后重试",
     "herdrSettings": "Herdr 设置…",
-    "launchSchemes": "{{backend}} 启动方案",
+    "launchSchemes": "启动方案",
     "schemeCount": "{{count}} 套"
   },
   "tasks": {

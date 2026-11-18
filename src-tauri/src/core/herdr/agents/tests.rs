@@ -169,7 +169,8 @@ fn starts_a_configured_executable_path_without_replacing_it_with_the_canonical_b
     std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o700)).unwrap();
     let mut script = std::fs::read_to_string(&executable).unwrap();
     script = script.replace("  *) exit 2 ;;", r#"  'pane process-info') printf '%s' '{"process_info":{"shell_pid":7,"foreground_processes":[{"pid":7,"name":"zsh"}]}}' ;;
-  'pane run'|'agent rename'|'agent wait') printf '%s' '{"result":{}}' ;;
+  'pane run') : ;;
+  'agent rename'|'agent wait') printf '%s' '{"result":{}}' ;;
   *) exit 2 ;;"#);
     script = script.replace(
         "\"agent_status\":\"blocked\"",
@@ -194,6 +195,8 @@ fn starts_a_configured_executable_path_without_replacing_it_with_the_canonical_b
         program.display()
     )));
     assert_eq!(log.matches("\nrun\n").count(), 1);
+    assert!(log.contains("\nagent\nrename\nw9:p3\n"));
+    assert!(log.contains("\nagent\nwait\n"));
     assert!(!log.contains("\nstart\n"));
     assert!(!directory.path().join("NEVER").exists());
 }

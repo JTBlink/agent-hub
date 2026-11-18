@@ -311,7 +311,6 @@ export function NewMenu({
           key={`${panel.entryKey}-${panel.backend}`}
           anchor={panel.anchor}
           label={panelEntry.label}
-          backend={panel.backend}
           config={panelGroups}
           focusFirst={panel.focusFirst}
           onBack={() => {

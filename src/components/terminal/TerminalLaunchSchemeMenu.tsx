@@ -12,7 +12,6 @@ export function TerminalLaunchSchemeMenu({
   id,
   anchor,
   label,
-  backend,
   config,
   focusFirst,
   onSelect,
@@ -27,7 +26,6 @@ export function TerminalLaunchSchemeMenu({
   herdrDisabled: boolean;
   anchor: HTMLElement | null;
   label: string;
-  backend: TerminalLaunchBackend;
   config: AgentLaunchSchemes;
   focusFirst: boolean;
   onSelect: (id: string, backend: TerminalLaunchBackend) => void;
@@ -87,13 +85,7 @@ export function TerminalLaunchSchemeMenu({
         }
       }}
     >
-      <div
-        id={id}
-        role="menu"
-        aria-label={t("terminal.launchSchemes", {
-          backend: backend === "herdr" ? "Herdr" : t("terminal.new"),
-        })}
-      >
+      <div id={id} role="menu" aria-label={t("terminal.launchSchemes")}>
         {config.items.map((group) => (
           <div key={group.id} className="relative flex items-center rounded-md">
             <button
@@ -101,9 +93,9 @@ export function TerminalLaunchSchemeMenu({
               role="menuitemradio"
               aria-checked={group.id === config.default_id}
               disabled={disabled || !group.instruction.trim()}
-              title={`${label} · ${group.name}`}
+              title={`${t("terminal.new")} · ${label} · ${group.name}`}
               className={`flex min-h-8 min-w-0 flex-1 items-center gap-2 rounded-md py-1.5 pl-2 text-left text-sm text-secondary outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 ${allowHerdr ? "pr-11" : "pr-2"}`}
-              onClick={() => onSelect(group.id, backend)}
+              onClick={() => onSelect(group.id, "terminal")}
             >
               <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-accent">
                 {group.id === config.default_id && <Check size={14} />}
