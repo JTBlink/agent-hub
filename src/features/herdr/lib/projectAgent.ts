@@ -11,6 +11,8 @@ export async function openProjectHerdrAgent(
   agent: HerdrAgent,
   verify: () => boolean,
   onCreated?: (opened: ProjectAgentAttachment) => void,
+  schemeId?: string,
+  schemeName?: string,
 ) {
   const kind = agent === "claude_teams" ? "claude" : agent;
   const prefix = `hub-${agent.replaceAll("_", "-")}-`;
@@ -30,9 +32,14 @@ export async function openProjectHerdrAgent(
     opened.target,
     {
       kind,
+      ...(schemeId ? { scheme_id: schemeId } : {}),
       name: `${prefix}${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`,
       direction: "tab",
-      tab_label: herdrAgentLabel(agent),
+      tab_label: Array.from(
+        `${herdrAgentLabel(agent)}${schemeName ? ` · ${schemeName}` : ""}`,
+      )
+        .slice(0, 80)
+        .join(""),
       prompt: "",
       ...(agent === "claude_teams" ? { teams: true } : {}),
     },

@@ -31,11 +31,19 @@ enum LaunchCommand {
     /// 查看共享启动环境与可用后端。
     Environment,
     /// 解析一个 Agent 的有效启动指令（不启动进程）。
-    Resolve { agent: String },
+    Resolve {
+        agent: String,
+        #[arg(long)]
+        scheme: Option<String>,
+    },
     /// 在明确的 Herdr 会话和空闲窗格启动一次 Agent，不投递提示词。
     #[cfg(feature = "herdr")]
     Start {
         agent: String,
+        #[arg(long)]
+        expected_plan: Option<String>,
+        #[arg(long)]
+        scheme: Option<String>,
         #[arg(long)]
         session: String,
         #[arg(long)]
@@ -51,6 +59,10 @@ enum LaunchCommand {
     /// 在原生终端启动一次 Agent。
     Terminal {
         agent: String,
+        #[arg(long)]
+        expected_plan: Option<String>,
+        #[arg(long)]
+        scheme: Option<String>,
         #[arg(long)]
         cwd: std::path::PathBuf,
         #[arg(long)]
@@ -141,10 +153,18 @@ pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
             let herdr_path: Option<String> = None;
             super::print_json(&serde_json::json!({ "herdr_path": herdr_path }), json);
         }
-        LaunchCommand::Resolve { agent } => super::print_json(&config::resolve(&agent)?, json),
+        LaunchCommand::Resolve { agent, scheme } => {
+            let launch = config::resolve_scheme(&agent, scheme.as_deref())?;
+            let fingerprint = config::plan_fingerprint(&launch)?;
+            let mut value = serde_json::to_value(launch)?;
+            value["fingerprint"] = serde_json::Value::String(fingerprint);
+            super::print_json(&value, json);
+        }
         #[cfg(feature = "herdr")]
         LaunchCommand::Start {
             agent,
+            expected_plan,
+            scheme,
             session,
             pane,
             name,
@@ -159,7 +179,8 @@ pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
                     && !name.is_empty(),
                 "Invalid Herdr target"
             );
-            let mut launch = config::resolve(&agent)?;
+            let mut launch = config::resolve_scheme(&agent, scheme.as_deref())?;
+            config::verify_plan(&launch, expected_plan.as_deref())?;
             if let Some(raw) = arguments_json {
                 launch.arguments = serde_json::from_str(&raw)?;
             }
@@ -188,6 +209,8 @@ pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
         }
         LaunchCommand::Terminal {
             agent,
+            expected_plan,
+            scheme,
             cwd,
             prompt_file,
             arguments_json,
@@ -195,7 +218,8 @@ pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
         } => {
             use app_lib::core::agent_launcher::external_terminal;
             use std::io::Write;
-            let mut launch = config::resolve(&agent)?;
+            let mut launch = config::resolve_scheme(&agent, scheme.as_deref())?;
+            config::verify_plan(&launch, expected_plan.as_deref())?;
             if let Some(raw) = arguments_json {
                 launch.arguments = serde_json::from_str(&raw)?;
             }

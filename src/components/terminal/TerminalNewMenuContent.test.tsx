@@ -10,6 +10,22 @@ const defaults = vi.hoisted(() => ({ key: "codex" }));
 vi.mock("../../hooks/useDefaultAgentKey", () => ({
   useDefaultAgentKey: () => defaults.key,
 }));
+vi.mock("../../hooks/useAgentLaunchSettings", () => ({
+  useAgentLaunchSettings: () => ({
+    snapshot: {
+      revision: "test",
+      defaults: {
+        codex: "codex --dangerously-bypass-approvals-and-sandbox",
+        claude_code: "claude --dangerously-skip-permissions",
+        opencode: "opencode --auto",
+        hermes: "hermes --yolo",
+      },
+      document: { schema_version: 2, default_agent: defaults.key, schemes: {} },
+    },
+    error: "",
+    busy: false,
+  }),
+}));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -141,11 +157,11 @@ it("launches a selected Agent in the current terminal or through Herdr", async (
       ),
     );
     const codex = [
-      ...host.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]'),
+      ...host.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
     ].find((button) => button.textContent?.includes("Codex"))!;
-    expect(codex.getAttribute("aria-checked")).toBe("true");
+    expect(codex.textContent).toContain("Codex");
     await act(async () => codex.click());
-    expect(onNew).toHaveBeenCalledWith("codex");
+    expect(onNew).toHaveBeenCalledWith("codex", "default");
 
     await act(async () =>
       root.render(
@@ -167,7 +183,7 @@ it("launches a selected Agent in the current terminal or through Herdr", async (
       '[aria-label="terminal.openHerdr Claude Code"]',
     )!;
     await act(async () => herdr.click());
-    expect(onHerdr).toHaveBeenCalledWith("claude");
+    expect(onHerdr).toHaveBeenCalledWith("claude", "default");
     expect(close).toHaveBeenCalledTimes(2);
   } finally {
     await act(async () => root.unmount());

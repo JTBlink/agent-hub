@@ -466,13 +466,23 @@ fn restores_agent_instructions_through_git_without_changing_local_tool_settings(
         "codex --search --config 'note=hello world'".into(),
     );
     let saved = launch::save(document, &initial.revision).unwrap();
+    let mut document = saved.document.clone();
+    document
+        .schemes
+        .get_mut("codex")
+        .unwrap()
+        .items
+        .push(launch::LaunchScheme {
+            id: "custom".into(),
+            name: "Custom".into(),
+            instruction: "custom-codex --search".into(),
+        });
+    let saved = launch::save(document, &saved.revision).unwrap();
     initialize(&e.store).unwrap();
     let tag = commit(&e.store, "configured Agent").unwrap();
     assert!(repo_dir().join("user-config/agent-launch.json").is_file());
     let mut changed = saved.document;
-    changed
-        .instructions
-        .insert("codex".into(), "codex --no-alt-screen".into());
+    changed.schemes.get_mut("codex").unwrap().items[0].instruction = "codex --no-alt-screen".into();
     launch::save(changed, &saved.revision).unwrap();
     commit(&e.store, "changed Agent").unwrap();
     restore(&e.store, &tag).unwrap();
@@ -481,6 +491,12 @@ fn restores_agent_instructions_through_git_without_changing_local_tool_settings(
         ["--search", "--config", "note=hello world"]
     );
     assert_eq!(launch::load().unwrap().document.default_agent, "hermes");
+    assert_eq!(
+        launch::resolve_scheme("codex", Some("custom"))
+            .unwrap()
+            .program,
+        "custom-codex"
+    );
     assert_eq!(
         e.store.get_setting("disabled_tools").unwrap().as_deref(),
         Some("[\"codex\"]")

@@ -6,7 +6,6 @@ import {
   Settings,
   Smartphone,
   TerminalSquare,
-  Check,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -16,11 +15,13 @@ import {
   defaultTerminalAgent,
   type HerdrAgent,
 } from "@app/herdr";
-import { AgentIcon } from "../AgentIcon";
 import type { CardAction } from "../CardActionMenu";
+import { CardActionMenuItems } from "../CardActionMenuItems";
 import type { ToolInfo } from "../../lib/tauri";
 import { queuePreviewWeb } from "../../features/preview/shared/openRequests";
-import { useDefaultAgentKey } from "../../hooks/useDefaultAgentKey";
+import { useAgentLaunchSettings } from "../../hooks/useAgentLaunchSettings";
+import { agentLaunchSchemes } from "../../lib/agentLaunchConfig";
+import { TerminalAgentLaunchRows } from "./TerminalAgentLaunchRows";
 
 export function TerminalNewMenuContent({
   tools,
@@ -34,31 +35,40 @@ export function TerminalNewMenuContent({
 }: {
   tools: readonly Pick<ToolInfo, "key" | "installed">[];
   terminalDisabled: boolean;
-  onNew: (agent?: HerdrAgent) => void;
+  onNew: (agent?: HerdrAgent, schemeId?: string, schemeName?: string) => void;
   onNewMarkdown?: () => void;
-  onHerdr?: (agent: HerdrAgent) => void;
+  onHerdr?: (agent: HerdrAgent, schemeId?: string, schemeName?: string) => void;
   onHerdrSettings?: () => void;
   herdrBusy?: boolean;
   close: () => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const launch = useAgentLaunchSettings();
   const [query, setQuery] = useState("");
   const agents = installedTerminalAgents(tools);
-  const defaultAgent = defaultTerminalAgent(agents, useDefaultAgentKey());
+  const defaultAgent = defaultTerminalAgent(
+    agents,
+    launch.snapshot?.document.default_agent ?? "codex",
+  );
+  const needle = query.trim().toLocaleLowerCase();
+  const select = (action: () => void) => () => {
+    close();
+    action();
+  };
   const actions: CardAction[] = [
     {
       key: "terminal",
       label: t("terminal.new"),
       icon: <TerminalSquare size={16} />,
       disabled: terminalDisabled,
-      onSelect: () => onNew(),
+      onSelect: select(() => onNew()),
     },
     {
       key: "browser",
       label: t("terminal.newBrowser"),
       icon: <Globe size={16} />,
-      onSelect: () => queuePreviewWeb("about:blank"),
+      onSelect: select(() => queuePreviewWeb("about:blank")),
     },
     ...(onNewMarkdown
       ? [
@@ -66,7 +76,7 @@ export function TerminalNewMenuContent({
             key: "markdown",
             label: t("terminal.newMarkdown"),
             icon: <FileText size={16} />,
-            onSelect: onNewMarkdown,
+            onSelect: select(onNewMarkdown),
           },
         ]
       : []),
@@ -74,33 +84,42 @@ export function TerminalNewMenuContent({
       key: "mobile",
       label: t("terminal.newMobile"),
       icon: <Smartphone size={16} />,
-      onSelect: () =>
+      onSelect: select(() =>
         queuePreviewWeb("about:blank", "default", {
           width: 390,
           height: 844,
           mobile: true,
         }),
-    },
-    ...agents.map(({ id, label, toolKey }, index) => ({
-      key: id,
-      label,
-      separatorBefore: index === 0,
-      checked: defaultAgent?.id === id,
-      disabled: terminalDisabled,
-      icon: (
-        <AgentIcon
-          agentKey={toolKey}
-          className="h-5 w-5 border-0 bg-transparent"
-        />
       ),
-      onSelect: () => onNew(id),
-    })),
+    },
+  ];
+  const filtered = actions.filter((action) =>
+    action.label.toLocaleLowerCase().includes(needle),
+  );
+  const snapshot = launch.snapshot;
+  const rows = snapshot
+    ? agents
+        .map((agent) => ({
+          ...agent,
+          schemes: agentLaunchSchemes(
+            snapshot,
+            agent.toolKey,
+            t("agentLaunch.schemes.automatic"),
+          ),
+        }))
+        .filter((row) =>
+          `${row.label} ${row.schemes.items.map((scheme) => `${scheme.name} ${scheme.instruction}`).join(" ")}`
+            .toLocaleLowerCase()
+            .includes(needle),
+        )
+    : [];
+  const footer: CardAction[] = [
     {
       key: "settings",
       label: t("terminal.agentSettings"),
       icon: <Settings size={16} />,
       separatorBefore: true,
-      onSelect: () => navigate("/settings#agents"),
+      onSelect: select(() => navigate("/settings#agents")),
     },
     ...(onHerdrSettings
       ? [
@@ -108,13 +127,12 @@ export function TerminalNewMenuContent({
             key: "herdr-settings",
             label: t("terminal.herdrSettings"),
             icon: <HerdrIcon width={16} height={16} viewBox="0 0 32 32" />,
-            onSelect: onHerdrSettings,
+            onSelect: select(onHerdrSettings),
           },
         ]
       : []),
-  ];
-  const filtered = actions.filter((action) =>
-    action.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
+  ].filter(
+    (action) => !needle || action.label.toLocaleLowerCase().includes(needle),
   );
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Tab") {
@@ -125,7 +143,11 @@ export function TerminalNewMenuContent({
       ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
         'button[role="menuitem"]:not(:disabled), button[role="menuitemradio"]:not(:disabled)',
       ),
-    ];
+    ].filter(
+      (button) =>
+        button.closest('[role="menu"]') ===
+        event.currentTarget.querySelector('[role="menu"]'),
+    );
     const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
     const input = event.target instanceof HTMLInputElement;
     const next =
@@ -150,10 +172,11 @@ export function TerminalNewMenuContent({
     }
   };
   return (
-    <div className="w-72 max-w-full" onKeyDown={onKeyDown}>
+    <div className="w-80 max-w-full" onKeyDown={onKeyDown}>
       <label className="m-1 mb-2 flex items-center gap-2 border-b border-border-subtle px-2 pb-2 text-muted">
         <Search size={14} className="shrink-0" />
         <input
+          autoFocus
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -163,69 +186,30 @@ export function TerminalNewMenuContent({
         />
       </label>
       <div role="menu" aria-label={t("terminal.newMenu")}>
-        {filtered.map((action) => (
-          <div key={action.key}>
-            {action.separatorBefore && !query.trim() && (
-              <div
-                role="separator"
-                className="my-1 border-t border-border-subtle"
-              />
-            )}
-            <div className="group/agent flex items-center gap-1 rounded-md hover:bg-surface-hover focus-within:bg-surface-hover">
-              <button
-                type="button"
-                role={
-                  action.checked === undefined ? "menuitem" : "menuitemradio"
-                }
-                aria-checked={action.checked}
-                disabled={action.disabled}
-                onClick={() => {
-                  close();
-                  action.onSelect();
-                }}
-                className={`flex min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40 ${action.checked ? "text-accent" : "text-secondary"}`}
-              >
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">
-                  {action.icon}
-                </span>
-                <span className="min-w-0 flex-1 truncate">{action.label}</span>
-                {action.checked && (
-                  <Check
-                    size={16}
-                    className="shrink-0 text-accent"
-                    aria-hidden="true"
-                  />
-                )}
-              </button>
-              {onHerdr && agents.some((agent) => agent.id === action.key) && (
-                <button
-                  type="button"
-                  role="menuitem"
-                  aria-label={`${t("terminal.openHerdr")} ${action.label}`}
-                  title={`${t("terminal.openHerdr")} ${action.label}`}
-                  disabled={action.disabled || herdrBusy}
-                  className="app-button-ghost pointer-events-none mr-1 h-7 w-7 shrink-0 p-0 text-muted opacity-0 transition-opacity group-hover/agent:pointer-events-auto group-hover/agent:opacity-70 group-focus-within/agent:pointer-events-auto group-focus-within/agent:opacity-70 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-70"
-                  onClick={() => {
-                    close();
-                    onHerdr(action.key as HerdrAgent);
-                  }}
-                >
-                  <HerdrIcon
-                    width={16}
-                    height={16}
-                    viewBox="0 0 32 32"
-                    aria-hidden="true"
-                  />
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-        {!filtered.length && (
+        <CardActionMenuItems actions={filtered} close={close} />
+        <TerminalAgentLaunchRows
+          rows={rows}
+          defaultAgent={defaultAgent?.id}
+          disabled={terminalDisabled}
+          herdrBusy={herdrBusy}
+          onNew={onNew}
+          onHerdr={onHerdr}
+          close={close}
+        />
+        {!launch.snapshot && agents.length > 0 && (
+          <p
+            role={launch.error ? "alert" : "status"}
+            className="px-3 py-2 text-xs text-muted"
+          >
+            {launch.error || t("common.loading")}
+          </p>
+        )}
+        {!filtered.length && !rows.length && !footer.length && (
           <p role="status" className="px-3 py-4 text-xs text-muted">
             {t("terminal.noNewMatches")}
           </p>
         )}
+        <CardActionMenuItems actions={footer} close={close} />
       </div>
     </div>
   );

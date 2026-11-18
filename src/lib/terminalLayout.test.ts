@@ -41,6 +41,9 @@ it("preserves custom tab names and independent pane attachments without persisti
     },
   });
   expect(localStorage.getItem(TERMINAL_LAYOUT_KEY)).not.toContain("private");
+  expect(readTerminalLayout().tabs[0].launchSchemeId).toBeUndefined();
+  expect(readTerminalLayout().tabs[0].launchSchemeName).toBeUndefined();
+  expect(readTerminalLayout().tabs[0].agent).toBeUndefined();
 });
 
 it("saves only terminal layout and restores split direction, focus and scoped selection", () => {
@@ -127,6 +130,10 @@ it("bounds restored panes and discards duplicate identifiers and foreign selecti
 
 it("restores a native Herdr attachment locator without retaining Agent identity", () => {
   const tab = createTerminalTab("demo", undefined, "/projects/demo");
+  tab.agent = "codex";
+  tab.nativeAgent = true;
+  tab.launchSchemeId = "custom";
+  tab.launchSchemeName = "Custom";
   tab.herdrTarget = {
     session: "default",
     workspace_id: "w1",
@@ -147,6 +154,9 @@ it("restores a native Herdr attachment locator without retaining Agent identity"
     target: { pane_id: "w1:p1" },
   });
   expect(localStorage.getItem(TERMINAL_LAYOUT_KEY)).not.toContain("private");
+  expect(readTerminalLayout().tabs[0].launchSchemeId).toBeUndefined();
+  expect(readTerminalLayout().tabs[0].launchSchemeName).toBeUndefined();
+  expect(readTerminalLayout().tabs[0].agent).toBeUndefined();
 });
 
 it.each([false, true])(

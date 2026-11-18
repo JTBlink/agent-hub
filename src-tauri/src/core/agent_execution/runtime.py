@@ -81,7 +81,7 @@ def read_agent_config(path):
     execution = value.get("execution")
     if not isinstance(runner, dict) or set(runner) - {"kind", "session", "title"}:
         raise HerdrError("Agent runner 配置无效。")
-    if not isinstance(launch, dict) or set(launch) - {"arguments"}:
+    if not isinstance(launch, dict) or set(launch) - {"arguments", "scheme_id"}:
         raise HerdrError("Agent launch 配置无效。")
     if not isinstance(execution, dict) or set(execution) - {
             "wait_timeout_seconds", "include_task_variables", "session_reuse_seconds"}:
@@ -103,6 +103,9 @@ def read_agent_config(path):
         for arg in arguments
     )):
         raise HerdrError("Agent 启动参数必须是单行字符串数组。")
+    scheme_id = launch.get("scheme_id")
+    if scheme_id is not None and (not isinstance(scheme_id, str) or not scheme_id or len(scheme_id) > 128 or not all(c.isascii() and (c.isalnum() or c in "_-") for c in scheme_id)):
+        raise HerdrError("启动方案引用无效，请重新选择。")
     wait_timeout_seconds = execution.get("wait_timeout_seconds", 1800)
     if (isinstance(wait_timeout_seconds, bool) or not isinstance(wait_timeout_seconds, int)
             or not 60 <= wait_timeout_seconds <= 7200):
@@ -117,14 +120,14 @@ def read_agent_config(path):
         raise HerdrError("Agent 会话复用时长必须是 0–86400 秒的整数。")
     return {
         "runner": {"kind": kind, "session": session, "title": title},
-        "launch": {"arguments": list(arguments)},
+        "launch": {"arguments": list(arguments), **({"scheme_id": scheme_id} if scheme_id else {})},
         "execution": {"wait_timeout_seconds": wait_timeout_seconds,
                       "include_task_variables": include_task_variables,
                       "session_reuse_seconds": session_reuse_seconds},
     }
 
 
-def terminal_fallback(bridge, kind, arguments, prompt, cwd):
+def terminal_fallback(bridge, kind, arguments, prompt, cwd, scheme_id=None, expected_plan=None):
     if not bridge:
         raise HerdrError("Herdr 未安装，且没有可用的 AgentHub CLI；无法创建终端执行任务。")
     previous = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else None
@@ -153,7 +156,7 @@ def terminal_fallback(bridge, kind, arguments, prompt, cwd):
     try:
         command(bridge, ["--json", "agents", "launch", "terminal", kind, "--cwd", str(cwd),
                          "--prompt-file", str(prompt_path), "--arguments-json", json.dumps(arguments),
-                         "--receipt-file", str(receipt_path)])
+                         "--receipt-file", str(receipt_path)] + (["--scheme", scheme_id] if scheme_id else []) + (["--expected-plan", expected_plan] if expected_plan else []))
     finally:
         prompt_path.unlink(missing_ok=True)
     print("Herdr 未安装，任务已提交到原生终端；后续触发将核对回执，不重复发起。", flush=True)
@@ -202,7 +205,9 @@ def main(prompt_context=""):
     if bridge:
         environment = command(bridge, ["--json", "agents", "launch", "environment"])
         binary = environment.get("herdr_path")
-        resolved = command(bridge, ["--json", "agents", "launch", "resolve", kind])
+        scheme_id = config["launch"].get("scheme_id")
+        resolved = command(bridge, ["--json", "agents", "launch", "resolve", kind] + (["--scheme", scheme_id] if scheme_id else []))
+        config["launch"]["_expected_plan"] = resolved.get("fingerprint")
         kind = resolved.get("kind")
         if not kind:
             raise HerdrError("所选 Agent 不支持 Herdr CLI 启动，请更换智能体。")
@@ -235,7 +240,7 @@ def main(prompt_context=""):
     if not binary or (previous_state.get("backend") == "terminal" and previous_state.get("phase") != "completed"):
         if REQUEST.get("continuation_prompt"):
             raise HerdrError("原会话续作需要可核实的 Herdr Agent，不创建替代终端。")
-        return terminal_fallback(bridge, kind, extra, prompt, cwd)
+        return terminal_fallback(bridge, kind, extra, prompt, cwd, config["launch"].get("scheme_id"), config["launch"].get("_expected_plan"))
     backend_path = os.environ.get('AGENT_HUB_HERDR_RUNTIME')
     if not backend_path:
         raise HerdrError('当前构建不提供 Herdr 执行能力。')

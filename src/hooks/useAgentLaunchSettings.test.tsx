@@ -78,8 +78,17 @@ it("synchronizes saved commands and default selection across entries while prese
     );
     const settings = host.querySelector("#settings")!;
     const sidebar = host.querySelector("#sidebar")!;
-    await click(sidebar, "--no-alt-screen");
-    await click(settings, "--search");
+    const edit = async (entry: Element, value: string) =>
+      act(async () => {
+        const input = entry.querySelector("input")!;
+        Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value",
+        )!.set!.call(input, value);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    await edit(sidebar, "codex --no-alt-screen");
+    await edit(settings, "codex --search");
     vi.mocked(saveAgentLaunchSettings).mockRejectedValueOnce(
       new Error("Conflict"),
     );
@@ -92,9 +101,6 @@ it("synchronizes saved commands and default selection across entries while prese
     );
     await click(sidebar, "common.cancel");
     expect(sidebar.querySelector("input")?.value).toBe("codex --search");
-    expect(
-      sidebar.querySelector('[title="--search"]')?.getAttribute("aria-pressed"),
-    ).toBe("true");
     await click(settings, "Use Hermes");
     expect(host.querySelector("output")?.textContent).toBe("hermes");
     await act(async () => finishInitial(initial));
@@ -132,7 +138,10 @@ it("queues a second save against the snapshot produced by the first save", async
           onClick={() =>
             void controller.save((current) => ({
               ...current,
-              instructions: { ...current.instructions, codex: "codex --search" },
+              instructions: {
+                ...current.instructions,
+                codex: "codex --search",
+              },
             }))
           }
         >
@@ -163,7 +172,7 @@ it("queues a second save against the snapshot produced by the first save", async
     await vi.waitFor(() => expect(calls).toBe(2));
     const last = vi.mocked(saveAgentLaunchSettings).mock.calls.at(-1)![0];
     expect(last.default_agent).toBe("hermes");
-    expect(last.instructions.codex).toBe("codex --search");
+    expect(last.instructions?.codex).toBe("codex --search");
   } finally {
     await act(async () => root.unmount());
     host.remove();

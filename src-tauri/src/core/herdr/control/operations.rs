@@ -292,7 +292,10 @@ impl HerdrControl {
         if input.teams && input.kind != "claude" {
             bail!("Agent Teams requires Claude")
         }
-        let launch = crate::core::agent_launch_config::resolve(&input.kind)?;
+        let launch = crate::core::agent_launch_config::resolve_scheme(
+            &input.kind,
+            input.scheme_id.as_deref(),
+        )?;
         if input.prompt.len() > 32 * 1024 {
             bail!("Initial task exceeds 32 KiB")
         }
@@ -330,7 +333,7 @@ impl HerdrControl {
         ) {
             return Ok(StartedAgent { target: pane, warning: Some(format!("{error}; the created pane was preserved. Inspect its terminal before starting or sending again")) });
         }
-        let ready = (|| -> Result<Target> {
+        let ready = || -> Result<Target> {
             let snapshot = self.snapshot(&target.session)?;
             let current = snapshot
                 .agents
@@ -343,8 +346,8 @@ impl HerdrControl {
                 })
                 .context("Created Agent identity cannot be verified")?;
             Ok(Target::from_pane(&target.session, current))
-        })();
-        let current = match ready {
+        };
+        let mut current = match ready() {
             Ok(current) => current,
             Err(error) => {
                 return Ok(StartedAgent {
@@ -358,6 +361,33 @@ impl HerdrControl {
         if !input.prompt.trim().is_empty() {
             if let Err(error) = self.action(&current, Action::Prompt, Some(&input.prompt)) {
                 return Ok(StartedAgent { target:current, warning:Some(format!("{error}; Agent was created, but initial task delivery is uncertain. Inspect output before sending again")) });
+            }
+            // Codex can expose its conversation identity only after the first prompt.
+            // Pin that identity in the launch receipt rather than returning the
+            // pre-prompt null identity, which would reject every later follow-up.
+            if input.kind == "codex" && current.agent_session.is_none() {
+                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+                let identity = loop {
+                    match ready() {
+                        Ok(target) if target.agent_session.is_some() => break Ok(target),
+                        Ok(_) if std::time::Instant::now() < deadline => {
+                            std::thread::sleep(std::time::Duration::from_millis(100));
+                        }
+                        Ok(_) => {
+                            break Err(anyhow::anyhow!(
+                                "Agent conversation identity is not available"
+                            ))
+                        }
+                        Err(error) => break Err(error),
+                    }
+                };
+                match identity {
+                    Ok(target) => current = target,
+                    Err(error) => return Ok(StartedAgent {
+                        target: current,
+                        warning: Some(format!("{error}; initial task was submitted. Inspect its terminal before sending again")),
+                    }),
+                }
             }
         }
         Ok(StartedAgent {

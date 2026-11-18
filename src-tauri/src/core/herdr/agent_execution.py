@@ -442,7 +442,7 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
     # Its startup rules (including shell readiness) have one authoritative implementation.
     started = command(bridge, ["--json", "agents", "launch", "start", kind,
                               "--session", session, "--pane", pane, "--name", name,
-                              "--arguments-json", json.dumps(extra)], timeout=80)
+                              "--arguments-json", json.dumps(extra)] + (["--scheme", config["launch"]["scheme_id"]] if config["launch"].get("scheme_id") else []) + (["--expected-plan", config["launch"]["_expected_plan"]] if config["launch"].get("_expected_plan") else []), timeout=80)
     state["phase"] = "submitted"
     state["prompt_attempted"] = True
     state["completion_seq"] = started.get("agent", {}).get("completion_seq") or 0

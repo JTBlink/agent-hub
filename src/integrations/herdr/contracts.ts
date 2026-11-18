@@ -67,6 +67,7 @@ export interface HerdrActionResult {
   target: HerdrTarget | null;
 }
 export interface HerdrNewAgent {
+  scheme_id?: string;
   teams?: boolean;
   kind: string;
   name: string;

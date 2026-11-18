@@ -99,6 +99,7 @@ export function TerminalTabPanes({
               scriptPath={pane === tab.panes[0] ? tab.scriptPath : undefined}
               nativeTask={tab.nativeTask}
               nativeAgent={tab.nativeAgent}
+              launchSchemeId={tab.launchSchemeId}
               development={pane === tab.panes[0] ? tab.development : undefined}
               visible={
                 visible &&

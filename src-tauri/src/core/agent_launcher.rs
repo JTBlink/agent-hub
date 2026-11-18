@@ -19,10 +19,21 @@ pub enum Prepared {
 /// Prefer installed Herdr. A failed/uncertain Herdr launch never triggers a second execution.
 #[cfg(feature = "herdr")]
 pub fn prepare(tools: &HerdrTools, cwd: &Path, agent: HerdrAgent) -> Result<Prepared> {
+    prepare_scheme(tools, cwd, agent, None)
+}
+
+#[cfg(feature = "herdr")]
+pub fn prepare_scheme(
+    tools: &HerdrTools,
+    cwd: &Path,
+    agent: HerdrAgent,
+    scheme_id: Option<&str>,
+) -> Result<Prepared> {
     if let Some(installation) = tools.detect()? {
-        return agents::prepare(Path::new(&installation.path), cwd, agent).map(Prepared::Herdr);
+        return agents::prepare_scheme(Path::new(&installation.path), cwd, agent, scheme_id)
+            .map(Prepared::Herdr);
     }
-    prepare_native(cwd, agent)
+    prepare_native_task_scheme(cwd, agent, None, scheme_id)
 }
 
 /// Prepare a native Agent without probing optional integration backends.
@@ -36,7 +47,16 @@ pub fn prepare_native_task(
     agent: TerminalAgent,
     prompt: Option<&str>,
 ) -> Result<Prepared> {
-    let mut launch = agent_launch_config::resolve(agent.kind())?;
+    prepare_native_task_scheme(cwd, agent, prompt, None)
+}
+
+pub fn prepare_native_task_scheme(
+    cwd: &Path,
+    agent: TerminalAgent,
+    prompt: Option<&str>,
+    scheme_id: Option<&str>,
+) -> Result<Prepared> {
+    let mut launch = agent_launch_config::resolve_scheme(agent.kind(), scheme_id)?;
     launch.arguments = native_prompt::arguments(&launch, prompt)?;
     let mut command = terminal_command(&launch, cwd)?;
     if matches!(agent, TerminalAgent::ClaudeTeams) {

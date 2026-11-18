@@ -21,7 +21,10 @@ fn reads_saved_launch_preferences_while_unrelated_backup_holds_repo_lock() {
             start.elapsed()
         );
         assert_eq!(loaded.revision, saved.revision);
-        assert_eq!(loaded.document.instructions["codex"], "codex --search");
+        assert_eq!(
+            loaded.document.schemes["codex"].items[0].instruction,
+            "codex --search"
+        );
         assert_eq!(resolve("codex").unwrap().arguments, ["--search"]);
     });
     central_repo::set_test_base_dir_override(None);
@@ -68,7 +71,7 @@ fn saves_launch_preferences_with_revision_protection_and_preserves_unknown_agent
         );
         assert!(save(document, &initial.revision).is_err());
         assert_eq!(
-            load().unwrap().document.instructions["future_agent"],
+            load().unwrap().document.schemes["future_agent"].items[0].instruction,
             "future-agent --continue"
         );
         assert_ne!(saved.revision, initial.revision);

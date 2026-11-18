@@ -31,6 +31,8 @@ it.each(["/projects/demo", "/projects/demo-topic"])(
       path,
       "claude_teams",
       () => true,
+      undefined,
+      "custom-scheme",
     );
     expect(api.ensureHerdrWorkspace).toHaveBeenLastCalledWith(
       "default",
@@ -41,6 +43,7 @@ it.each(["/projects/demo", "/projects/demo-topic"])(
       target,
       expect.objectContaining({
         kind: "claude",
+        scheme_id: "custom-scheme",
         teams: true,
         direction: "tab",
         tab_label: "Claude Agent Teams",

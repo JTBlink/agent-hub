@@ -48,18 +48,37 @@ impl AgentAttachment {
 /// Start an interactive YOLO Agent in an explicitly selected, validated directory.
 /// Callers retain ownership of project validation and the attachment's PTY.
 pub fn prepare(executable: &Path, cwd: &Path, agent: HerdrAgent) -> Result<PreparedAgent> {
-    let launch = crate::core::agent_launch_config::resolve(agent.kind())?;
+    prepare_scheme(executable, cwd, agent, None)
+}
+
+pub fn prepare_scheme(
+    executable: &Path,
+    cwd: &Path,
+    agent: HerdrAgent,
+    scheme_id: Option<&str>,
+) -> Result<PreparedAgent> {
+    let launch = crate::core::agent_launch_config::resolve_scheme(agent.kind(), scheme_id)?;
     if crate::core::tool_detection::resolve_program(&launch.program, cwd).is_none() {
         bail!(
             "{} is not installed; install its CLI and retry",
             agent.kind()
         );
     }
-    prepare_available(executable, cwd, agent)
+    prepare_available_with_launch(executable, cwd, agent, launch)
 }
 
+#[cfg(test)]
 fn prepare_available(executable: &Path, cwd: &Path, agent: HerdrAgent) -> Result<PreparedAgent> {
     let launch = crate::core::agent_launch_config::resolve(agent.kind())?;
+    prepare_available_with_launch(executable, cwd, agent, launch)
+}
+
+fn prepare_available_with_launch(
+    executable: &Path,
+    cwd: &Path,
+    agent: HerdrAgent,
+    launch: crate::core::agent_launch_config::Launch,
+) -> Result<PreparedAgent> {
     let client = Client { executable, cwd };
     client.ensure_server()?;
     let mut workspace = vec!["workspace", "create", "--cwd"];

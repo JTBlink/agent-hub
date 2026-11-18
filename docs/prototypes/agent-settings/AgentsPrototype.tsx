@@ -1,487 +1,378 @@
-// Disposable requirements prototype: one editable launch instruction per Agent.
-// Uses native model defaults; no real settings are written.
-import { useEffect, useState, type ReactNode } from "react";
-import { Check, Moon, Plus, Search, Sun, X } from "lucide-react";
+// Requirements prototype: latest Settings card geometry, synthetic data only.
+import { useState } from "react";
 import {
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
-import { AgentGroupDnd } from "../../../src/components/settings/AgentGroupDnd";
+  Cloud,
+  GripVertical,
+  Moon,
+  Plus,
+  Sun,
+  TerminalSquare,
+} from "lucide-react";
 import { AgentIcon } from "../../../src/components/AgentIcon";
 import { ToggleSwitch } from "../../../src/components/ToggleSwitch";
-import "./agents-prototype.css";
-
-import { initialAgents as initial, type PrototypeAgent } from "./agentData";
-import { AgentOriginalFields } from "./AgentOriginalFields";
-import { AgentCustomForm } from "./AgentCustomForm";
-import { AgentSyncPanel } from "./AgentSyncPanel";
-import { useAgentSyncPrototype } from "./useAgentSyncPrototype";
-import { instructionFor, launchDocument } from "./agentLaunchDocument";
-
-const shortcuts: Record<string, { label: string; flag: string }[]> = {
-  codex: [
-    { label: "完全访问", flag: "--dangerously-bypass-approvals-and-sandbox" },
-    { label: "联网搜索", flag: "--search" },
-    { label: "保留终端滚动", flag: "--no-alt-screen" },
-  ],
-  claude_code: [
-    { label: "完全访问", flag: "--dangerously-skip-permissions" },
-    { label: "继续上次会话", flag: "--continue" },
-    { label: "详细日志", flag: "--verbose" },
-  ],
-  opencode: [
-    { label: "继续上次会话", flag: "--continue" },
-    { label: "显示日志", flag: "--print-logs" },
-  ],
-  hermes: [
-    { label: "完全访问", flag: "--yolo" },
-    { label: "继续上次会话", flag: "--continue" },
-    { label: "终端界面", flag: "--tui" },
-  ],
-};
-// Retain the rest of the instruction, including quoted values and their spacing.
-function flagTokens(instruction: string) {
-  return [...instruction.matchAll(/"[^"\n]*"|'[^'\n]*'|\S+/g)];
-}
-function toggleFlag(instruction: string, flag: string) {
-  const matches = flagTokens(instruction).filter((token) => token[0] === flag);
-  if (!matches.length) return `${instruction.trimEnd()} ${flag}`;
-  let next = instruction;
-  for (const token of matches.reverse()) {
-    const index = token.index!;
-    next = next.slice(0, index) + next.slice(index + flag.length);
-  }
-  return next.trim();
-}
+import { ThemedSelect } from "../../../src/components/ThemedSelect";
+import { CardActionMenu } from "../../../src/components/CardActionMenu";
+import { AppDialog } from "../../../src/components/AppDialog";
+import type { LaunchSettingsPrototype } from "./useLaunchSettingsPrototype";
+import { LaunchGroupEditor } from "./LaunchGroupEditor";
 
 export function AgentsPrototype({
-  onInstalledCountChange,
-}: { onInstalledCountChange?: (count: number) => void } = {}) {
-  const { update: updateBackup, adopted } = useAgentSyncPrototype();
-  const [agents, setAgents] = useState<PrototypeAgent[]>(initial);
-  const [defaultAgent, setDefaultAgent] = useState("codex");
-  const [showMore, setShowMore] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [showCustom, setShowCustom] = useState(false);
-  const [notice, setNotice] = useState("");
-  const [filter, setFilter] = useState("installed");
+  settings,
+  onBackup,
+}: {
+  settings: LaunchSettingsPrototype;
+  onBackup: () => void;
+}) {
+  const {
+    agents,
+    setAgents,
+    groups,
+    setGroups,
+    defaultAgent,
+    setDefaultAgent,
+  } = settings;
   const [query, setQuery] = useState("");
-  const [activeAgent, setActiveAgent] = useState("codex");
-  useEffect(() => {
-    updateBackup(launchDocument(agents, defaultAgent));
-  }, [agents, defaultAgent, updateBackup]);
-  useEffect(() => {
-    if (!adopted) return;
-    setAgents((all) =>
-      all.map((agent) => ({
-        ...agent,
-        instruction: instructionFor(adopted, agent.key),
-      })),
-    );
-    setDefaultAgent(adopted.default_agent);
-  }, [adopted]);
-  const installedCount = agents.filter((agent) => agent.installed).length;
-  const enabledCount = agents.filter(
-    (agent) => agent.enabled && agent.installed,
-  ).length;
-  const visible = agents.filter(
+  const [filter, setFilter] = useState("installed");
+  const [dark, setDark] = useState(
+    document.documentElement.classList.contains("dark"),
+  );
+  const [showOther, setShowOther] = useState(false);
+  const [launchPreview, setLaunchPreview] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [launchAgent, setLaunchAgent] = useState("codex");
+  const [launchGroup, setLaunchGroup] = useState("default");
+  const installed = agents.filter((agent) => agent.installed);
+  const enabled = installed.filter((agent) => agent.enabled);
+  const matching = agents.filter(
     (agent) =>
       (filter === "all" ||
         (filter === "installed"
           ? agent.installed
-          : agent.enabled && agent.installed)) &&
-      `${agent.display_name} ${agent.instruction}`
+          : agent.installed && agent.enabled)) &&
+      `${agent.display_name} ${groups[agent.key].groups.map((group) => `${group.name} ${group.command}`).join(" ")}`
         .toLowerCase()
         .includes(query.trim().toLowerCase()),
   );
-
-  const customCount = agents.filter((agent) => agent.is_custom).length;
-  const groups = [
-    {
-      key: "detected",
-      title: "已检测到的智能体",
-      items: visible.filter((agent) => agent.installed && !agent.is_custom),
-    },
-    {
-      key: "other",
-      title: "其他智能体",
-      items: visible.filter((agent) => !agent.installed && !agent.is_custom),
-    },
-    {
-      key: "custom",
-      title: "自定义智能体",
-      items: visible.filter((agent) => agent.is_custom),
-    },
-  ];
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-  );
-  useEffect(() => {
-    onInstalledCountChange?.(installedCount);
-  }, [installedCount, onInstalledCountChange]);
-  const reorder = (event: DragEndEvent, keys: string[]) => {
-    if (!event.over || event.active.id === event.over.id) return;
-    const from = keys.indexOf(String(event.active.id)),
-      to = keys.indexOf(String(event.over.id));
-    if (from < 0 || to < 0) return;
-    const reordered = arrayMove(keys, from, to);
-    let index = 0;
-    setAgents((all) =>
-      all.map((agent) =>
-        keys.includes(agent.key)
-          ? all.find((item) => item.key === reordered[index++])!
-          : agent,
-      ),
-    );
-    setNotice("智能体顺序已更新（仅原型）。");
+  const activeGroup =
+    groups[launchAgent].groups.find((group) => group.id === launchGroup) ??
+    groups[launchAgent].groups[0];
+  const preview = () => {
+    setLaunchAgent(defaultAgent);
+    setLaunchGroup(groups[defaultAgent].defaultId);
+    setLaunchPreview(true);
   };
-  const refresh = () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    window.setTimeout(() => {
-      setAgents((all) =>
-        all.map((agent) => ({
-          ...agent,
-          installed:
-            initial.find((item) => item.key === agent.key)?.installed ??
-            agent.installed,
-        })),
-      );
-      setRefreshing(false);
-      setNotice("安装状态已刷新（原型数据）；已编辑的配置和排序保留。");
-    }, 450);
-  };
-  const [dark, setDark] = useState(
-    document.documentElement.classList.contains("dark"),
-  );
-  const renderRow = (agent: PrototypeAgent, dragHandle?: ReactNode) => (
-    <div
-      className={`ap-agent-row ${agent.enabled ? "" : "ap-disabled"}`}
-      key={agent.key}
-    >
-      <div className="ap-agent-name">
-        {dragHandle}
-        <AgentIcon agentKey={agent.key} className="h-7 w-7" />
-        <div>
-          <label htmlFor={`instruction-${agent.key}`}>
-            {agent.display_name}
-          </label>
-          {!agent.installed && <span className="ap-not-installed">未安装</span>}
-        </div>
-      </div>
-      <div className="ap-command-editor">
-        <input
-          id={`instruction-${agent.key}`}
-          className="ap-instruction"
-          aria-label={`${agent.display_name} 启动指令`}
-          value={agent.instruction}
-          placeholder={agent.installed ? "输入完整启动指令" : "配置启动指令…"}
-          onFocus={() => setActiveAgent(agent.key)}
-          spellCheck={false}
-          onChange={(event) =>
-            setAgents((all) =>
-              all.map((item) =>
-                item.key === agent.key
-                  ? { ...item, instruction: event.target.value }
-                  : item,
-              ),
-            )
-          }
-        />
-        <div
-          className="ap-shortcuts"
-          role="group"
-          aria-label={`${agent.display_name} 常用参数`}
-        >
-          {(activeAgent === agent.key ? (shortcuts[agent.key] ?? []) : []).map(
-            (shortcut) => {
-              const active = flagTokens(agent.instruction).some(
-                (token) => token[0] === shortcut.flag,
-              );
-              return (
-                <button
-                  key={shortcut.flag}
-                  className={
-                    active ? "ap-shortcut ap-shortcut-active" : "ap-shortcut"
-                  }
-                  aria-pressed={active}
-                  title={shortcut.flag}
-                  onClick={() =>
-                    setAgents((all) =>
-                      all.map((item) =>
-                        item.key === agent.key
-                          ? {
-                              ...item,
-                              instruction: toggleFlag(
-                                item.instruction,
-                                shortcut.flag,
-                              ),
-                            }
-                          : item,
-                      ),
-                    )
-                  }
-                >
-                  {active ? <Check size={11} /> : <Plus size={11} />}
-                  {shortcut.label}
-                </button>
-              );
-            },
-          )}
-        </div>
-        <AgentOriginalFields
-          agent={agent}
-          update={(patch) =>
-            setAgents((all) =>
-              all.map((item) =>
-                item.key === agent.key ? { ...item, ...patch } : item,
-              ),
-            )
-          }
-          remove={() => {
-            const remaining = agents.filter((item) => item.key !== agent.key);
-            setAgents(remaining);
-            setQuery("");
-            setFilter("installed");
-            if (defaultAgent === agent.key)
-              setDefaultAgent(
-                remaining.find((item) => item.installed && item.enabled)?.key ??
-                  "",
-              );
-            setNotice(`已移除 ${agent.display_name}（仅原型）；技能目录保留。`);
-          }}
-        />
-      </div>
-      <div className="ap-actions">
-        <ToggleSwitch
-          title={`启用 ${agent.display_name}`}
-          checked={agent.installed && agent.enabled}
-          disabled={!agent.installed}
-          onChange={() =>
-            setAgents((all) =>
-              all.map((item) =>
-                item.key === agent.key
-                  ? { ...item, enabled: !item.enabled }
-                  : item,
-              ),
-            )
-          }
-        />
-        <button
-          className={`ap-default ${defaultAgent === agent.key ? "ap-selected" : ""}`}
-          disabled={!agent.installed || !agent.enabled}
-          onClick={() => setDefaultAgent(agent.key)}
-        >
-          {defaultAgent === agent.key ? (
-            <>
-              <Check size={13} />
-              默认
-            </>
-          ) : (
-            "设为默认"
-          )}
-        </button>
-      </div>
-    </div>
-  );
-  const renderGroup = (items: PrototypeAgent[]) => (
-    <div className="ap-sortable-group">
-      <AgentGroupDnd
-        items={items}
-        sensors={sensors}
-        dragLabel="拖动调整智能体顺序"
-        onDragEnd={reorder}
-        renderAgentCard={(tool, handle) => {
-          const agent = items.find((item) => item.key === tool.key);
-          return agent ? renderRow(agent, handle) : null;
-        }}
-      />
-    </div>
-  );
   return (
-    <section className="ap-page">
-      <header className="ap-heading">
-        <div>
-          <h2>智能体</h2>
-          <p>直接编辑完整启动指令。所有智能体使用自身的默认模型。</p>
-        </div>
+    <section>
+      <div className="mb-3 flex min-w-0 items-center gap-3 rounded-lg border border-border bg-bg-secondary px-3 py-2 text-sm">
+        <Cloud className="h-4 w-4 shrink-0 text-muted" />
+        <span className="min-w-0 flex-1 truncate text-secondary">
+          {!settings.backupEnabled
+            ? "启动配置 · 未加入备份"
+            : settings.backup
+              ? settings.changed
+                ? "启动配置 · 有待备份更改"
+                : "启动配置 · 已创建演示备份"
+              : "启动配置 · 待备份"}
+        </span>
         <button
-          className="ap-icon-button"
+          type="button"
+          className="text-xs text-accent"
+          onClick={onBackup}
+        >
+          备份设置
+        </button>
+        <button
+          type="button"
           aria-label="切换主题"
+          className="app-button-ghost p-1"
           onClick={() => {
             document.documentElement.classList.toggle("dark");
             setDark(!dark);
           }}
         >
-          {dark ? <Sun size={16} /> : <Moon size={16} />}
+          {dark ? (
+            <Sun className="h-3.5 w-3.5" />
+          ) : (
+            <Moon className="h-3.5 w-3.5" />
+          )}
         </button>
-      </header>
-      <AgentSyncPanel />
-      <div className="ap-controls">
-        <div className="ap-filters" role="group" aria-label="筛选智能体">
+      </div>
+      <div className="mb-3 flex min-w-0 flex-wrap items-center gap-3">
+        <div
+          className="flex shrink-0 gap-1"
+          role="group"
+          aria-label="筛选智能体"
+        >
           {[
-            { id: "installed", label: "已安装", count: installedCount },
-            { id: "enabled", label: "已启用", count: enabledCount },
-            { id: "all", label: "全部", count: agents.length },
+            { id: "installed", name: "已安装", count: installed.length },
+            { id: "enabled", name: "已启用", count: enabled.length },
+            { id: "all", name: "全部", count: agents.length },
           ].map((item) => (
             <button
               key={item.id}
+              type="button"
               aria-pressed={filter === item.id}
-              className={filter === item.id ? "ap-filter-selected" : ""}
-              onClick={() => {
-                setFilter(item.id);
-                if (item.id === "all") setShowMore(true);
-              }}
+              className={`rounded-md px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent ${filter === item.id ? "bg-surface-active font-medium text-primary" : "text-muted hover:bg-surface-hover"}`}
+              onClick={() => setFilter(item.id)}
             >
-              {item.label}
-              <span>{item.count}</span>
+              {item.name} <span className="ml-1 text-xs">{item.count}</span>
             </button>
           ))}
         </div>
-        <div className="ap-search">
-          <Search size={14} />
-          <input
-            aria-label="搜索智能体"
-            placeholder="搜索所有 Agent…"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              if (event.target.value) setFilter("all");
-            }}
-          />
-          {query && (
-            <button aria-label="清空搜索" onClick={() => setQuery("")}>
-              <X size={12} />
-            </button>
-          )}
-        </div>
-        <button className="ap-reset" onClick={() => setShowCustom(true)}>
-          <Plus size={13} />
-          添加自定义
-        </button>
-        <details className="ap-more">
-          <summary role="button" aria-label="更多操作">
-            更多
-          </summary>
-          <div>
-            <button
-              onClick={() =>
+        <input
+          type="search"
+          aria-label="搜索智能体或启动方案"
+          placeholder="搜索智能体或启动方案"
+          className="app-input ml-auto min-w-0 max-w-sm flex-1"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <CardActionMenu
+          label="更多操作"
+          triggerIcon={<span className="text-sm">更多</span>}
+          triggerClassName="!w-auto px-2"
+          actions={[
+            {
+              key: "enable",
+              label: "全部启用",
+              onSelect: () =>
                 setAgents((all) =>
                   all.map((agent) => ({ ...agent, enabled: true })),
-                )
-              }
-            >
-              全部启用
-            </button>
-            <button
-              onClick={() =>
+                ),
+            },
+            {
+              key: "disable",
+              label: "全部禁用",
+              onSelect: () =>
                 setAgents((all) =>
                   all.map((agent) => ({ ...agent, enabled: false })),
-                )
-              }
-            >
-              全部禁用
-            </button>
-            <button
-              disabled={refreshing}
-              aria-busy={refreshing}
-              onClick={refresh}
-            >
-              {refreshing ? "正在刷新…" : "刷新安装状态"}
-            </button>
-            <button
-              onClick={() => {
-                setAgents(initial);
-                setDefaultAgent("codex");
-                setNotice("");
-              }}
-            >
-              重置演示
-            </button>
-          </div>
-        </details>
-      </div>
-      <div className="ap-counts">
-        已检测 {installedCount} / {agents.length}
-        <span>已启用 {enabledCount}</span>
-        <span>自定义 {customCount}</span>
-      </div>
-      {showCustom && (
-        <AgentCustomForm
-          close={() => setShowCustom(false)}
-          add={(agent) => {
-            setAgents((all) => [...all, agent]);
-            setFilter("all");
-            setShowCustom(false);
-            setQuery(agent.display_name);
-            setActiveAgent(agent.key);
-          }}
+                ),
+            },
+          ]}
         />
-      )}
-      <div className="ap-agent-list">
-        {groups
-          .filter((group) => group.items.length)
-          .map((group) => (
-            <section className="ap-agent-group" key={group.key}>
-              {group.key === "other" ? (
-                <details
-                  open={showMore || !!query}
-                  onToggle={(event) => setShowMore(event.currentTarget.open)}
-                >
-                  <summary role="button" aria-label="其他智能体">
-                    {group.title}
-                    <span>{group.items.length}</span>
-                  </summary>
-                  {renderGroup(group.items)}
-                </details>
-              ) : (
-                <>
-                  <header>
-                    {group.title}
-                    <span>{group.items.length}</span>
-                  </header>
-                  {renderGroup(group.items)}
-                </>
-              )}
-            </section>
-          ))}
       </div>
-      {visible.length === 0 && (
-        <div className="ap-empty">
-          没有找到匹配的智能体
-          <button
-            onClick={() => {
-              setQuery("");
-              setFilter("all");
-            }}
-          >
-            查看全部智能体
-          </button>
-        </div>
-      )}
-      {filter !== "all" && !query && (
+      <div className="space-y-4">
+        {[
+          {
+            id: "detected",
+            title: "已检测到的智能体",
+            items: matching.filter(
+              (agent) => agent.installed && !agent.is_custom,
+            ),
+          },
+          {
+            id: "other",
+            title: "其他智能体",
+            items: matching.filter(
+              (agent) => !agent.installed && !agent.is_custom,
+            ),
+          },
+          {
+            id: "custom",
+            title: "自定义智能体",
+            items: matching.filter((agent) => agent.is_custom),
+          },
+        ].map(
+          (section) =>
+            section.items.length > 0 && (
+              <div key={section.id}>
+                <div className="mb-2 flex items-center justify-between text-sm text-secondary">
+                  {section.id === "other" ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowOther(!showOther)}
+                    >
+                      {showOther || query ? "▾" : "▸"} {section.title}
+                    </button>
+                  ) : (
+                    <h3>{section.title}</h3>
+                  )}
+                  <span className="text-xs text-muted">
+                    {section.items.length}
+                  </span>
+                </div>
+                {(section.id !== "other" || showOther || query) && (
+                  <div className="grid grid-cols-1 gap-2 xl:grid-cols-2">
+                    {section.items.map((agent) => (
+                      <fieldset
+                        key={agent.key}
+                        className="group relative flex h-full min-w-0 flex-col gap-1.5 rounded-xl border border-border bg-surface px-3.5 py-3"
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <GripVertical className="mt-1 h-4 w-4 shrink-0 text-faint" />
+                          <AgentIcon
+                            agentKey={agent.key}
+                            displayName={agent.display_name}
+                            className="mt-px h-6 w-6 shrink-0 rounded-md"
+                          />
+                          <h3 className="min-w-0 flex-1 truncate text-base font-semibold">
+                            {agent.display_name}
+                          </h3>
+                          <ToggleSwitch
+                            title={`启用 ${agent.display_name}`}
+                            checked={agent.enabled && agent.installed}
+                            disabled={!agent.installed}
+                            onChange={() =>
+                              setAgents((all) =>
+                                all.map((item) =>
+                                  item.key === agent.key
+                                    ? { ...item, enabled: !item.enabled }
+                                    : item,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                        <LaunchGroupEditor
+                          agentKey={agent.key}
+                          name={agent.display_name}
+                          value={groups[agent.key]}
+                          onChange={(next) =>
+                            setGroups((all) => ({ ...all, [agent.key]: next }))
+                          }
+                        />
+                        <div className="flex items-center justify-between gap-2 border-t border-border-faint pt-2 text-xs text-muted">
+                          <span>{groups[agent.key].groups.length} 套方案</span>
+                          <button
+                            type="button"
+                            disabled={!agent.installed || !agent.enabled}
+                            className="text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40"
+                            onClick={() => setDefaultAgent(agent.key)}
+                          >
+                            {defaultAgent === agent.key
+                              ? "默认 Agent"
+                              : "设为默认 Agent"}
+                          </button>
+                        </div>
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-xs text-muted">
+                            详细设置
+                          </summary>
+                          <div className="mt-2 space-y-1 text-xs text-muted">
+                            <p className="truncate font-mono">
+                              {agent.skills_dir}
+                            </p>
+                            <p>
+                              项目路径：
+                              <code>
+                                {agent.project_relative_skills_dir || "未配置"}
+                              </code>
+                            </p>
+                          </div>
+                        </details>
+                      </fieldset>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ),
+        )}
+        {matching.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted">
+            没有匹配的智能体或启动方案
+          </p>
+        )}
+      </div>
+      <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border-subtle pt-3 text-xs text-muted">
+        <span className="flex-1">
+          方案按 Agent 保存，选择编辑对象不会改变默认方案。
+        </span>
         <button
-          className="ap-show-all"
-          onClick={() => {
-            setFilter("all");
-            setShowMore(true);
-          }}
+          type="button"
+          className="app-button-secondary"
+          onClick={preview}
         >
-          查看全部 {agents.length} 个智能体，包括未安装的 Agent
+          <TerminalSquare className="h-3.5 w-3.5" />
+          启动选择预览
         </button>
-      )}
+      </div>
       {notice && (
-        <p role="status" className="ap-footnote">
+        <p
+          role="status"
+          className="mt-3 rounded border border-accent-border bg-accent-bg p-3 text-sm text-secondary"
+        >
           {notice}
         </p>
       )}
-      <p className="ap-footnote">
-        原型 · 保留项目全部 Agent
-        字段。启动指令为预填配置，修改仅保留在当前页面。
-      </p>
+      {launchPreview && (
+        <AppDialog
+          title="新建 Agent 终端"
+          onClose={() => setLaunchPreview(false)}
+        >
+          <div className="space-y-4">
+            <label className="block space-y-1 text-xs text-secondary">
+              Agent
+              <ThemedSelect
+                aria-label="启动 Agent"
+                className="app-input w-full"
+                value={launchAgent}
+                onChange={(event) => {
+                  const key = event.target.value;
+                  setLaunchAgent(key);
+                  setLaunchGroup(groups[key].defaultId);
+                }}
+              >
+                {enabled.map((agent) => (
+                  <option key={agent.key} value={agent.key}>
+                    {agent.display_name}
+                  </option>
+                ))}
+              </ThemedSelect>
+            </label>
+            <label className="block space-y-1 text-xs text-secondary">
+              启动方案
+              <ThemedSelect
+                aria-label="本次启动方案"
+                className="app-input w-full"
+                value={activeGroup.id}
+                onChange={(event) => setLaunchGroup(event.target.value)}
+              >
+                {groups[launchAgent].groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                    {group.id === groups[launchAgent].defaultId
+                      ? " · 默认"
+                      : ""}
+                  </option>
+                ))}
+              </ThemedSelect>
+            </label>
+            <div>
+              <p className="mb-1 text-xs text-muted">本次启动指令</p>
+              <code className="block break-all rounded border border-border bg-background p-3 text-xs leading-6 text-secondary">
+                {activeGroup.command || "尚未填写启动指令"}
+              </code>
+            </div>
+            <p className="text-xs text-muted">仅本次使用，不改变默认方案。</p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="app-button-secondary"
+                onClick={() => setLaunchPreview(false)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                disabled={
+                  !activeGroup.command.trim() ||
+                  !enabled.some((agent) => agent.key === launchAgent)
+                }
+                className="app-button-primary"
+                onClick={() => {
+                  setNotice(
+                    `预览：将以 ${activeGroup.name} 启动 ${launchAgent}，命令为 ${activeGroup.command}。原型未执行命令。`,
+                  );
+                  setLaunchPreview(false);
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                新建终端
+              </button>
+            </div>
+          </div>
+        </AppDialog>
+      )}
     </section>
   );
 }

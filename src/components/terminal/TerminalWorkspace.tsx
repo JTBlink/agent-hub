@@ -269,7 +269,7 @@ export function TerminalWorkspace({
   const activeHerdrTarget = herdrEnabled
     ? (herdrSessions.target ?? active?.herdrTarget)
     : undefined;
-  const add = (agent?: HerdrAgent) => {
+  const add = (agent?: HerdrAgent, schemeId?: string, schemeName?: string) => {
     if (!ready || !(scopedProject || selected) || count >= TERMINAL_PANE_LIMIT)
       return;
     onSelectTerminal?.();
@@ -281,6 +281,8 @@ export function TerminalWorkspace({
       scopedPath ?? projects.find((project) => project.id === target)?.path,
     );
     tab.agent = agent;
+    tab.launchSchemeId = schemeId;
+    tab.launchSchemeName = schemeName;
     tab.nativeAgent = !!agent;
     setTabs((previous) => [...previous, tab]);
     setActiveId(tab.id);
@@ -387,7 +389,10 @@ export function TerminalWorkspace({
               onNew={add}
               onNewMarkdown={onNewMarkdown}
               onHerdr={
-                herdrEnabled ? (agent) => void herdrMenu.open(agent) : undefined
+                herdrEnabled
+                  ? (agent, schemeId, schemeName) =>
+                      void herdrMenu.open(agent, schemeId, schemeName)
+                  : undefined
               }
               onHerdrSettings={
                 herdrEnabled

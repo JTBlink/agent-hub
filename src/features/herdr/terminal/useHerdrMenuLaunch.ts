@@ -36,7 +36,11 @@ export function useHerdrMenuLaunch(
       mounted.current = false;
     };
   }, []);
-  const open = async (agent: HerdrAgent): Promise<boolean> => {
+  const open = async (
+    agent: HerdrAgent,
+    schemeId?: string,
+    schemeName?: string,
+  ): Promise<boolean> => {
     if (pending.current || !projectId) return false;
     const scope = context.current;
     const request = ++sequence.current;
@@ -75,6 +79,7 @@ export function useHerdrMenuLaunch(
             state: { preserveSidebar: true, herdrAttachment: created },
           });
         },
+        ...(schemeId ? [schemeId, schemeName] : []),
       );
       if (!opened || !valid()) return attached;
       if (!attached) {

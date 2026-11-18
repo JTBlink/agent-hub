@@ -21,3 +21,23 @@ it("waits for a closing PTY to release its slot before opening its replacement",
   await closing;
   await expect(creating).resolves.toMatchObject({ id: "replacement" });
 });
+
+it("passes the selected scheme reference to native terminal creation", async () => {
+  vi.mocked(invoke).mockResolvedValue({ id: "selected", cwd: "<workspace>" });
+  await createTerminal(
+    "demo",
+    { rows: 24, cols: 80 },
+    () => {},
+    undefined,
+    "codex",
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    true,
+    "custom",
+  );
+  expect(vi.mocked(invoke).mock.calls.at(-1)?.[1]).toMatchObject({
+    launch: { kind: "native_agent", agent: "codex", scheme_id: "custom" },
+  });
+});

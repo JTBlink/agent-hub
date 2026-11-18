@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { agentLaunchSchemes } from "../../lib/agentLaunchConfig";
 import {
   ChevronDown,
   ChevronRight,
@@ -41,10 +42,11 @@ export function AgentsSettings() {
   } = controller;
   const matching = (agents: api.ToolInfo[]) =>
     agents.filter((agent) => {
-      const instruction =
-        launch.snapshot?.document.instructions[agent.key] ??
-        launch.snapshot?.defaults[agent.key] ??
-        "";
+      const instruction = launch.snapshot
+        ? agentLaunchSchemes(launch.snapshot, agent.key)
+            .items.map((scheme) => `${scheme.name} ${scheme.instruction}`)
+            .join(" ")
+        : "";
       if (filter === "installed" && !agent.installed) return false;
       if (filter === "enabled" && (!agent.installed || !agent.enabled))
         return false;

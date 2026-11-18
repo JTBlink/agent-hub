@@ -1,3 +1,5 @@
+import { AutomationLaunchSchemeField } from "./AutomationLaunchSchemeField";
+import { herdrAgents } from "../lib/terminalAgents";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Settings, Terminal } from "lucide-react";
@@ -37,7 +39,9 @@ export function AutomationAgentField({
   onChange,
   onPendingChange,
   onInactivePromptChange,
+  onLaunchValidityChange,
 }: {
+  onLaunchValidityChange?: (valid: boolean) => void;
   draft: AutomationDraft;
   disabled: boolean;
   providerLocked: boolean;
@@ -294,6 +298,17 @@ export function AutomationAgentField({
           )}
         </ThemedSelect>
       </label>
+      <AutomationLaunchSchemeField
+        draft={draft}
+        agentKey={
+          configured?.key ??
+          herdrAgents.find((item) => item.id === resolvedChoice)?.toolKey ??
+          resolvedChoice
+        }
+        disabled={disabled || pending}
+        onChange={onChange}
+        onValidityChange={onLaunchValidityChange}
+      />
       {pending && (
         <p role="status" className="text-xs text-muted">
           {t("common.loading")}

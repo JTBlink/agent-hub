@@ -5,6 +5,21 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { TerminalNewMenu } from "./TerminalNewMenu";
 
+vi.mock("../../hooks/useAgentLaunchSettings", () => ({
+  useAgentLaunchSettings: () => ({
+    snapshot: {
+      revision: "test",
+      document: { schema_version: 2, default_agent: "codex", schemes: {} },
+      defaults: {
+        codex: "codex",
+        claude_code: "claude",
+        opencode: "opencode",
+        hermes: "hermes",
+      },
+    },
+    error: "",
+  }),
+}));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -67,7 +82,7 @@ it("tracks settings installation changes and shares Claude installation with Tea
       ),
     ].find((item) => item.textContent === "Claude Agent Teams")!;
     await act(async () => teams.click());
-    expect(onNew).toHaveBeenCalledWith("claude_teams");
+    expect(onNew).toHaveBeenCalledWith("claude_teams", "default");
     await render(false, true);
     await act(async () => host.querySelector("button")!.click());
     expect(labels()).toEqual([

@@ -17,7 +17,7 @@ export function automationPromptFile(draft: AutomationDraft) {
 
 export type AutomationAgentConfig = {
   runner: { kind: string; session: string; title: string };
-  launch: { arguments: string[] };
+  launch: { arguments: string[]; scheme_id?: string };
   execution: {
     wait_timeout_seconds: number;
     include_task_variables?: boolean;
@@ -68,6 +68,9 @@ export function automationAgentConfig(draft: AutomationDraft) {
       !runnerValue.session ||
       typeof runnerValue.title !== "string" ||
       !runnerValue.title.trim() ||
+      (launchValue.scheme_id !== undefined &&
+        (typeof launchValue.scheme_id !== "string" ||
+          !/^[a-zA-Z0-9_-]{1,128}$/.test(launchValue.scheme_id))) ||
       !Array.isArray(launchValue.arguments) ||
       launchValue.arguments.length > 128 ||
       !launchValue.arguments.every(

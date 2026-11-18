@@ -1512,13 +1512,13 @@ export const saveAgentLaunchSettings = (
   );
 
 /** Read-only argv resolution shared with native and Herdr startup. */
-export const getAgentLaunchPlan = (agent: string) =>
+export const getAgentLaunchPlan = (agent: string, schemeId?: string) =>
   invoke<{
     key: string;
     kind: string | null;
     program: string;
     arguments: string[];
-  }>("agent_launch_plan", { agent });
+  }>("agent_launch_plan", { agent, ...(schemeId ? { schemeId } : {}) });
 
 export * from "./platformAccountsApi";
 

@@ -14,6 +14,22 @@ import { TerminalWorkspace } from "./TerminalWorkspace";
 import { TerminalSessions } from "./TerminalSessions";
 import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
 
+vi.mock("../../hooks/useAgentLaunchSettings", () => ({
+  useAgentLaunchSettings: () => ({
+    snapshot: {
+      revision: "test",
+      defaults: {
+        codex: "codex --dangerously-bypass-approvals-and-sandbox",
+        claude_code: "claude --dangerously-skip-permissions",
+        opencode: "opencode --auto",
+        hermes: "hermes --yolo",
+      },
+      document: { schema_version: 2, default_agent: "codex", schemes: {} },
+    },
+    error: "",
+    busy: false,
+  }),
+}));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));

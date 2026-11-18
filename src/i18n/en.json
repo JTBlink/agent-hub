@@ -2418,7 +2418,9 @@
     "herdrBusy": "Shell is busy or contains input. Retry at a fresh prompt or open a new terminal.",
     "error": "Terminal operation failed",
     "inputFull": "Terminal input queue is full; try again shortly",
-    "herdrSettings": "Herdr settings…"
+    "herdrSettings": "Herdr settings…",
+    "launchSchemes": "{{backend}} launch schemes",
+    "schemeCount": "{{count}} schemes"
   },
   "tasks": {
     "reviewActions": {
@@ -3308,7 +3310,41 @@
       "all": "All"
     },
     "addCustom": "Add custom",
-    "more": "More"
+    "more": "More",
+    "schemes": {
+      "automatic": "Full access",
+      "label": "Launch scheme",
+      "create": "New launch scheme",
+      "actions": "Scheme actions",
+      "rename": "Rename",
+      "duplicate": "Duplicate scheme",
+      "isDefault": "Default scheme",
+      "setDefault": "Set as default scheme",
+      "delete": "Delete scheme",
+      "defaultHelp": "Quick launch uses this scheme",
+      "deleteTitle": "Delete launch scheme",
+      "renameTitle": "Rename launch scheme",
+      "namePlaceholder": "Enter a scheme name",
+      "createAction": "Create scheme",
+      "saveName": "Save name",
+      "nameRequired": "Enter a scheme name",
+      "duplicateName": "This Agent already has a scheme with that name",
+      "default": "Default",
+      "copyName": "{{name}} copy",
+      "currentDefault": "Quick launch: {{name}}",
+      "deleteConfirm": "Delete “{{name}}”? Running sessions are unaffected.",
+      "replacement": "“{{name}}” will become the default scheme.",
+      "copyInstruction": "Copy the launch instruction from “{{name}}”",
+      "name": "Scheme name",
+      "followDefault": "Follow Agent default scheme",
+      "unavailable": "The selected launch scheme was removed or is unavailable. Choose another scheme.",
+      "manage": "Manage launch schemes…",
+      "currentInstruction": "Current launch instruction",
+      "syncedHelp": "Stays in sync with the scheme in Agent settings.",
+      "followHelp": "The next launch uses the current default scheme."
+    },
+    "defaultAgent": "Default Agent",
+    "setDefaultAgent": "Set as default Agent"
   },
   "product": {
     "buildMismatch": "Application resources do not match this product build. Rebuild or reinstall the application."

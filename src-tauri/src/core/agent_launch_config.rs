@@ -10,7 +10,12 @@ use std::{
     path::Path,
 };
 mod defaults;
+mod schemes;
 pub use defaults::{key_for_kind, kind_for_key};
+use schemes::normalize;
+pub use schemes::{AgentSchemes, LaunchScheme};
+#[cfg(test)]
+mod scheme_tests;
 #[cfg(test)]
 mod tests;
 
@@ -29,14 +34,19 @@ pub fn file_path() -> Result<String> {
 pub struct Document {
     pub schema_version: u32,
     pub default_agent: String,
+    /// Legacy input only; normalize consumes it before persistence or resolution.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub instructions: BTreeMap<String, String>,
+    #[serde(default)]
+    pub schemes: BTreeMap<String, AgentSchemes>,
 }
 impl Default for Document {
     fn default() -> Self {
         Self {
-            schema_version: 1,
+            schema_version: 2,
             default_agent: "codex".into(),
             instructions: BTreeMap::new(),
+            schemes: BTreeMap::new(),
         }
     }
 }
@@ -79,25 +89,6 @@ pub fn parse(instruction: &str) -> Result<(String, Vec<String>)> {
         .context("Enter an Agent executable")?;
     Ok((program, words.collect()))
 }
-fn validate(document: &Document) -> Result<()> {
-    ensure!(
-        document.schema_version == 1,
-        "Unsupported Agent launch configuration version"
-    );
-    ensure!(
-        valid_key(&document.default_agent),
-        "Invalid default Agent key"
-    );
-    ensure!(
-        document.instructions.len() <= 512,
-        "Too many Agent launch preferences"
-    );
-    for (key, instruction) in &document.instructions {
-        ensure!(valid_key(key), "Invalid Agent key");
-        parse(instruction)?;
-    }
-    Ok(())
-}
 fn read(root: &Path) -> Result<(Document, String)> {
     let path = root.join(FILE);
     let mut bytes = Vec::new();
@@ -120,7 +111,7 @@ fn read(root: &Path) -> Result<(Document, String)> {
     } else {
         serde_json::from_slice(&bytes).context("Invalid Agent launch configuration")?
     };
-    validate(&document)?;
+    let document = normalize(document)?;
     Ok((document, hex::encode(Sha256::digest(&bytes))))
 }
 /// Validate restored configuration before the backup transaction publishes any files.
@@ -171,7 +162,7 @@ pub fn load() -> Result<Snapshot> {
 }
 /// Compare-and-replace; drafts from another window or a prior restore cannot overwrite edits.
 pub fn save(document: Document, expected_revision: &str) -> Result<Snapshot> {
-    validate(&document)?;
+    let document = normalize(document)?;
     let _lock = RepoLock::acquire_foreground("save Agent launch settings")?;
     let current = load_unlocked()?;
     ensure!(
@@ -198,20 +189,38 @@ pub fn save(document: Document, expected_revision: &str) -> Result<Snapshot> {
     load_unlocked()
 }
 pub fn resolve(agent: &str) -> Result<Launch> {
-    let snapshot = load()?;
+    resolve_scheme(agent, None)
+}
+
+/// Resolve an optional stable scheme reference without changing global defaults.
+pub fn resolve_scheme(agent: &str, scheme_id: Option<&str>) -> Result<Launch> {
+    resolve_document(&load()?.document, agent, scheme_id)
+}
+
+fn resolve_document(document: &Document, agent: &str, scheme_id: Option<&str>) -> Result<Launch> {
     let key = key_for_kind(if agent == "default" {
-        &snapshot.document.default_agent
+        &document.default_agent
     } else {
         agent
     });
     ensure!(valid_key(key), "Invalid Agent key");
-    let instruction = snapshot
-        .document
-        .instructions
-        .get(key)
-        .or_else(|| snapshot.defaults.get(key))
-        .map(String::as_str)
-        .unwrap_or(key);
+    let requested = scheme_id.filter(|id| !id.is_empty());
+    let defaults = defaults::instructions();
+    let instruction = if let Some(schemes) = document.schemes.get(key) {
+        let selected = requested.unwrap_or(&schemes.default_id);
+        &schemes
+            .items
+            .iter()
+            .find(|scheme| scheme.id == selected)
+            .context("Selected Agent launch scheme is no longer available; choose another scheme")?
+            .instruction
+    } else {
+        ensure!(
+            requested.map_or(true, |id| id == "default"),
+            "Selected Agent launch scheme is no longer available; choose another scheme"
+        );
+        defaults.get(key).map(String::as_str).unwrap_or(key)
+    };
     let (mut program, arguments) = parse(instruction)?;
     if let Some(suffix) = program.strip_prefix("~/") {
         program = dirs::home_dir()
@@ -226,4 +235,19 @@ pub fn resolve(agent: &str) -> Result<Launch> {
         program,
         arguments,
     })
+}
+
+/// Detect changes between a managed runner's resolve and start calls.
+pub fn plan_fingerprint(launch: &Launch) -> Result<String> {
+    Ok(hex::encode(Sha256::digest(serde_json::to_vec(launch)?)))
+}
+
+pub fn verify_plan(launch: &Launch, expected: Option<&str>) -> Result<()> {
+    if let Some(expected) = expected {
+        ensure!(
+            plan_fingerprint(launch)? == expected,
+            "Agent launch scheme changed before startup; retry with the current settings"
+        );
+    }
+    Ok(())
 }

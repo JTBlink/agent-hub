@@ -51,6 +51,9 @@ export function TerminalTabs({
             <TerminalTabButton
               name={
                 terminalTabName(tab) ??
+                (tab.agent && tab.launchSchemeName
+                  ? `${herdrAgentLabel(tab.agent)} · ${tab.launchSchemeName}`
+                  : undefined) ??
                 `${(tab.agent ? herdrAgentLabel(tab.agent) : scoped ? t("terminal.title") : project?.name) || t("terminal.title")} ${index + 1}`
               }
               selected={tab.id === activeId}

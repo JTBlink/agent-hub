@@ -20,9 +20,13 @@ pub(crate) fn owner<R: tauri::Runtime>(window: &Webview<R>) -> Result<String, Ap
 pub enum TerminalLaunch {
     Agent {
         agent: TerminalAgent,
+        #[serde(default)]
+        scheme_id: Option<String>,
     },
     NativeAgent {
         agent: TerminalAgent,
+        #[serde(default)]
+        scheme_id: Option<String>,
         prompt: String,
     },
     Script {
@@ -67,11 +71,16 @@ pub async fn terminal_create(
                         worktree_path.as_deref(),
                     )?;
                     let (command, integration) = match launch {
-                        Some(TerminalLaunch::NativeAgent { agent, prompt }) => {
-                            let prepared = crate::core::agent_launcher::prepare_native_task(
+                        Some(TerminalLaunch::NativeAgent {
+                            agent,
+                            prompt,
+                            scheme_id,
+                        }) => {
+                            let prepared = crate::core::agent_launcher::prepare_native_task_scheme(
                                 &cwd,
                                 agent,
                                 Some(&prompt),
+                                scheme_id.as_deref(),
                             )?;
                             match prepared {
                                 crate::core::agent_launcher::Prepared::Terminal(command) => {
@@ -90,13 +99,21 @@ pub async fn terminal_create(
                         Some(TerminalLaunch::Script { path }) => {
                             (terminal::prepare_script(&cwd, &path)?, None)
                         }
-                        Some(TerminalLaunch::Agent { agent }) => {
+                        Some(TerminalLaunch::Agent { agent, scheme_id }) => {
                             #[cfg(feature = "herdr")]
-                            let prepared =
-                                crate::core::agent_launcher::prepare(&tools, &cwd, agent)?;
+                            let prepared = crate::core::agent_launcher::prepare_scheme(
+                                &tools,
+                                &cwd,
+                                agent,
+                                scheme_id.as_deref(),
+                            )?;
                             #[cfg(not(feature = "herdr"))]
-                            let prepared =
-                                crate::core::agent_launcher::prepare_native(&cwd, agent)?;
+                            let prepared = crate::core::agent_launcher::prepare_native_task_scheme(
+                                &cwd,
+                                agent,
+                                None,
+                                scheme_id.as_deref(),
+                            )?;
                             match prepared {
                                 #[cfg(feature = "herdr")]
                                 crate::core::agent_launcher::Prepared::Herdr(prepared) => {

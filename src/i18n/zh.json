@@ -2415,7 +2415,9 @@
     "herdrBusy": "当前 Shell 忙碌或已有输入，请在空闲提示符重试或新建终端",
     "error": "终端操作失败",
     "inputFull": "终端输入队列已满，请稍后重试",
-    "herdrSettings": "Herdr 设置…"
+    "herdrSettings": "Herdr 设置…",
+    "launchSchemes": "{{backend}} 启动方案",
+    "schemeCount": "{{count}} 套"
   },
   "tasks": {
     "reviewActions": {
@@ -3305,7 +3307,41 @@
       "all": "全部"
     },
     "addCustom": "添加自定义",
-    "more": "更多"
+    "more": "更多",
+    "schemes": {
+      "automatic": "全自动",
+      "label": "启动方案",
+      "create": "新建启动方案",
+      "actions": "方案操作",
+      "rename": "重命名",
+      "duplicate": "复制为新方案",
+      "isDefault": "已是默认方案",
+      "setDefault": "设为默认方案",
+      "delete": "删除方案",
+      "defaultHelp": "快捷启动使用此方案",
+      "deleteTitle": "删除启动方案",
+      "renameTitle": "重命名启动方案",
+      "namePlaceholder": "输入自定义方案名称",
+      "createAction": "创建方案",
+      "saveName": "保存名称",
+      "nameRequired": "请输入方案名称",
+      "duplicateName": "该 Agent 已有同名方案",
+      "default": "默认",
+      "copyName": "{{name}} 副本",
+      "currentDefault": "快捷启动：{{name}}",
+      "deleteConfirm": "删除“{{name}}”？已运行的会话不受影响。",
+      "replacement": "删除后，“{{name}}”将成为默认方案。",
+      "copyInstruction": "从“{{name}}”复制启动指令",
+      "name": "方案名称",
+      "followDefault": "跟随 Agent 默认方案",
+      "unavailable": "所选启动方案已删除或不可用，请重新选择。",
+      "manage": "管理启动方案…",
+      "currentInstruction": "当前启动指令",
+      "syncedHelp": "与 Agent 设置中的方案保持同步。",
+      "followHelp": "默认方案改变后，下次启动使用新默认。"
+    },
+    "defaultAgent": "默认 Agent",
+    "setDefaultAgent": "设为默认 Agent"
   },
   "product": {
     "buildMismatch": "应用资源与当前产品构建不匹配，请重新编译或安装应用。"

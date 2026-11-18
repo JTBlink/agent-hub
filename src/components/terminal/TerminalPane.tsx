@@ -47,6 +47,7 @@ interface Props {
   worktreePath?: string;
   agent?: HerdrAgent;
   nativeAgent?: boolean;
+  launchSchemeId?: string;
   scriptPath?: string;
   development?: DevelopmentTerminal;
   nativeTask?: import("../../lib/terminalLayout").TerminalTab["nativeTask"];
@@ -65,6 +66,7 @@ export function TerminalPane({
   worktreePath,
   agent,
   nativeAgent,
+  launchSchemeId,
   scriptPath,
   development,
   nativeTask,
@@ -328,6 +330,7 @@ export function TerminalPane({
               development?.launch,
               nativeTask?.prompt,
               nativeAgent,
+              ...(launchSchemeId ? [launchSchemeId] : []),
             );
         return session
           .then((session) => {
@@ -395,6 +398,7 @@ export function TerminalPane({
     worktreePath,
     agent,
     nativeAgent,
+    launchSchemeId,
     attachmentKey,
     scriptPath,
     development,

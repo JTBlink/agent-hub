@@ -29,3 +29,5 @@ export const defaultTerminalAgent = (
 ) =>
   choices.find((choice) => choice.toolKey === key || choice.id === key) ??
   choices[0];
+
+export type TerminalLaunchBackend = "terminal" | "herdr";

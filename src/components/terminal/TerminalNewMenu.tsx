@@ -16,9 +16,9 @@ export function TerminalNewMenu({
 }: {
   disabled: boolean;
   tools: readonly Pick<ToolInfo, "key" | "installed">[];
-  onNew: (agent?: HerdrAgent) => void;
+  onNew: (agent?: HerdrAgent, schemeId?: string, schemeName?: string) => void;
   onNewMarkdown?: () => void;
-  onHerdr?: (agent: HerdrAgent) => void;
+  onHerdr?: (agent: HerdrAgent, schemeId?: string, schemeName?: string) => void;
   onHerdrSettings?: () => void;
   herdrBusy?: boolean;
 }) {

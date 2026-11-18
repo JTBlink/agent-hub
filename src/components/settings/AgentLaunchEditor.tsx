@@ -2,127 +2,135 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { useAgentLaunchSettings } from "../../hooks/useAgentLaunchSettings";
 import {
-  launchShortcuts,
-  shortcutSelected,
-  toggleLaunchShortcut,
+  agentLaunchSchemes,
+  withAgentLaunchSchemes,
+  type AgentLaunchSchemes,
 } from "../../lib/agentLaunchConfig";
+import { AgentLaunchSchemesEditor } from "./AgentLaunchSchemesEditor";
 
 type Controller = ReturnType<typeof useAgentLaunchSettings>;
 export function AgentLaunchEditor({
   agentKey,
+  agentName,
   controller,
   saveOnUnmount = false,
+  onDraftChange,
 }: {
   agentKey: string;
+  agentName?: string;
   controller: Controller;
-  /** Flush an edited command when its card leaves the current settings surface. */
   saveOnUnmount?: boolean;
+  onDraftChange?: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation();
   const { snapshot, busy, error, save } = controller;
-  const unavailable = !snapshot;
-  const disabled = busy || unavailable;
-  const saved =
-    snapshot?.document.instructions[agentKey] ??
-    snapshot?.defaults[agentKey] ??
-    (snapshot ? agentKey : "");
-  const [draft, setDraft] = useState<{ value: string; base: string } | null>(
-    null,
-  );
+  const saved = snapshot
+    ? agentLaunchSchemes(snapshot, agentKey, t("agentLaunch.schemes.automatic"))
+    : null;
+  const encoded = JSON.stringify(saved);
+  const [draft, setDraft] = useState<{
+    base: string;
+    value: AgentLaunchSchemes;
+  } | null>(null);
   const value = draft?.value ?? saved;
-  const conflict = !!draft && draft.base !== saved && value !== saved;
-  const edit = (next: string) =>
-    setDraft(
-      next === saved ? null : { value: next, base: draft?.base ?? saved },
-    );
-  const dirty = value !== saved;
-  const persist = async (reset = false) => {
-    if (!snapshot || (!dirty && !reset)) return;
-    const ok = await save((current) => {
-      const instructions = { ...current.instructions };
-      if (reset || value.trim() === snapshot.defaults[agentKey])
-        delete instructions[agentKey];
-      else instructions[agentKey] = value.trim();
-      return { ...current, instructions };
-    });
-    if (ok) setDraft(null);
+  const dirty = !!draft && JSON.stringify(draft.value) !== encoded;
+  const conflict = !!draft && draft.base !== encoded && dirty;
+  useEffect(() => {
+    onDraftChange?.(dirty);
+  }, [dirty, onDraftChange]);
+  const persist = async (overwrite = false) => {
+    if (!value || !snapshot || !dirty) return;
+    const submitted = JSON.stringify(value);
+    if (
+      await save((current) => {
+        const currentValue = agentLaunchSchemes(
+          { ...snapshot, document: current },
+          agentKey,
+          t("agentLaunch.schemes.automatic"),
+        );
+        if (!overwrite && draft && JSON.stringify(currentValue) !== draft.base)
+          throw new Error(t("agentLaunch.changed"));
+        return withAgentLaunchSchemes(current, agentKey, value);
+      })
+    )
+      setDraft((current) =>
+        current && JSON.stringify(current.value) !== submitted
+          ? { ...current, base: submitted }
+          : null,
+      );
   };
   const persistRef = useRef(persist);
   useEffect(() => {
     persistRef.current = persist;
   });
-
-  // The command is shared by Settings, Herdr and every launch entrypoint.
-  // Persist a settled edit promptly so changing surfaces cannot leave a local
-  // draft masking the value that the other surface reads.
   useEffect(() => {
-    if (!dirty || conflict || disabled) return;
+    if (!dirty || conflict || busy || error) return;
     const timer = window.setTimeout(() => void persistRef.current(), 250);
     return () => window.clearTimeout(timer);
-  }, [conflict, disabled, dirty, value, snapshot?.revision]);
-
-  // Herdr's settings panel is remounted when the main interface changes. Flush
-  // the latest draft before that unmount so the next surface reads local data.
-  useEffect(() => {
-    if (!saveOnUnmount) return;
-    return () => void persistRef.current();
-  }, [saveOnUnmount]);
+  }, [dirty, conflict, busy, error, draft]);
+  useEffect(
+    () => () => {
+      if (saveOnUnmount) void persistRef.current();
+    },
+    [saveOnUnmount],
+  );
+  if (!snapshot || !value)
+    return (
+      <div
+        className="mt-2 flex items-center gap-2 text-xs text-muted"
+        role={error ? "alert" : "status"}
+      >
+        <span>{error || t("common.loading")}</span>
+        {error && (
+          <button
+            type="button"
+            className="text-accent"
+            onClick={() => void controller.reload()}
+          >
+            {t("common.retry")}
+          </button>
+        )}
+      </div>
+    );
   return (
-    <div className="mt-2 space-y-2" aria-busy={unavailable && !error}>
-      <label className="block text-xs text-secondary">
-        {t("agentLaunch.instruction")}
-        <input
-          aria-label={t("agentLaunch.instruction")}
-          value={value}
-          disabled={disabled}
-          placeholder={
-            unavailable
-              ? t(error ? "common.error" : "common.loading")
-              : undefined
-          }
-          onChange={(e) => edit(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && dirty) void persist();
-            if (e.key === "Escape") setDraft(null);
-          }}
-          className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 font-mono text-sm text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        />
-      </label>
+    <fieldset disabled={busy} className="min-w-0" aria-busy={busy}>
+      <AgentLaunchSchemesEditor
+        key={agentKey}
+        name={agentName ?? agentKey}
+        defaultInstruction={snapshot.defaults[agentKey] ?? agentKey}
+        value={value}
+        onChange={(next) =>
+          setDraft({ base: draft?.base ?? encoded, value: next })
+        }
+      />
       {conflict && (
-        <p
-          role="alert"
-          className="order-last w-full break-words text-xs text-danger"
-        >
-          {t("agentLaunch.changed")} <code>{saved}</code>
+        <p role="alert" className="mt-2 text-xs text-danger">
+          {t("agentLaunch.changed")}{" "}
+          <code>
+            {
+              saved?.items.find((item) => item.id === saved.default_id)
+                ?.instruction
+            }
+          </code>
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {(launchShortcuts[agentKey] ?? []).map((shortcut) => (
-          <button
-            key={shortcut.flag}
-            type="button"
-            disabled={disabled}
-            aria-pressed={shortcutSelected(value, shortcut.flag)}
-            title={shortcut.flag}
-            className={`rounded border px-2 py-0.5 text-xs focus-visible:ring-2 focus-visible:ring-accent ${shortcutSelected(value, shortcut.flag) ? "border-accent-border text-accent bg-surface-active" : "border-border text-muted"}`}
-            onClick={() => edit(toggleLaunchShortcut(value, shortcut.flag))}
-          >
-            {t(`agentLaunch.shortcuts.${shortcut.label}`)}
-          </button>
-        ))}
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-danger">
+          {error}
+        </p>
+      )}
+      <div className="mt-2 flex items-center gap-2 text-xs">
         {dirty && (
           <>
             <button
               type="button"
-              disabled={disabled || !value.trim()}
               className="app-button-secondary text-xs"
-              onClick={() => void persist()}
+              onClick={() => void persist(conflict)}
             >
               {t(conflict ? "agentLaunch.overwrite" : "common.save")}
             </button>
             <button
               type="button"
-              disabled={disabled}
               className="app-button-ghost text-xs"
               onClick={() => setDraft(null)}
             >
@@ -130,34 +138,21 @@ export function AgentLaunchEditor({
             </button>
           </>
         )}
-        {snapshot &&
-          Object.hasOwn(snapshot.document.instructions, agentKey) && (
-            <button
-              type="button"
-              disabled={disabled}
-              className="app-button-ghost text-xs"
-              onClick={() => void persist(true)}
-            >
-              {t("agentLaunch.reset")}
-            </button>
-          )}
-
         <button
           type="button"
-          aria-pressed={snapshot?.document.default_agent === agentKey}
-          disabled={disabled}
-          className="ml-auto text-xs text-accent focus-visible:ring-2 focus-visible:ring-accent"
+          className="ml-auto text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          aria-pressed={snapshot.document.default_agent === agentKey}
           onClick={() =>
             void save((current) => ({ ...current, default_agent: agentKey }))
           }
         >
           {t(
-            snapshot?.document.default_agent === agentKey
-              ? "agentLaunch.default"
-              : "agentLaunch.setDefault",
+            snapshot.document.default_agent === agentKey
+              ? "agentLaunch.defaultAgent"
+              : "agentLaunch.setDefaultAgent",
           )}
         </button>
       </div>
-    </div>
+    </fieldset>
   );
 }

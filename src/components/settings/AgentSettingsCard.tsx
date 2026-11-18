@@ -130,6 +130,7 @@ export function AgentSettingsCard({
       {launch && (
         <AgentLaunchEditor
           agentKey={agent.key}
+          agentName={agent.display_name}
           controller={launch}
           saveOnUnmount
         />

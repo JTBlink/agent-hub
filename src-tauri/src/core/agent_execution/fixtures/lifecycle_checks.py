@@ -457,6 +457,26 @@ class HerdrChecks(unittest.TestCase):
         self.assertIsInstance(self.execute(launch_failure=True), str)
         self.assertFalse(any('create' in args or 'start' in args for args, _ in self.calls))
 
+    def test_selected_scheme_is_resolved_and_passed_to_the_herdr_start(self):
+        config = {'runner': {'kind': 'codex', 'session': 'default', 'title': 'Review'},
+                  'launch': {'arguments': [], 'scheme_id': 'custom'},
+                  'execution': {'wait_timeout_seconds': 1800}}
+        self.assertEqual(self.execute(config=config, launch={'kind': 'codex', 'program': 'codex-yolo', 'arguments': ['--search'], 'fingerprint': 'a' * 64}), 0)
+        resolve = next(args for args, _ in self.config_calls if args[1:5] == ['--json', 'agents', 'launch', 'resolve'])
+        self.assertEqual(resolve[resolve.index('--scheme') + 1], 'custom')
+        start = next(args for args, _ in self.config_calls if args[1:5] == ['--json', 'agents', 'launch', 'start'])
+        self.assertEqual(start[start.index('--scheme') + 1], 'custom')
+        self.assertEqual(start[start.index('--expected-plan') + 1], 'a' * 64)
+
+    def test_selected_scheme_is_preserved_by_the_native_terminal_fallback(self):
+        config = {'runner': {'kind': 'codex', 'session': 'default', 'title': 'Review'},
+                  'launch': {'arguments': [], 'scheme_id': 'custom'},
+                  'execution': {'wait_timeout_seconds': 1800}}
+        self.assertEqual(self.execute(config=config, herdr_missing=True, launch={'kind': 'codex', 'program': 'codex-yolo', 'arguments': [], 'fingerprint': 'b' * 64}), 0)
+        terminal = next(args for args, _ in self.config_calls if args[1:5] == ['--json', 'agents', 'launch', 'terminal'])
+        self.assertEqual(terminal[terminal.index('--scheme') + 1], 'custom')
+        self.assertEqual(terminal[terminal.index('--expected-plan') + 1], 'b' * 64)
+
     def test_invalid_arguments_never_create_a_session(self):
         for value in [['--model', 7], 'nul\0value']:
             with self.subTest(value=value):

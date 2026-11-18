@@ -118,6 +118,8 @@ pub struct ActionResult {
 #[derive(Deserialize)]
 pub struct NewAgent {
     #[serde(default)]
+    pub scheme_id: Option<String>,
+    #[serde(default)]
     pub teams: bool,
     pub kind: String,
     pub name: String,

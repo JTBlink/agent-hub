@@ -2375,7 +2375,9 @@
     "herdrBusy": "目前 Shell 忙碌或已有輸入，請在閒置提示符重試或新增終端",
     "error": "終端操作失敗",
     "inputFull": "終端輸入佇列已滿，請稍後重試",
-    "herdrSettings": "Herdr 設定…"
+    "herdrSettings": "Herdr 設定…",
+    "launchSchemes": "{{backend}} 啟動方案",
+    "schemeCount": "{{count}} 套"
   },
   "tasks": {
     "reviewActions": {
@@ -3265,7 +3267,41 @@
       "all": "全部"
     },
     "addCustom": "新增自訂",
-    "more": "更多"
+    "more": "更多",
+    "schemes": {
+      "automatic": "全自動",
+      "label": "啟動方案",
+      "create": "新增啟動方案",
+      "actions": "方案操作",
+      "rename": "重命名",
+      "duplicate": "複製為新方案",
+      "isDefault": "已是預設方案",
+      "setDefault": "設為預設方案",
+      "delete": "刪除方案",
+      "defaultHelp": "快速啟動使用此方案",
+      "deleteTitle": "刪除啟動方案",
+      "renameTitle": "重命名启动方案",
+      "namePlaceholder": "輸入自訂方案名稱",
+      "createAction": "建立方案",
+      "saveName": "儲存名稱",
+      "nameRequired": "請輸入方案名稱",
+      "duplicateName": "該 Agent 已有同名方案",
+      "default": "預設",
+      "copyName": "{{name}} 副本",
+      "currentDefault": "快速啟動：{{name}}",
+      "deleteConfirm": "刪除「{{name}}」？執行中的工作階段不受影響。",
+      "replacement": "刪除後，「{{name}}」將成為預設方案。",
+      "copyInstruction": "從「{{name}}」複製啟動指令",
+      "name": "方案名称",
+      "followDefault": "跟隨 Agent 預設方案",
+      "unavailable": "所選啟動方案已刪除或無法使用，請重新選擇。",
+      "manage": "管理啟動方案…",
+      "currentInstruction": "目前啟動指令",
+      "syncedHelp": "與 Agent 設定中的方案保持同步。",
+      "followHelp": "預設方案改變後，下次啟動使用新預設。"
+    },
+    "defaultAgent": "預設 Agent",
+    "setDefaultAgent": "設為預設 Agent"
   },
   "product": {
     "buildMismatch": "應用程式資源與目前產品建置不符，請重新編譯或安裝應用程式。"

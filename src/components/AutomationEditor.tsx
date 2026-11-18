@@ -58,6 +58,7 @@ export function AutomationEditor({
   leaving.current = leavingForDiscovery;
   const [busy, setBusy] = useState(false);
   const [selectingAgent, setSelectingAgent] = useState(false);
+  const [launchValid, setLaunchValid] = useState(true);
   const [inactivePrompt, setInactivePrompt] = useState("");
   const [picker, setPicker] = useState<"backup" | null>(
     restoreBackup ? "backup" : null,
@@ -154,7 +155,7 @@ export function AutomationEditor({
         (variant) => !variant.name.trim() || !variant.content.trim(),
       ));
   const submit = async () => {
-    if (pending.current || picker !== null) return;
+    if (pending.current || picker !== null || !launchValid) return;
     pending.current = true;
     setBusy(true);
     setError(null);
@@ -298,6 +299,7 @@ export function AutomationEditor({
                 draft={draft}
                 disabled={busy || externalNative}
                 providerLocked={!!task}
+                onLaunchValidityChange={setLaunchValid}
                 onPendingChange={setSelectingAgent}
                 onInactivePromptChange={setInactivePrompt}
                 onChange={update}
@@ -402,6 +404,7 @@ export function AutomationEditor({
               type="submit"
               disabled={
                 busy ||
+                !launchValid ||
                 selectingAgent ||
                 picker !== null ||
                 !draft.name.trim() ||

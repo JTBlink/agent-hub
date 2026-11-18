@@ -17,6 +17,16 @@ Agent 是可选能力。普通自动化任务执行自己的命令；需要交�
 | `core/python_support`                      | 公共 Python 检测及按内容版本发布共享模块。                                                                    |
 | `automations/_shared/agent-entry.py`       | 任务薄适配器：从旧/新布局解析配置、提示词与状态目录，将请求交给 CLI。                                         |
 
+## 多套启动方案
+
+`user-config/agent-launch.json` 的 v2 文档按 Agent key 保存 `schemes: { default_id, items: [{ id, name, instruction }] }`。每个 Agent 允许 1–32 套，ID 与名称在该 Agent 内唯一；全局默认 Agent 与各 Agent 默认方案分别保存。未自定义的 Agent 从适配器派生唯一默认方案，不重复落盘。自定义入口与参数沿用统一 argv 解析，不能通过任务覆盖另一份全局配置。
+
+v1 `instructions` 在读取时无损转换为每个 Agent 的 `default` 方案，保留原指令；仅在下一次正常修订保存时发布 v2，不因读取重写文件。新保存不再输出 `instructions`，未知 Agent 的已有指令仍保留。备份恢复沿既有 user-config 发布事务与格式校验，不创建第二份方案权威源。
+
+设置页复用同一快照通知更新各入口。终端与 Herdr 的启动意图携带可选方案 ID；菜单多套时悬浮展开，方案行也可直接通过 Herdr 启动。该意图不进入终端布局恢复，重启不重放启动。
+
+自动化 `config/agent.json` 通过可选 `launch.scheme_id` 固定方案，省略时跟随该 Agent 的默认方案；命令及名称不复制到任务中。共享执行器在每次新启动前通过 CLI `agents launch resolve <agent> --scheme <id>` 读取当前定义，并将同一引用传给 Herdr `start` 或原生 `terminal`。方案删除、恢复后 ID 不存在或格式错误时停止并报告，不静默改用默认方案。共享执行器同时将解析时的计划指纹传给启动命令；若启动前有效程序或参数变化则拒绝发起，不将不同版本混合。指纹仅用于本次调用，不写入任务定义。旧任务的额外参数继续追加，提示词方案独立。
+
 ## 启动契约
 
 调用方必须明确目标会话及窗格，不依赖调用 Agent 的隐式环境。通用启动输入是已解析的 `Launch { key, kind, program, arguments }` 与 `session/name/pane`，不包含任务编号、模板、日程或模型字段。桌面 terminal、侧栏新建、任务面板和自动化 CLI 使用同一实现；未来场景只需编写布局与业务适配器。
@@ -64,3 +74,20 @@ Herdr 提交提示词时短暂等待活动回执；若 Claude 输入仍未提交
 `agents launch recover` 接收同一 ExecutionRequest，要求调用方提供 `continuation_prompt` 和唯一 `continuation_id`。仍存活的原 Agent 沿 continue 语义复用；只有确认旧面板和旧 Agent 均不存在，才在任务项目中新建面板及 Agent，并投递明确的恢复上下文。新 Agent 不伪装成原对话；旧检查点归档在同一私有状态目录，回执保存恢复 ID 与归档引用。
 
 恢复由调用方业务授权触发，不把关闭 Tab 推断为完成、取消或清零。任务提供当前业务版本、原批次、成果和未决事项；共享层负责创建及投递的唯一回执、运行锁和身份核验。送达未决、旧 Agent 仍在、原面板被其他进程占用时保持待核验，不启动替代者。reconcile 和 continue 的原有只读/不替代契约保持不变。
+
+## 原生权限模式依据
+
+新默认只包含宿主原生的自动批准参数，不写提供方全局配置，不固定模型。已保存指令保留原文。以下扩展命令于 2026-11-18 按官方参考核对：
+
+| Agent       | 新默认                            | 依据                                                                                                  |
+| ----------- | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Cursor CLI  | `cursor-agent --force`            | [官方 CLI 更新说明](https://cursor.com/changelog/cli-feb-18-2026)                                     |
+| Copilot CLI | `copilot --yolo`                  | [官方工具权限](https://docs.github.com/en/copilot/how-tos/copilot-cli/use-copilot-cli/allowing-tools) |
+| Gemini CLI  | `gemini --yolo`                   | [官方参数配置](https://geminicli.com/docs/reference/configuration/)                                   |
+| Qwen Code   | `qwen --yolo`                     | [官方配置参考](https://qwenlm.github.io/qwen-code-docs/en/users/configuration/settings/)              |
+| Kilo CLI    | `kilo --auto`                     | [官方命令参考，TUI 与 run 参数](https://kilo.ai/docs/code-with-ai/platforms/cli-reference)            |
+| Kiro CLI    | `kiro-cli chat --trust-all-tools` | [官方命令参考](https://kiro.dev/docs/cli/reference/cli-commands/)                                     |
+| Kimi CLI    | `kimi --yolo`                     | [维护者交互指南](https://github.com/MoonshotAI/kimi-cli/blob/main/docs/en/guides/interaction.md)      |
+| Cline CLI   | `cline --auto-approve true`       | [官方 CLI 概览](https://docs.cline.bot/usage/cli-overview)                                            |
+
+Amp 与 Pi 原生工具调用默认不逐次审批，保留其普通入口（[Amp](https://ampcode.com/docs/tools)、[Pi](https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/usage.md)）。只有 IDE 入口及命令身份不明确的宿主保留原入口，不虚构 `--yolo`；旧 Qoder/Grok 实现仍需按既有兼容性说明核实安装版本。宿主或管理员的权限限制继续由宿主执行，这些参数不承诺越过其硬限制。

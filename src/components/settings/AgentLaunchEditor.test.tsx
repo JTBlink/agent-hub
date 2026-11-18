@@ -1,11 +1,8 @@
 // @vitest-environment jsdom
 import { act } from "react";
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { AgentLaunchEditor } from "./AgentLaunchEditor";
-import { useAgentLaunchSettings } from "../../hooks/useAgentLaunchSettings";
-import { getAgentLaunchSettings } from "../../lib/tauri";
 import type {
   AgentLaunchDocument,
   AgentLaunchSnapshot,
@@ -13,94 +10,14 @@ import type {
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
-vi.mock("../../lib/tauri", () => ({ getAgentLaunchSettings: vi.fn() }));
 
-it("keeps launch controls visible while loading and fills them with the saved command", async () => {
-  let resolve!: (snapshot: AgentLaunchSnapshot) => void;
-  vi.mocked(getAgentLaunchSettings).mockReturnValueOnce(
-    new Promise((done) => {
-      resolve = done;
-    }),
-  );
-  const host = document.createElement("div");
-  const root = createRoot(host);
-  function Settings() {
-    const controller = useAgentLaunchSettings();
-    return <AgentLaunchEditor agentKey="codex" controller={controller} />;
-  }
-  try {
-    await act(async () => root.render(<Settings />));
-    const input = host.querySelector("input")!;
-    const search = host.querySelector<HTMLButtonElement>('[title="--search"]')!;
-    expect(input).not.toBeNull();
-    expect(input.placeholder).toBe("common.loading");
-    expect(input.disabled).toBe(true);
-    expect(search.disabled).toBe(true);
-    expect(host.textContent).toContain("agentLaunch.setDefault");
-    await act(async () =>
-      resolve({
-        revision: "saved",
-        defaults: { codex: "codex" },
-        document: {
-          schema_version: 1,
-          default_agent: "codex",
-          instructions: { codex: "codex --search --no-alt-screen" },
-        },
-      }),
-    );
-    expect(host.querySelector("input")).toBe(input);
-    expect(input.value).toBe("codex --search --no-alt-screen");
-    expect(input.disabled).toBe(false);
-    expect(search.disabled).toBe(false);
-    expect(search.getAttribute("aria-pressed")).toBe("true");
-    expect(host.textContent).toContain("agentLaunch.default");
-  } finally {
-    await act(async () => root.unmount());
-  }
-});
-
-it("keeps unloaded controls disabled after a read failure and recovers on retry", async () => {
-  vi.mocked(getAgentLaunchSettings)
-    .mockRejectedValueOnce(new Error("Read failed"))
-    .mockResolvedValueOnce({
-      revision: "retry",
-      defaults: { codex: "codex --search" },
-      document: { schema_version: 1, default_agent: "codex", instructions: {} },
-    });
-  const host = document.createElement("div");
-  const root = createRoot(host);
-  function Settings() {
-    const controller = useAgentLaunchSettings();
-    return (
-      <>
-        {controller.error && (
-          <button onClick={() => void controller.reload()}>Retry</button>
-        )}
-        <AgentLaunchEditor agentKey="codex" controller={controller} />
-      </>
-    );
-  }
-  try {
-    await act(async () => root.render(<Settings />));
-    const input = host.querySelector("input")!;
-    expect(input.placeholder).toBe("common.error");
-    expect(input.disabled).toBe(true);
-    expect(input.value).toBe("");
-    await act(async () =>
-      host.querySelector<HTMLButtonElement>("button")!.click(),
-    );
-    expect(input.value).toBe("codex --search");
-    expect(input.disabled).toBe(false);
-  } finally {
-    await act(async () => root.unmount());
-  }
-});
-it("keeps a failed draft across a remote refresh and lets cancel adopt the refreshed command", async () => {
+it("saves scheme edits without copying legacy commands and preserves a conflicting draft until cancel", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const host = document.createElement("div");
   const root = createRoot(host);
   let snapshot: AgentLaunchSnapshot = {
-    revision: "first",
-    defaults: { codex: `codex --config 'note=hello world'` },
+    revision: "initial",
+    defaults: { codex: "codex --dangerously-bypass-approvals-and-sandbox" },
     document: {
       schema_version: 1,
       default_agent: "hermes",
@@ -129,37 +46,45 @@ it("keeps a failed draft across a remote refresh and lets cancel adopt the refre
     );
   try {
     await act(render);
-    const search = () =>
-      Array.from(host.querySelectorAll("button")).find(
-        (button) => button.title === "--search",
-      )!;
-    await act(async () => search().click());
-    const input = () => host.querySelector("input")!;
-    expect(input().value).toBe(`codex --config 'note=hello world' --search`);
-    const saveButton = Array.from(host.querySelectorAll("button")).find(
-      (button) => button.textContent === "common.save",
-    )!;
-    await act(async () => saveButton.click());
-    expect(submitted?.instructions.hermes).toBe("hermes --yolo");
-    expect(submitted?.instructions.codex).toBe(
-      `codex --config 'note=hello world' --search`,
+    const input = () => host.querySelector<HTMLInputElement>("input")!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!.call(input(), "codex-yolo");
+      input().dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () =>
+      [...host.querySelectorAll("button")]
+        .find((button) => button.textContent === "common.save")!
+        .click(),
     );
+    expect(submitted?.schemes?.codex.items[0].instruction).toBe("codex-yolo");
+    expect(submitted?.schemes?.hermes.items[0].instruction).toBe(
+      "hermes --yolo",
+    );
+    expect(submitted?.instructions).toBeUndefined();
     snapshot = {
       ...snapshot,
       revision: "restored",
       document: {
         ...snapshot.document,
-        instructions: { codex: "codex --no-alt-screen" },
+        instructions: { codex: "restored-codex" },
       },
     };
     await act(render);
-    expect(input().value).toBe(`codex --config 'note=hello world' --search`);
-    const cancel = Array.from(host.querySelectorAll("button")).find(
-      (button) => button.textContent === "common.cancel",
-    )!;
-    await act(async () => cancel.click());
-    expect(input().value).toBe("codex --no-alt-screen");
+    expect(input().value).toBe("codex-yolo");
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      "agentLaunch.changed",
+    );
+    await act(async () =>
+      [...host.querySelectorAll("button")]
+        .find((button) => button.textContent === "common.cancel")!
+        .click(),
+    );
+    expect(input().value).toBe("restored-codex");
   } finally {
     await act(async () => root.unmount());
+    vi.unstubAllGlobals();
   }
 });

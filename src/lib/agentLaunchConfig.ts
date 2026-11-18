@@ -2,12 +2,83 @@
 export interface AgentLaunchDocument {
   schema_version: number;
   default_agent: string;
-  instructions: Record<string, string>;
+  /** Legacy input only; new saves use schemes. */
+  instructions?: Record<string, string>;
+  schemes?: Record<string, AgentLaunchSchemes>;
 }
 export interface AgentLaunchSnapshot {
   document: AgentLaunchDocument;
   revision: string;
   defaults: Record<string, string>;
+}
+
+export interface AgentLaunchScheme {
+  id: string;
+  name: string;
+  instruction: string;
+}
+export interface AgentLaunchSchemes {
+  default_id: string;
+  items: AgentLaunchScheme[];
+}
+
+/** Derived implicit defaults never create a second stored configuration. */
+export function agentLaunchSchemes(
+  snapshot: AgentLaunchSnapshot,
+  key: string,
+  defaultName = "全自动",
+): AgentLaunchSchemes {
+  return (
+    snapshot.document.schemes?.[key] ?? {
+      default_id: "default",
+      items: [
+        {
+          id: "default",
+          name:
+            snapshot.document.instructions?.[key] !== undefined
+              ? "默认"
+              : defaultName,
+          instruction:
+            snapshot.document.instructions?.[key] ??
+            snapshot.defaults[key] ??
+            key,
+        },
+      ],
+    }
+  );
+}
+
+export function selectedLaunchScheme(
+  snapshot: AgentLaunchSnapshot,
+  key: string,
+  schemeId?: string,
+) {
+  const schemes = agentLaunchSchemes(snapshot, key);
+  return schemes.items.find(
+    (item) => item.id === (schemeId || schemes.default_id),
+  );
+}
+
+/** Consume all legacy entries on a write, preserving unknown Agent preferences. */
+export function withAgentLaunchSchemes(
+  document: AgentLaunchDocument,
+  key: string,
+  value: AgentLaunchSchemes,
+): AgentLaunchDocument {
+  const schemes = Object.fromEntries(
+    Object.entries(document.instructions ?? {}).map(([agent, instruction]) => [
+      agent,
+      {
+        default_id: "default",
+        items: [{ id: "default", name: "默认", instruction }],
+      },
+    ]),
+  );
+  return {
+    schema_version: 2,
+    default_agent: document.default_agent,
+    schemes: { ...schemes, ...document.schemes, [key]: value },
+  };
 }
 
 export const launchShortcuts: Record<

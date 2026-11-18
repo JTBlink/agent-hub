@@ -23,7 +23,7 @@
 | `herdr-sidebar`  | [herdr-sidebar/](herdr-sidebar/README.md)    | Herdr 工作空间与 Agent 侧栏方案    |
 | `install`        | [install/](install/index.html)               | 发现入口、技能与自动化任务安装     |
 | `hosts`          | [hosts/](hosts/index.html)                   | Hosts 列表与编辑器实现对照         |
-| `agent-settings` | [agent-settings/](agent-settings/index.html) | 全局智能体默认启动配置             |
+| `agent-settings` | [agent-settings/](agent-settings/index.html) | Agent 多组启动方案与自定义命令     |
 
 `tasks-herdr` 是任务与终端原型的旧名称，统一归入 `tasks-terminal`。历史 `/docs/prototypes/*.html` 和 `/tests/browser/preview-module-prototype.html` 网址在 Vite 开发服务中保留跳转，查询参数沿用。
 
