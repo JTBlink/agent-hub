@@ -1,5 +1,5 @@
 import { Cloud } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -20,19 +20,36 @@ export function AgentLaunchBackup({
   const [error, setError] = useState("");
   const [readError, setReadError] = useState("");
   const [generation, setGeneration] = useState(0);
+  const statusRequest = useRef<Promise<void> | null>(null);
   useEffect(() => {
     let active = true;
-    void api
-      .gitBackupStatus()
-      .then((next) => {
-        if (active) {
-          setStatus(next);
-          setReadError("");
-        }
-      })
-      .catch((e) => {
-        if (active) setReadError(getErrorMessage(e, String(e)));
-      });
+    const timer = window.setTimeout(async () => {
+      // Full backup status projects user configuration under the repository
+      // lock. Coalesce revision changes and keep at most one read in flight.
+      await statusRequest.current;
+      if (!active) return;
+      const request = api
+        .gitBackupStatus()
+        .then((next) => {
+          if (active) {
+            setStatus(next);
+            setReadError("");
+          }
+        })
+        .catch((e) => {
+          if (active) setReadError(getErrorMessage(e, String(e)));
+        });
+      statusRequest.current = request;
+      await request;
+      if (statusRequest.current === request) statusRequest.current = null;
+    }, 600);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [revision, generation]);
+  useEffect(() => {
+    let active = true;
     const unsubscribe = listen("backup-auto-completed", () => {
       if (active) {
         setGeneration((n) => n + 1);
@@ -41,9 +58,9 @@ export function AgentLaunchBackup({
     });
     return () => {
       active = false;
-      void unsubscribe.then((stop) => stop());
+      void unsubscribe.then((stop) => stop()).catch(() => {});
     };
-  }, [revision, generation, onSynced]);
+  }, [onSynced]);
   const sync = async () => {
     setBusy(true);
     setError("");

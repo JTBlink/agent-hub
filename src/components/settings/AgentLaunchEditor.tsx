@@ -30,29 +30,42 @@ export function AgentLaunchEditor({
     base: string;
     value: AgentLaunchSchemes;
   } | null>(null);
+  const latestDraft = useRef(draft);
+  const savingDraft = useRef(false);
+  const flushAfterSave = useRef(false);
+  const updateDraft = (next: typeof draft) => {
+    latestDraft.current = next;
+    setDraft(next);
+  };
   const value = draft?.value ?? saved;
   const dirty = !!draft && JSON.stringify(draft.value) !== encoded;
   const conflict = !!draft && draft.base !== encoded && dirty;
   const persist = async (overwrite = false) => {
-    if (!value || !snapshot || !dirty) return;
-    const submitted = JSON.stringify(value);
-    if (
-      await save((current) => {
-        const currentValue = agentLaunchSchemes(
-          { ...snapshot, document: current },
-          agentKey,
-          t("agentLaunch.schemes.automatic"),
-        );
-        if (!overwrite && draft && JSON.stringify(currentValue) !== draft.base)
-          throw new Error(t("agentLaunch.changed"));
-        return withAgentLaunchSchemes(current, agentKey, value);
-      })
-    )
-      setDraft((current) =>
-        current && JSON.stringify(current.value) !== submitted
-          ? { ...current, base: submitted }
-          : null,
+    const pending = latestDraft.current;
+    if (!snapshot || !pending || savingDraft.current) return;
+    const submitted = JSON.stringify(pending.value);
+    if (submitted === pending.base) return;
+
+    savingDraft.current = true;
+    const ok = await save((current) => {
+      const currentValue = agentLaunchSchemes(
+        { ...snapshot, document: current },
+        agentKey,
+        t("agentLaunch.schemes.automatic"),
       );
+      if (!overwrite && JSON.stringify(currentValue) !== pending.base)
+        throw new Error(t("agentLaunch.changed"));
+      return withAgentLaunchSchemes(current, agentKey, pending.value);
+    });
+    savingDraft.current = false;
+    if (!ok) return;
+    const latest = latestDraft.current;
+    updateDraft(
+      latest && JSON.stringify(latest.value) !== submitted
+        ? { ...latest, base: submitted }
+        : null,
+    );
+    if (flushAfterSave.current) void persist();
   };
   const persistRef = useRef(persist);
   useEffect(() => {
@@ -63,12 +76,14 @@ export function AgentLaunchEditor({
     const timer = window.setTimeout(() => void persistRef.current(), 250);
     return () => window.clearTimeout(timer);
   }, [dirty, conflict, busy, error, draft]);
-  useEffect(
-    () => () => {
-      if (saveOnUnmount) void persistRef.current();
-    },
-    [saveOnUnmount],
-  );
+  useEffect(() => {
+    flushAfterSave.current = false;
+    return () => {
+      if (!saveOnUnmount) return;
+      if (savingDraft.current) flushAfterSave.current = true;
+      else void persistRef.current();
+    };
+  }, [saveOnUnmount]);
   if (!snapshot || !value)
     return (
       <div
@@ -88,14 +103,28 @@ export function AgentLaunchEditor({
       </div>
     );
   return (
-    <fieldset disabled={busy} className="min-w-0" aria-busy={busy}>
+    <div className="min-w-0">
       <AgentLaunchSchemesEditor
         key={agentKey}
+        agentKey={agentKey}
         name={agentName ?? agentKey}
         defaultInstruction={snapshot.defaults[agentKey] ?? agentKey}
         value={value}
+        onInstructionKeyDown={(event) => {
+          if (event.key === "Enter" && dirty && !conflict && !busy) {
+            event.preventDefault();
+            void persist();
+          }
+          if (event.key === "Escape" && dirty && !busy) {
+            event.stopPropagation();
+            updateDraft(null);
+          }
+        }}
         onChange={(next) =>
-          setDraft({ base: draft?.base ?? encoded, value: next })
+          updateDraft({
+            base: latestDraft.current?.base ?? encoded,
+            value: next,
+          })
         }
       />
       {conflict && (
@@ -119,6 +148,7 @@ export function AgentLaunchEditor({
           <>
             <button
               type="button"
+              disabled={busy}
               className="app-button-secondary text-xs"
               onClick={() => void persist(conflict)}
             >
@@ -126,8 +156,9 @@ export function AgentLaunchEditor({
             </button>
             <button
               type="button"
+              disabled={busy}
               className="app-button-ghost text-xs"
-              onClick={() => setDraft(null)}
+              onClick={() => updateDraft(null)}
             >
               {t("common.cancel")}
             </button>
@@ -136,6 +167,7 @@ export function AgentLaunchEditor({
         <button
           type="button"
           className="ml-auto text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          disabled={busy}
           aria-pressed={snapshot.document.default_agent === agentKey}
           onClick={() =>
             void save((current) => ({ ...current, default_agent: agentKey }))
@@ -148,6 +180,6 @@ export function AgentLaunchEditor({
           )}
         </button>
       </div>
-    </fieldset>
+    </div>
   );
 }

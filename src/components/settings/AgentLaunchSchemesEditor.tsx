@@ -4,21 +4,28 @@ import { Copy, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { AppDialog } from "../AppDialog";
 import { CardActionMenu } from "../CardActionMenu";
 import { ThemedSelect } from "../ThemedSelect";
-import type {
-  AgentLaunchSchemes,
-  AgentLaunchScheme,
+import {
+  launchShortcuts,
+  shortcutSelected,
+  toggleLaunchShortcut,
+  type AgentLaunchSchemes,
+  type AgentLaunchScheme,
 } from "../../lib/agentLaunchConfig";
 
 export function AgentLaunchSchemesEditor({
+  agentKey,
   defaultInstruction,
   name,
   value,
   onChange,
+  onInstructionKeyDown,
 }: {
+  agentKey: string;
   defaultInstruction: string;
   name: string;
   value: AgentLaunchSchemes;
   onChange: (next: AgentLaunchSchemes) => void;
+  onInstructionKeyDown: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState(value.default_id);
@@ -31,6 +38,8 @@ export function AgentLaunchSchemesEditor({
   const [copyCurrent, setCopyCurrent] = useState(true);
   const [error, setError] = useState("");
   const isDefault = current.id === value.default_id;
+  const shortcuts = launchShortcuts[agentKey] ?? [];
+  const canReset = current.instruction !== defaultInstruction;
   const update = (patch: Partial<AgentLaunchScheme>) =>
     onChange({
       ...value,
@@ -152,9 +161,45 @@ export function AgentLaunchSchemesEditor({
           spellCheck={false}
           value={current.instruction}
           onChange={(event) => update({ instruction: event.target.value })}
+          onKeyDown={onInstructionKeyDown}
           className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 font-mono text-sm text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
       </label>
+      {(shortcuts.length > 0 || canReset) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {shortcuts.map(({ label, flag }) => {
+            const selected = shortcutSelected(current.instruction, flag);
+            return (
+              <button
+                key={flag}
+                type="button"
+                aria-pressed={selected}
+                title={flag}
+                className={`rounded border px-2 py-0.5 text-xs focus-visible:ring-2 focus-visible:ring-accent ${selected ? "border-accent-border bg-surface-active text-accent" : "border-border text-muted"}`}
+                onClick={() =>
+                  update({
+                    instruction: toggleLaunchShortcut(
+                      current.instruction,
+                      flag,
+                    ),
+                  })
+                }
+              >
+                {t(`agentLaunch.shortcuts.${label}`)}
+              </button>
+            );
+          })}
+          {canReset && (
+            <button
+              type="button"
+              className="app-button-ghost text-xs"
+              onClick={() => update({ instruction: defaultInstruction })}
+            >
+              {t("agentLaunch.reset")}
+            </button>
+          )}
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         <span>
           {isDefault
