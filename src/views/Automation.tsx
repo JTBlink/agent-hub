@@ -14,6 +14,10 @@ import {
 } from "../components/AutomationToolbar";
 import { AutomationTaskTable } from "../components/AutomationTaskTable";
 import { useAutomationTaskOrder } from "../hooks/useAutomationTaskOrder";
+import {
+  automationEditorResume,
+  forgetAutomationEditor,
+} from "../lib/automationEditorNavigation";
 import { AutomationEditor } from "../components/AutomationEditor";
 import { AutomationPageMenu } from "../components/AutomationPageMenu";
 import { AutomationTaskActions } from "../components/AutomationTaskActions";
@@ -50,6 +54,12 @@ export function Automation() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [resume, setResume] = useState(() =>
+    automationEditorResume(location.state),
+  );
+  useEffect(() => {
+    forgetAutomationEditor(location.state);
+  }, [location.state]);
   const { data, loading, error, refresh, generation, restored } =
     useAutomationOverview(i18n.resolvedLanguage ?? i18n.language);
   useAutomationNextRunRefresh(data?.tasks, refresh);
@@ -75,9 +85,15 @@ export function Automation() {
   const [origin, setOrigin] = useState<AutomationOriginFilter>("agent_hub");
   const [editor, setEditor] = useState<
     AutomationTask | "create" | "restore" | null
-  >(null);
+  >(
+    resume
+      ? (resume.task ?? (resume.restoreBackup ? "restore" : "create"))
+      : null,
+  );
   const [removing, setRemoving] = useState<AutomationTask | null>(null);
-  const [copyDraft, setCopyDraft] = useState<AutomationDraft | null>(null);
+  const [copyDraft, setCopyDraft] = useState<AutomationDraft | null>(
+    resume?.draft ?? null,
+  );
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [showConfigInfo, setShowConfigInfo] = useState(false);
@@ -218,6 +234,7 @@ export function Automation() {
         : await saveAutomation(task?.id ?? null, task?.revision ?? null, draft);
     setEditor(null);
     setCopyDraft(null);
+    setResume(null);
     setActionError(null);
     setNotice(t("automation.saved"));
     refresh();
@@ -269,10 +286,12 @@ export function Automation() {
           task={typeof editor === "object" && editor ? editor : undefined}
           initialDraft={copyDraft ?? undefined}
           restoreBackup={editor === "restore"}
+          initialInactivePrompt={resume?.inactivePrompt}
           hermesInstalled={data?.hermes_installed ?? false}
           onClose={() => {
             setEditor(null);
             setCopyDraft(null);
+            setResume(null);
           }}
           onSave={save}
         />

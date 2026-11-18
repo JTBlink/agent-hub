@@ -23,7 +23,7 @@ export function BackupScope({
         </h2>
       </div>
       <div className="space-y-2 text-sm">
-        {["skills", "automations", "metadata"].map((key) => (
+        {["skills", "automations", "userConfig", "metadata"].map((key) => (
           <div key={key} className="flex items-start gap-2 text-tertiary">
             <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
             <span>{t(`backup.scope.included.${key}`)}</span>

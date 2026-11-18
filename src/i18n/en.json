@@ -876,7 +876,13 @@
       "noContent": "No content changes",
       "selectFile": "Select a file on the left to view its diff",
       "originalVersion": "Original",
-      "currentVersion": "Current"
+      "currentVersion": "Current",
+      "categories": {
+        "userConfig": "User configuration",
+        "skills": "Skills",
+        "automations": "Automations",
+        "metadata": "Sync metadata"
+      }
     },
     "actions": {
       "backupNow": "Sync Now",
@@ -960,7 +966,8 @@
       "included": {
         "automations": "Automation packages: task.json, scripts, prompts, dependency declarations and schedules",
         "skills": "Skills and their files",
-        "metadata": "Tags, skill groups, skill group membership, and per-agent skill toggles"
+        "metadata": "Tags, skill groups, skill group membership, and per-agent skill toggles",
+        "userConfig": "User configuration: Agent launch schemes, defaults and Hosts profiles"
       },
       "excluded": {
         "automationLocal": "Automation project bindings, installation receipts, private environments and run history",

@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { getAgentLaunchSettings } from "../lib/tauri";
 import { subscribeAgentLaunchUpdates } from "../lib/agentLaunchUpdates";
@@ -7,19 +8,28 @@ export function useDefaultAgentKey() {
   const [key, setKey] = useState("");
   useEffect(() => {
     let active = true;
-    let updated = false;
+    let generation = 0;
     const unsubscribe = subscribeAgentLaunchUpdates((snapshot) => {
-      updated = true;
+      ++generation;
       setKey(snapshot.document.default_agent);
     });
-    void getAgentLaunchSettings()
-      .then((snapshot) => {
-        if (active && !updated) setKey(snapshot.document.default_agent);
-      })
-      .catch(() => {
-        /* Optional initial selection; startup still validates settings. */
-      });
+    const refresh = () => {
+      const request = ++generation;
+      return getAgentLaunchSettings()
+        .then((snapshot) => {
+          if (active && request === generation)
+            setKey(snapshot.document.default_agent);
+        })
+        .catch(() => {
+          /* Optional initial selection; startup still validates settings. */
+        });
+    };
+    void refresh();
+    const unlisten = listen("app-files-changed", () => void refresh()).catch(
+      () => () => {},
+    );
     return () => {
+      void unlisten.then((dispose) => dispose()).catch(() => {});
       active = false;
       unsubscribe();
     };

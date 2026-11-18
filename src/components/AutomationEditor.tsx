@@ -21,12 +21,14 @@ import { AutomationAdminNotice } from "./AutomationAdminNotice";
 import { AutomationVersionField } from "./AutomationVersionField";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { rememberAutomationEditor } from "../lib/automationEditorNavigation";
 
 export function AutomationEditor({
   task,
   initialDraft,
   restoreBackup = false,
+  initialInactivePrompt = "",
   hermesInstalled,
   onClose,
   onSave,
@@ -34,12 +36,14 @@ export function AutomationEditor({
   task?: AutomationTask;
   initialDraft?: AutomationDraft;
   restoreBackup?: boolean;
+  initialInactivePrompt?: string;
   hermesInstalled: boolean;
   onClose: () => void;
   onSave: (draft: AutomationDraft) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [draft, setDraft] = useState<AutomationDraft>(
     initialDraft ??
       task?.definition ?? {
@@ -59,7 +63,7 @@ export function AutomationEditor({
   const [busy, setBusy] = useState(false);
   const [selectingAgent, setSelectingAgent] = useState(false);
   const [launchValid, setLaunchValid] = useState(true);
-  const [inactivePrompt, setInactivePrompt] = useState("");
+  const [inactivePrompt, setInactivePrompt] = useState(initialInactivePrompt);
   const [picker, setPicker] = useState<"backup" | null>(
     restoreBackup ? "backup" : null,
   );
@@ -132,6 +136,24 @@ export function AutomationEditor({
     )
       setLeavingForDiscovery(true);
     else openDiscovery();
+  };
+  const openAgentSettings = (agentKey: string) => {
+    const id = rememberAutomationEditor({
+      draft,
+      task,
+      restoreBackup,
+      inactivePrompt,
+    });
+    navigate(location.pathname + location.search + location.hash, {
+      replace: true,
+      state: { ...location.state, automationEditorResume: id },
+    });
+    navigate(
+      agentKey
+        ? `/settings?agent=${encodeURIComponent(agentKey)}#agents`
+        : "/settings#agents",
+      { state: { automationSettingsReturn: true } },
+    );
   };
   const update = (value: Partial<AutomationDraft>) =>
     setDraft((previous) => ({ ...previous, ...value }));
@@ -300,6 +322,7 @@ export function AutomationEditor({
                 disabled={busy || externalNative}
                 providerLocked={!!task}
                 onLaunchValidityChange={setLaunchValid}
+                onOpenAgentSettings={openAgentSettings}
                 onPendingChange={setSelectingAgent}
                 onInactivePromptChange={setInactivePrompt}
                 onChange={update}

@@ -5,7 +5,13 @@ import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as api from "../lib/tauri";
 import zh from "../i18n/zh.json";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import {
+  MemoryRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { Automation } from "./Automation";
 import { automationOverviewCache } from "../lib/automationOverviewCache";
 import { saveAutomationOverviewSummary } from "../lib/automationOverviewStorage";
@@ -2719,4 +2725,56 @@ it("keeps running task details read-only and does not save cancelled variant edi
   await click("取消");
   expect(api.saveAutomation).not.toHaveBeenCalled();
   expect(container.querySelectorAll('input[type="radio"]')).toHaveLength(0);
+});
+
+it("opens shared scheme settings and restores the unsaved task when returning", async () => {
+  function SettingsReturn() {
+    const navigate = useNavigate();
+    return <button onClick={() => navigate(-1)}>Return to task</button>;
+  }
+  await act(async () =>
+    root.render(
+      <StrictMode>
+        <MemoryRouter initialEntries={["/automation"]}>
+          <Routes>
+            <Route path="/automation" element={<Automation />} />
+            <Route path="/settings" element={<SettingsReturn />} />
+          </Routes>
+          <CurrentLocation />
+        </MemoryRouter>
+      </StrictMode>,
+    ),
+  );
+  await click("新建自动化");
+  await select("智能体（可选）", "codex");
+  const name =
+    container.querySelector<HTMLInputElement>('input[aria-label="任务名称"]') ??
+    container.querySelector<HTMLInputElement>("form input");
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )!.set!.call(name, "Unsaved task draft");
+    name!.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>(
+        '[role="combobox"][aria-label="启动方案"]',
+      )!
+      .click(),
+  );
+  const manage = [
+    ...document.querySelectorAll<HTMLButtonElement>("[role=listbox] button"),
+  ].find((button) => button.textContent === "管理启动方案…")!;
+  await act(async () => manage.click());
+  expect(container.querySelector("form")).toBeNull();
+  expect(
+    container.querySelector("output[data-current-location]")?.textContent,
+  ).toBe("/settings?agent=codex");
+  await click("Return to task");
+  expect(container.querySelector<HTMLInputElement>("form input")?.value).toBe(
+    "Unsaved task draft",
+  );
+  expect(api.saveAutomation).not.toHaveBeenCalled();
 });

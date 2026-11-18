@@ -14,13 +14,11 @@ export function AgentLaunchEditor({
   agentName,
   controller,
   saveOnUnmount = false,
-  onDraftChange,
 }: {
   agentKey: string;
   agentName?: string;
   controller: Controller;
   saveOnUnmount?: boolean;
-  onDraftChange?: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation();
   const { snapshot, busy, error, save } = controller;
@@ -35,9 +33,6 @@ export function AgentLaunchEditor({
   const value = draft?.value ?? saved;
   const dirty = !!draft && JSON.stringify(draft.value) !== encoded;
   const conflict = !!draft && draft.base !== encoded && dirty;
-  useEffect(() => {
-    onDraftChange?.(dirty);
-  }, [dirty, onDraftChange]);
   const persist = async (overwrite = false) => {
     if (!value || !snapshot || !dirty) return;
     const submitted = JSON.stringify(value);

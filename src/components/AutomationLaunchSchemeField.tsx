@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Settings } from "lucide-react";
 import { useAgentLaunchSettings } from "../hooks/useAgentLaunchSettings";
@@ -10,8 +10,7 @@ import { herdrAgentKind } from "../lib/automationAgents";
 import { automationAgentConfig } from "../lib/automation";
 import type { AutomationDraft } from "../lib/tauri";
 import { ThemedSelect } from "./ThemedSelect";
-import { AppDialog } from "./AppDialog";
-import { AgentLaunchEditor } from "./settings/AgentLaunchEditor";
+import { useNavigate } from "react-router-dom";
 
 export function AutomationLaunchSchemeField({
   draft,
@@ -19,17 +18,18 @@ export function AutomationLaunchSchemeField({
   disabled,
   onChange,
   onValidityChange,
+  onOpenSettings,
 }: {
   draft: AutomationDraft;
   agentKey: string;
   disabled: boolean;
   onChange: (change: Partial<AutomationDraft>) => void;
   onValidityChange?: (valid: boolean) => void;
+  onOpenSettings?: (agentKey: string) => void;
 }) {
   const { t } = useTranslation();
   const launch = useAgentLaunchSettings();
-  const [managedAgent, setManagedAgent] = useState<string | null>(null);
-  const [pendingDraft, setPendingDraft] = useState(false);
+  const navigate = useNavigate();
   const config = automationAgentConfig(draft);
   const schemeId = config?.value.launch.scheme_id ?? "";
   const selected =
@@ -99,8 +99,11 @@ export function AutomationLaunchSchemeField({
             label: t("agentLaunch.schemes.manage"),
             icon: <Settings size={16} />,
             onSelect: () => {
-              setPendingDraft(false);
-              setManagedAgent(agentKey);
+              if (onOpenSettings) onOpenSettings(agentKey);
+              else
+                navigate(
+                  `/settings?agent=${encodeURIComponent(agentKey)}#agents`,
+                );
             },
           }}
         >
@@ -164,20 +167,6 @@ export function AutomationLaunchSchemeField({
             {t("common.retry")}
           </button>
         </div>
-      )}
-      {managedAgent && (
-        <AppDialog
-          title={t("agentLaunch.schemes.manage")}
-          busy={launch.busy || pendingDraft}
-          onClose={() => setManagedAgent(null)}
-        >
-          <AgentLaunchEditor
-            agentKey={managedAgent}
-            controller={launch}
-            onDraftChange={setPendingDraft}
-            saveOnUnmount
-          />
-        </AppDialog>
       )}
     </div>
   );

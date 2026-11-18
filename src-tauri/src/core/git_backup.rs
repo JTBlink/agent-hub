@@ -402,6 +402,7 @@ pub(crate) fn build_auto_commit_message(porcelain: &str) -> String {
     let mut skills = std::collections::BTreeSet::new();
     let mut automations = std::collections::BTreeSet::new();
     let mut has_metadata = false;
+    let mut has_user_config = false;
     for line in porcelain.lines() {
         let entry = line.get(3..).unwrap_or("").trim();
         if entry.is_empty() {
@@ -424,9 +425,13 @@ pub(crate) fn build_auto_commit_message(porcelain: &str) -> String {
                 }
             }
         }
+        if path.starts_with("user-config/") {
+            has_user_config = true;
+            continue;
+        }
         has_metadata = true;
     }
-    if skills.is_empty() && automations.is_empty() && !has_metadata {
+    if skills.is_empty() && automations.is_empty() && !has_metadata && !has_user_config {
         return "auto backup".to_string();
     }
     let mut parts: Vec<String> = skills.into_iter().collect();
@@ -442,6 +447,9 @@ pub(crate) fn build_auto_commit_message(porcelain: &str) -> String {
     } else {
         None
     };
+    if has_user_config {
+        parts.push("user-config".into());
+    }
     if has_metadata {
         parts.push("metadata".into());
     }

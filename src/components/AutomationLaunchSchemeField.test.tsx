@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { act, type ReactNode } from "react";
+import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { AutomationLaunchSchemeField } from "./AutomationLaunchSchemeField";
 import type { AgentLaunchSnapshot } from "../lib/agentLaunchConfig";
 import type { AutomationDraft } from "../lib/tauri";
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock("react-router-dom", () => ({ useNavigate: () => navigate }));
 const shared = vi.hoisted((): { snapshot: AgentLaunchSnapshot | null } => ({
   snapshot: null,
 }));
@@ -17,17 +19,6 @@ vi.mock("../hooks/useAgentLaunchSettings", () => ({
 }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
-}));
-
-vi.mock("./settings/AgentLaunchEditor", () => ({
-  AgentLaunchEditor: ({ agentKey }: { agentKey: string }) => (
-    <output data-managed-agent>{agentKey}</output>
-  ),
-}));
-vi.mock("./AppDialog", () => ({
-  AppDialog: ({ children }: { children: ReactNode }) => (
-    <section data-managed-dialog>{children}</section>
-  ),
 }));
 
 it("saves only a scheme reference, reads edited commands dynamically and reports a deleted reference", async () => {
@@ -132,7 +123,7 @@ it("saves only a scheme reference, reads edited commands dynamically and reports
   }
 });
 
-it("keeps the opened manager bound to its Agent when the task's resolved Agent changes", async () => {
+it("opens the shared Agent settings directly instead of an inline manager", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const host = document.createElement("div");
   document.body.append(host);
@@ -179,13 +170,8 @@ it("keeps the opened manager bound to its Agent when the task's resolved Agent c
         .find((button) => button.textContent === "agentLaunch.schemes.manage")!
         .click(),
     );
-    expect(host.querySelector("[data-managed-agent]")?.textContent).toBe(
-      "codex",
-    );
-    await act(async () => render("hermes"));
-    expect(host.querySelector("[data-managed-agent]")?.textContent).toBe(
-      "codex",
-    );
+    expect(navigate).toHaveBeenLastCalledWith("/settings?agent=codex#agents");
+    expect(host.querySelector("dialog, [role=dialog]")).toBeNull();
   } finally {
     await act(async () => root.unmount());
     host.remove();

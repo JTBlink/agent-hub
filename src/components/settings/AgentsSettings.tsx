@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { agentLaunchSchemes } from "../../lib/agentLaunchConfig";
 import {
   ChevronDown,
@@ -21,7 +22,8 @@ export function AgentsSettings() {
   const { t } = useTranslation();
   const controller = useAgentSettings();
   const launch = useAgentLaunchSettings();
-  const [query, setQuery] = useState("");
+  const [params] = useSearchParams();
+  const [query, setQuery] = useState(() => params.get("agent") ?? "");
   const [filter, setFilter] = useState<"installed" | "enabled" | "all">("all");
   const {
     tools,

@@ -367,3 +367,26 @@ fn commit_on_exit_commits_locally_without_pushing() {
     );
     assert_eq!(git_out(&env.remote, &["rev-parse", "main"]), remote_before);
 }
+
+#[test]
+fn automatically_pushes_launch_schemes_as_user_configuration() {
+    let env = test_env();
+    let saved = crate::core::agent_launch_config::edit_schemes(
+        "codex",
+        crate::core::agent_launch_config::SchemeEdit::Add {
+            id: "custom".into(),
+            name: "Custom".into(),
+            instruction: "codex-yolo".into(),
+            default: true,
+        },
+    )
+    .unwrap();
+    assert_eq!(run_round_blocking(&env.store), Outcome::BackedUp);
+    let remote = git_out(&env.remote, &["show", "main:user-config/agent-launch.json"]);
+    let document: crate::core::agent_launch_config::Document =
+        serde_json::from_str(&remote).unwrap();
+    assert_eq!(document.schemes["codex"].default_id, "custom");
+    assert_eq!(document.schemes["codex"].items[1].instruction, "codex-yolo");
+    assert!(git_out(&env.remote, &["log", "-1", "--format=%s"]).contains("user-config"));
+    assert!(saved.document.instructions.is_empty());
+}

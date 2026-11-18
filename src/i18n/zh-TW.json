@@ -874,7 +874,13 @@
       "noContent": "無內容變更",
       "selectFile": "選擇左側檔案檢視差異",
       "originalVersion": "原始版本",
-      "currentVersion": "目前版本"
+      "currentVersion": "目前版本",
+      "categories": {
+        "userConfig": "使用者設定",
+        "skills": "技能",
+        "automations": "自動化任務",
+        "metadata": "同步中繼資料"
+      }
     },
     "actions": {
       "backupNow": "立即同步",
@@ -958,7 +964,8 @@
       "included": {
         "automations": "自動化任務套件：task.json、腳本、提示詞、相依宣告與排程",
         "skills": "技能檔案及目錄",
-        "metadata": "標籤、技能組、技能組成員關係和每個 Agent 的技能開關"
+        "metadata": "標籤、技能組、技能組成員關係和每個 Agent 的技能開關",
+        "userConfig": "使用者設定：Agent 啟動方案、預設選擇及 Hosts 設定"
       },
       "excluded": {
         "automationLocal": "自動化的本機專案綁定、安裝回條、私有環境與執行記錄",

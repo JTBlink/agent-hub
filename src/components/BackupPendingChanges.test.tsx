@@ -73,3 +73,15 @@ it("shows file paths, change kinds and rename origins directly on the backup car
   expect(container.textContent).toContain("skills/旧名称/SKILL.md");
   expect(container.textContent).toContain("重命名");
 });
+
+it("labels portable launch schemes as user configuration", async () => {
+  await render([
+    {
+      path: "user-config/agent-launch.json",
+      previous_path: null,
+      kind: "modified",
+    },
+  ]);
+  expect(container.textContent).toContain("用户配置");
+  expect(container.textContent).toContain("user-config/agent-launch.json");
+});

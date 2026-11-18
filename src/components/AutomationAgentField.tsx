@@ -40,8 +40,10 @@ export function AutomationAgentField({
   onPendingChange,
   onInactivePromptChange,
   onLaunchValidityChange,
+  onOpenAgentSettings,
 }: {
   onLaunchValidityChange?: (valid: boolean) => void;
+  onOpenAgentSettings?: (agentKey: string) => void;
   draft: AutomationDraft;
   disabled: boolean;
   providerLocked: boolean;
@@ -264,7 +266,10 @@ export function AutomationAgentField({
           menuFooterAction={{
             label: t("terminal.agentSettings"),
             icon: <Settings size={16} />,
-            onSelect: () => navigate("/settings#agents"),
+            onSelect: () =>
+              onOpenAgentSettings
+                ? onOpenAgentSettings(configured?.key ?? resolvedChoice)
+                : navigate("/settings#agents"),
           }}
           aria-label={t("automation.optionalAgent")}
           value={resolvedChoice}
@@ -308,6 +313,7 @@ export function AutomationAgentField({
         disabled={disabled || pending}
         onChange={onChange}
         onValidityChange={onLaunchValidityChange}
+        onOpenSettings={onOpenAgentSettings}
       />
       {pending && (
         <p role="status" className="text-xs text-muted">

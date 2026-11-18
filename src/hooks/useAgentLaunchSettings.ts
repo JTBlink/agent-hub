@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   AgentLaunchDocument,
@@ -15,12 +16,16 @@ export function useAgentLaunchSettings() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
+  const pendingReload = useRef(false);
   const snapshotRef = useRef<AgentLaunchSnapshot | null>(null);
   const saveQueue = useRef<Promise<boolean>>(Promise.resolve(false));
   const request = useRef(0);
   const alive = useRef(true);
   const reload = useCallback(async () => {
-    if (saving.current) return;
+    if (saving.current) {
+      pendingReload.current = true;
+      return;
+    }
     const generation = ++request.current;
     try {
       const next = await api.getAgentLaunchSettings();
@@ -41,7 +46,11 @@ export function useAgentLaunchSettings() {
       setError("");
     });
     void reload();
+    const unlisten = listen("app-files-changed", () => void reload()).catch(
+      () => () => {},
+    );
     return () => {
+      void unlisten.then((dispose) => dispose()).catch(() => {});
       alive.current = false;
       unsubscribe();
     };
@@ -49,28 +58,34 @@ export function useAgentLaunchSettings() {
   const save = (
     change: (current: AgentLaunchDocument) => AgentLaunchDocument,
   ) => {
-    const operation = saveQueue.current.catch(() => false).then(async () => {
-      const current = snapshotRef.current;
-      if (!current) return false;
-      saving.current = true;
-      ++request.current;
-      if (alive.current) setBusy(true);
-      try {
-        const next = await api.saveAgentLaunchSettings(
-          change(current.document),
-          current.revision,
-        );
-        snapshotRef.current = next;
-        publishAgentLaunchUpdate(next);
-        return true;
-      } catch (e) {
-        if (alive.current) setError(getErrorMessage(e, String(e)));
-        return false;
-      } finally {
-        saving.current = false;
-        if (alive.current) setBusy(false);
-      }
-    });
+    const operation = saveQueue.current
+      .catch(() => false)
+      .then(async () => {
+        const current = snapshotRef.current;
+        if (!current) return false;
+        saving.current = true;
+        ++request.current;
+        if (alive.current) setBusy(true);
+        try {
+          const next = await api.saveAgentLaunchSettings(
+            change(current.document),
+            current.revision,
+          );
+          snapshotRef.current = next;
+          publishAgentLaunchUpdate(next);
+          return true;
+        } catch (e) {
+          if (alive.current) setError(getErrorMessage(e, String(e)));
+          return false;
+        } finally {
+          saving.current = false;
+          if (alive.current) setBusy(false);
+          if (pendingReload.current && alive.current) {
+            pendingReload.current = false;
+            void reload();
+          }
+        }
+      });
     saveQueue.current = operation.catch(() => false);
     return operation;
   };

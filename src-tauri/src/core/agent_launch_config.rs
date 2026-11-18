@@ -10,6 +10,8 @@ use std::{
     path::Path,
 };
 mod defaults;
+mod edit;
+pub use edit::{edit_schemes, effective_schemes, set_default_agent, SchemeEdit};
 mod schemes;
 pub use defaults::{key_for_kind, kind_for_key};
 use schemes::normalize;

@@ -39,9 +39,13 @@ Herdr 原生 `agent start` 只能选择预设可执行文件。指令使用原�
 
 ## 配置与同步
 
-仅可移植设置保存到 `user-config/agent-launch.json`（schema 1）：`default_agent` 与按稳定 Agent key 保存的 `instructions`。安装检测、技能路径、排序、启用、凭据及运行状态保留原存储。
+仅可移植设置保存到 `user-config/agent-launch.json`（schema 2）：`default_agent` 与按稳定 Agent key 保存的 `schemes`；schema 1 的 `instructions` 作为迁移输入保留兼容。安装检测、技能路径、排序、启用、凭据及运行状态保留原存储。
 
 独立模块使用现有 RepoLock、user-config 路径边界和原子替换。保存比较修订，外部修改或恢复后旧草稿不能覆盖新设置。未知 Agent key 保留以支持另一设备或未来版本。现有 Git 备份负责上传、合并和恢复，恢复事务在发布文件前验证文档；模块不包含 GitHub 凭据或上传器。
+
+方案管理复用设置页，自动化的“管理启动方案”直接导航到对应 Agent，不再创建独立编辑弹窗。任务草稿只在内存中暂存供返回时恢复，不进入用户配置、Git 备份或云端同步。
+
+CLI 的 `agents launch schemes list|add|update|delete|set-default` 与桌面共用核心编辑和原子保存，`agents launch default-agent` 单独维护全局默认 Agent。CLI 进程退出后，运行中的桌面文件监听器识别 user-config 变更并通知同一自动备份调度器；桌面未运行时，下次启动的备份轮次收集待备份修改，不承诺退出的 CLI 进程继续上传。自动备份遵守已有启停与远端配置，不擅自开启或改写远端。Git 自动提交说明明确使用 `user-config` 分类；云端同步和恢复仍由统一备份工作区处理方案 ID、名称、指令及默认值，运行状态和草稿不进入同步。
 
 另见[自动化编写规范](../product/automation-authoring.md)与[自动化架构](automation.md)。
 

@@ -874,7 +874,13 @@
       "noContent": "无内容变更",
       "selectFile": "选择左侧文件查看差异",
       "originalVersion": "原始版本",
-      "currentVersion": "当前版本"
+      "currentVersion": "当前版本",
+      "categories": {
+        "userConfig": "用户配置",
+        "skills": "技能",
+        "automations": "自动化任务",
+        "metadata": "同步元数据"
+      }
     },
     "actions": {
       "backupNow": "立即同步",
@@ -958,7 +964,8 @@
       "included": {
         "automations": "自动化任务包：task.json、脚本、提示词、依赖声明与日程",
         "skills": "技能文件及目录",
-        "metadata": "标签、技能组、技能组成员关系和每 Agent 的技能开关"
+        "metadata": "标签、技能组、技能组成员关系和每 Agent 的技能开关",
+        "userConfig": "用户配置：Agent 启动方案、默认选择及 Hosts 配置"
       },
       "excluded": {
         "automationLocal": "自动化的本机项目绑定、安装回执、私有环境及运行记录",

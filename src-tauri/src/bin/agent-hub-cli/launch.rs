@@ -1,5 +1,7 @@
 use app_lib::core::agent_launch_config as config;
 use clap::{Args, Subcommand};
+#[path = "launch/schemes.rs"]
+mod schemes;
 
 #[derive(Args, Clone, Debug)]
 pub struct LaunchArgs {
@@ -28,6 +30,10 @@ enum LaunchCommand {
     },
     /// 查看完整设置、默认指令与当前修订。
     Show,
+    /// 配置命名启动方案；与桌面设置共用配置、备份及同步。
+    Schemes(schemes::SchemeArgs),
+    /// 设置全局默认 Agent（不改变该 Agent 的默认方案）。
+    DefaultAgent { agent: String },
     /// 查看共享启动环境与可用后端。
     Environment,
     /// 解析一个 Agent 的有效启动指令（不启动进程）。
@@ -91,6 +97,10 @@ enum RuntimeModule {
 
 pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
     match args.command {
+        LaunchCommand::Schemes(args) => schemes::run(args, json)?,
+        LaunchCommand::DefaultAgent { agent } => {
+            super::print_json(&config::set_default_agent(&agent)?, json)
+        }
         command @ (LaunchCommand::Execute
         | LaunchCommand::Reconcile
         | LaunchCommand::Continue

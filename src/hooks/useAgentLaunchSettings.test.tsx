@@ -8,6 +8,16 @@ import { AgentLaunchEditor } from "../components/settings/AgentLaunchEditor";
 import { getAgentLaunchSettings, saveAgentLaunchSettings } from "../lib/tauri";
 import type { AgentLaunchSnapshot } from "../lib/agentLaunchConfig";
 
+const fileChanges = vi.hoisted(() => new Set<() => void>());
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(async (_event: string, callback: () => void) => {
+    fileChanges.add(callback);
+    return () => {
+      fileChanges.delete(callback);
+    };
+  }),
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -173,6 +183,92 @@ it("queues a second save against the snapshot produced by the first save", async
     const last = vi.mocked(saveAgentLaunchSettings).mock.calls.at(-1)![0];
     expect(last.default_agent).toBe("hermes");
     expect(last.instructions?.codex).toBe("codex --search");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("reloads shared schemes and the default Agent after CLI edits or a cloud restore", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const initial: AgentLaunchSnapshot = {
+    revision: "old",
+    defaults: { codex: "codex" },
+    document: { schema_version: 2, default_agent: "codex", schemes: {} },
+  };
+  vi.mocked(getAgentLaunchSettings).mockReset().mockResolvedValue(initial);
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  function Entry() {
+    const config = useAgentLaunchSettings();
+    const agent = useDefaultAgentKey();
+    return (
+      <output>
+        {config.snapshot?.revision}:{agent}
+      </output>
+    );
+  }
+  try {
+    await act(async () => root.render(<Entry />));
+    expect(host.textContent).toBe("old:codex");
+    vi.mocked(getAgentLaunchSettings).mockResolvedValue({
+      ...initial,
+      revision: "cli-edited",
+      document: { ...initial.document, default_agent: "hermes" },
+    });
+    await act(async () => {
+      fileChanges.forEach((callback) => callback());
+    });
+    expect(host.textContent).toBe("cli-edited:hermes");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("rechecks CLI or restore changes that arrive while a settings save is pending", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const initial: AgentLaunchSnapshot = {
+    revision: "initial",
+    defaults: {},
+    document: { schema_version: 2, default_agent: "codex", schemes: {} },
+  };
+  vi.mocked(getAgentLaunchSettings).mockReset().mockResolvedValue(initial);
+  let finish!: (value: AgentLaunchSnapshot) => void;
+  vi.mocked(saveAgentLaunchSettings)
+    .mockReset()
+    .mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  function Entry() {
+    const config = useAgentLaunchSettings();
+    return (
+      <>
+        <button onClick={() => void config.save((document) => document)}>
+          Save
+        </button>
+        <output>{config.snapshot?.revision}</output>
+      </>
+    );
+  }
+  try {
+    await act(async () => root.render(<Entry />));
+    await act(async () => host.querySelector("button")!.click());
+    vi.mocked(getAgentLaunchSettings).mockResolvedValue({
+      ...initial,
+      revision: "external",
+    });
+    await act(async () => {
+      fileChanges.forEach((callback) => callback());
+    });
+    await act(async () => finish({ ...initial, revision: "saved" }));
+    expect(host.querySelector("output")?.textContent).toBe("external");
   } finally {
     await act(async () => root.unmount());
     host.remove();

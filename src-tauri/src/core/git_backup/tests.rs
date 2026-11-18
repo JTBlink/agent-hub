@@ -998,3 +998,17 @@ fn ensure_clean_clone_target_refuses_file() {
         "unexpected message: {msg}"
     );
 }
+
+#[test]
+fn auto_msg_user_configuration_is_distinct_from_skills_and_metadata() {
+    assert_eq!(
+        build_auto_commit_message(" M user-config/agent-launch.json\n"),
+        "auto backup: user-config"
+    );
+    assert_eq!(
+        build_auto_commit_message(
+            " M skills/demo/SKILL.md\n M user-config/agent-launch.json\n M .agent-hub/state.json\n"
+        ),
+        "auto backup: demo, user-config, metadata"
+    );
+}

@@ -38,6 +38,11 @@ export function BackupPendingChanges({
             key={change.path}
             className="flex items-start gap-2 rounded-md border border-border-subtle px-2 py-1.5 text-xs"
           >
+            <span className="shrink-0 rounded bg-surface-active px-1.5 text-muted">
+              {t(
+                `backup.changes.categories.${change.path.startsWith("user-config/") ? "userConfig" : change.path.startsWith("automations/") ? "automations" : change.path.startsWith("skills/") ? "skills" : "metadata"}`,
+              )}
+            </span>
             <span className="shrink-0 text-tertiary">
               {t(`backup.changes.${change.kind}`)}
             </span>

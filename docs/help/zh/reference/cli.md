@@ -213,3 +213,19 @@ agent-hub-cli automations logs '<task-id>'
 ## 预览与浏览
 
 `agent-hub-cli preview` 提供与桌面端共用的网页检查和自动操作。关键命令、运行前提与示例独立维护于[预览与浏览 CLI](preview-cli.md)。
+
+## Agent 启动方案
+
+CLI 与“设置 → Agent”共用启动方案配置；修改自动纳入已有 Git 备份和云端同步。需先配置备份远端并开启自动备份；桌面运行时监听变更，桌面关闭时在下次启动处理待备份修改。
+
+```bash
+agent-hub-cli --json agents launch schemes list codex
+agent-hub-cli agents launch schemes add codex --id custom --name 自定义 --instruction 'codex-yolo'
+agent-hub-cli agents launch schemes update codex custom --name 项目专用 --instruction 'codex-yolo --search'
+agent-hub-cli agents launch schemes set-default codex custom
+agent-hub-cli agents launch default-agent codex
+agent-hub-cli --json agents launch resolve codex --scheme custom
+agent-hub-cli agents launch schemes delete codex custom --replacement default
+```
+
+方案 ID 供任务引用，重命名不会改变 ID；删除正在使用的默认方案时必须显式指定接替方案，至少保留一套。删除其他方案无需 `--replacement`。删除后任务中的固定引用明确报错，不自动换方案。批量维护也可继续使用 `agents launch show` 与带修订保护的 `agents launch save --file <document.json> --revision <revision>`。
