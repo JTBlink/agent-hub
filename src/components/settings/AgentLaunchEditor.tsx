@@ -110,6 +110,48 @@ export function AgentLaunchEditor({
         name={agentName ?? agentKey}
         defaultInstruction={snapshot.defaults[agentKey] ?? agentKey}
         value={value}
+        actions={
+          <>
+            {dirty && (
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="app-button-secondary text-xs"
+                  onClick={() => void persist(conflict)}
+                >
+                  {t(conflict ? "agentLaunch.overwrite" : "common.save")}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="app-button-ghost text-xs"
+                  onClick={() => updateDraft(null)}
+                >
+                  {t("common.cancel")}
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              className="ml-auto text-xs text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              disabled={busy}
+              aria-pressed={snapshot.document.default_agent === agentKey}
+              onClick={() =>
+                void save((current) => ({
+                  ...current,
+                  default_agent: agentKey,
+                }))
+              }
+            >
+              {t(
+                snapshot.document.default_agent === agentKey
+                  ? "agentLaunch.defaultAgent"
+                  : "agentLaunch.setDefaultAgent",
+              )}
+            </button>
+          </>
+        }
         onInstructionKeyDown={(event) => {
           if (event.key === "Enter" && dirty && !conflict && !busy) {
             event.preventDefault();
@@ -143,43 +185,6 @@ export function AgentLaunchEditor({
           {error}
         </p>
       )}
-      <div className="mt-2 flex items-center gap-2 text-xs">
-        {dirty && (
-          <>
-            <button
-              type="button"
-              disabled={busy}
-              className="app-button-secondary text-xs"
-              onClick={() => void persist(conflict)}
-            >
-              {t(conflict ? "agentLaunch.overwrite" : "common.save")}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              className="app-button-ghost text-xs"
-              onClick={() => updateDraft(null)}
-            >
-              {t("common.cancel")}
-            </button>
-          </>
-        )}
-        <button
-          type="button"
-          className="ml-auto text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          disabled={busy}
-          aria-pressed={snapshot.document.default_agent === agentKey}
-          onClick={() =>
-            void save((current) => ({ ...current, default_agent: agentKey }))
-          }
-        >
-          {t(
-            snapshot.document.default_agent === agentKey
-              ? "agentLaunch.defaultAgent"
-              : "agentLaunch.setDefaultAgent",
-          )}
-        </button>
-      </div>
     </div>
   );
 }

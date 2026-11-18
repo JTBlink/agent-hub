@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Copy, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { AppDialog } from "../AppDialog";
@@ -19,15 +19,18 @@ export function AgentLaunchSchemesEditor({
   value,
   onChange,
   onInstructionKeyDown,
+  actions,
 }: {
   agentKey: string;
   defaultInstruction: string;
   name: string;
   value: AgentLaunchSchemes;
   onChange: (next: AgentLaunchSchemes) => void;
-  onInstructionKeyDown: React.KeyboardEventHandler<HTMLInputElement>;
+  onInstructionKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  actions?: ReactNode;
 }) {
   const { t } = useTranslation();
+  const instructionId = useId();
   const [selectedId, setSelectedId] = useState(value.default_id);
   const current =
     value.items.find((group) => group.id === selectedId) ?? value.items[0];
@@ -82,16 +85,20 @@ export function AgentLaunchSchemesEditor({
     setDialog(null);
   };
   return (
-    <div className="mt-2 space-y-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-xs text-secondary">
-          {t("agentLaunch.schemes.label")}
-        </span>
+    <div className="mt-2 space-y-1.5">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <label
+          htmlFor={instructionId}
+          className="mr-auto shrink-0 text-xs text-secondary"
+        >
+          {t("agentLaunch.instruction")}
+        </label>
         <ThemedSelect
           aria-label={`${name} ${t("agentLaunch.schemes.label")}`}
           value={current.id}
           onChange={(event) => setSelectedId(event.target.value)}
-          className="app-input min-w-0 flex-1 text-xs"
+          className="h-7 w-auto min-w-0 max-w-44 gap-1.5 px-2 text-xs"
+          title={t("agentLaunch.schemes.label")}
         >
           {value.items.map((group) => (
             <option key={group.id} value={group.id}>
@@ -154,18 +161,16 @@ export function AgentLaunchSchemesEditor({
           ]}
         />
       </div>
-      <label className="block text-xs text-secondary">
-        {t("agentLaunch.instruction")}
-        <input
-          aria-label={`${name} ${t("agentLaunch.instruction")}`}
-          spellCheck={false}
-          value={current.instruction}
-          onChange={(event) => update({ instruction: event.target.value })}
-          onKeyDown={onInstructionKeyDown}
-          className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 font-mono text-sm text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        />
-      </label>
-      {(shortcuts.length > 0 || canReset) && (
+      <input
+        id={instructionId}
+        aria-label={`${name} ${t("agentLaunch.instruction")}`}
+        spellCheck={false}
+        value={current.instruction}
+        onChange={(event) => update({ instruction: event.target.value })}
+        onKeyDown={onInstructionKeyDown}
+        className="block w-full rounded border border-border bg-background px-2 py-1.5 font-mono text-sm text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      />
+      {(shortcuts.length > 0 || canReset || actions) && (
         <div className="flex flex-wrap items-center gap-1.5">
           {shortcuts.map(({ label, flag }) => {
             const selected = shortcutSelected(current.instruction, flag);
@@ -198,27 +203,9 @@ export function AgentLaunchSchemesEditor({
               {t("agentLaunch.reset")}
             </button>
           )}
+          {actions}
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-        <span>
-          {isDefault
-            ? t("agentLaunch.schemes.defaultHelp")
-            : t("agentLaunch.schemes.currentDefault", {
-                name: value.items.find((group) => group.id === value.default_id)
-                  ?.name,
-              })}
-        </span>
-        {!isDefault && (
-          <button
-            type="button"
-            className="text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={() => onChange({ ...value, default_id: current.id })}
-          >
-            {t("agentLaunch.schemes.setDefault")}
-          </button>
-        )}
-      </div>
       {dialog && (
         <AppDialog
           title={

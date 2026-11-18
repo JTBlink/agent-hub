@@ -230,20 +230,19 @@ export function AgentsPrototype({
                           onChange={(next) =>
                             setGroups((all) => ({ ...all, [agent.key]: next }))
                           }
+                          actions={
+                            <button
+                              type="button"
+                              disabled={!agent.installed || !agent.enabled}
+                              className="ml-auto text-xs text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40"
+                              onClick={() => setDefaultAgent(agent.key)}
+                            >
+                              {defaultAgent === agent.key
+                                ? "默认 Agent"
+                                : "设为默认 Agent"}
+                            </button>
+                          }
                         />
-                        <div className="flex items-center justify-between gap-2 border-t border-border-faint pt-2 text-xs text-muted">
-                          <span>{groups[agent.key].groups.length} 套方案</span>
-                          <button
-                            type="button"
-                            disabled={!agent.installed || !agent.enabled}
-                            className="text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40"
-                            onClick={() => setDefaultAgent(agent.key)}
-                          >
-                            {defaultAgent === agent.key
-                              ? "默认 Agent"
-                              : "设为默认 Agent"}
-                          </button>
-                        </div>
                         <details className="mt-1">
                           <summary className="cursor-pointer text-xs text-muted">
                             详细设置

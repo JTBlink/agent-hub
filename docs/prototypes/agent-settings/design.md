@@ -6,7 +6,7 @@
 
 对照 `src/components/settings/AgentsSettings.tsx`、`AgentSettingsCard.tsx` 和 `AgentLaunchEditor.tsx`：保留左侧设置导航、右侧筛选与搜索、已检测与其他 Agent 分组及双列卡片。复用正式 SettingsTabs、AgentIcon、ToggleSwitch、ThemedSelect、CardActionMenu、AppDialog、主题 token 和常用参数纯函数。
 
-每张卡片在启动指令上方增加一行“启动方案”下拉、新建按钮和操作菜单。卡片底部将“默认 Agent”和“默认方案”分别表达，避免编辑某组时改变后续快捷启动所用方案。详细设置保留技能与项目目录的只读位置示意，实际路径维护继续使用正式设置组件。
+卡片沿用单指令版的紧凑结构。方案下拉、新建和操作菜单放在“启动指令”标题右侧。指令下方继续使用原有快捷参数行，「默认 Agent」在同行右侧。默认方案由下拉标记并通过操作菜单管理。原型直接复用正式的方案编辑器，详细设置仍展示技能与项目目录。
 
 ## 方案与交互
 
