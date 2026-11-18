@@ -21,7 +21,7 @@ fn reads_multi_script_drafts_using_the_package_json_budget() {
 
     std::fs::File::create(&path)
         .unwrap()
-        .set_len(4 * 1024 * 1024 + 1)
+        .set_len(8 * 1024 * 1024 + 1)
         .unwrap();
     assert!(super::draft(&path)
         .unwrap_err()

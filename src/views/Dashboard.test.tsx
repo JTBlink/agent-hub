@@ -118,7 +118,7 @@ function openWorkspaceButton() {
 }
 
 it("opens a selected workspace from the empty project list and prevents repeat clicks", async () => {
-  let finish!: (value: Project) => void;
+  let finish!: (value: Awaited<ReturnType<typeof openProjectFolder>>) => void;
   vi.mocked(openProjectFolder).mockReturnValueOnce(
     new Promise((resolve) => {
       finish = resolve;
@@ -133,7 +133,9 @@ it("opens a selected workspace from the empty project list and prevents repeat c
   });
   expect(button.disabled).toBe(true);
   expect(openProjectFolder).toHaveBeenCalledOnce();
-  await act(async () => finish(project(0)));
+  await act(async () =>
+    finish({ project: project(0), directory: project(0).path, visits: [] }),
+  );
   expect(app.refreshProjects).toHaveBeenCalled();
   expect(container.textContent).toBe("/project/project-0");
 });
