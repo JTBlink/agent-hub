@@ -68,9 +68,9 @@ npm run cli -- --help                   # 先编译、更新，再执行 CLI
 ./agent-hub.sh dev                      # 停止旧开发实例，更新 CLI 后启动 Tauri + React
 ```
 
-Unix 下 `./agent-hub.sh dev` 与 `npm run app:dev` 会先核实当前仓库的旧开发进程及工作目录，发送终止信号并等待退出，3 秒后仍未退出则强制结束；停止失败不启动新实例。其他仓库与正式安装版不参与清理。前端端口被其他服务占用时正常报错，不按端口强杀进程。
+Unix 下 `./agent-hub.sh dev` 与 `npm run app:dev` 会先核实当前仓库的旧开发进程及工作目录，发送终止信号并等待退出，3 秒后仍未退出则强制结束。macOS 上，如果系统或用户 Applications 目录里运行着相同产品的安装版，则先请求它正常退出，避免单实例机制把开发启动转交给旧窗口。安装版拒绝退出或等待超时时，开发启动停止。其他产品和检出目录的进程不参与停止。前端端口被其他服务占用时正常报错，不按端口强杀进程。
 
-`npm run app:dev`、`npm run tauri -- dev` 与上述 `dev` 使用同一入口。dev 启动阶段会同时更新 bridge 和 PATH 中当前产品的开发软链接；长驻会话中的 Tauri 热更新不等于重新编译 CLI，修改 CLI 后可执行 `npm run cli:build`，或重新启动 dev。
+`npm run tauri -- dev` 直接进入 Tauri 构建。需要先停掉旧实例时，使用 `npm run app:dev` 或 `./agent-hub.sh dev`。dev 启动阶段会同时更新 bridge 和 PATH 中当前产品的开发软链接；长驻会话中的 Tauri 热更新不等于重新编译 CLI，修改 CLI 后可执行 `npm run cli:build`，或重新启动 dev。
 
 dev 入口通过 `AGENT_HUB_DEV_CLI` 将桌面重启绑定到当前产品已准备的 sidecar。普通 Cargo 构建即使替换共享的 `target/debug/agent-hub-cli`，也不会改变该会话发布 CLI 的来源；发布仍检查版本与完整产品身份，来源缺失时明确失败。
 

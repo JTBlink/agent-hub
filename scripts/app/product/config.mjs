@@ -302,6 +302,11 @@ function writeGenerated(path, content) {
 }
 
 /** Build inputs live in an ignored, product-specific directory and are reproducible. */
+export function productBundleIdentifier(id = "standard") {
+  const base = "com.jtstudio.agenthub";
+  return id === "standard" ? base : `${base}.${id}`;
+}
+
 export function prepareProduct(product) {
   mkdirSync(product.generatedDir, { recursive: true });
   mkdirSync(product.binariesDir, { recursive: true });
@@ -391,7 +396,7 @@ export function prepareProduct(product) {
         ...(product.id === "standard"
           ? {}
           : {
-              identifier: `com.jtstudio.agenthub.${product.id}`,
+              identifier: productBundleIdentifier(product.id),
               productName:
                 product.productName ??
                 (product.id === "personal"

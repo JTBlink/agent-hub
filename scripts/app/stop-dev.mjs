@@ -3,7 +3,12 @@ import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { repositoryRoot } from "../shared/paths.mjs";
-import { loadProduct, productArguments } from "./product/config.mjs";
+import {
+  loadProduct,
+  productArguments,
+  productBundleIdentifier,
+} from "./product/config.mjs";
+import { quitInstalledMacApp } from "./quit-installed-macos.mjs";
 
 export function processSnapshot(runner = spawnSync) {
   const result = runner("ps", ["-axo", "pid=,ppid=,stat=,args="], {
@@ -192,7 +197,28 @@ export function stopDev({
   pause = sleep,
   graceMs = 3000,
   product,
+  platform = process.platform,
+  quitInstalled = quitInstalledMacApp,
+  installedGraceMs = 15000,
 } = {}) {
+  if (platform === "darwin") {
+    const pids = new Set(
+      quitInstalled(productBundleIdentifier(product?.id), runner),
+    );
+    if (pids.size) {
+      console.log("等待当前产品的 AgentHub 安装版退出…");
+      const deadline = Date.now() + installedGraceMs;
+      while (
+        processSnapshot(runner).some(
+          (item) => pids.has(item.pid) && !item.stat.startsWith("Z"),
+        )
+      ) {
+        if (Date.now() >= deadline)
+          throw new Error("AgentHub 安装版未退出，停止启动。");
+        pause(100);
+      }
+    }
+  }
   root = realpathSync(root);
   const snapshot = processSnapshot(runner);
   const targets = devProcesses(

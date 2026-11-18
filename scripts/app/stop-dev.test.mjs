@@ -4,8 +4,38 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { expect, it } from "vitest";
-import { devProcesses } from "./stop-dev.mjs";
+import { expect, it, vi } from "vitest";
+import { devProcesses, stopDev } from "./stop-dev.mjs";
+
+it("waits for the installed macOS instance to quit before starting dev", () => {
+  const snapshots = [
+    " 42 1 S /Applications/AgentHub.app/Contents/MacOS/agent-hub\n",
+    "",
+    "",
+  ];
+  const runner = vi.fn(() => ({ status: 0, stdout: snapshots.shift() }));
+  const quitInstalled = vi.fn(() => [42]);
+  const signal = vi.fn();
+  stopDev({ platform: "darwin", runner, quitInstalled, signal, pause() {} });
+  expect(quitInstalled).toHaveBeenCalledWith("com.jtstudio.agenthub", runner);
+  expect(snapshots).toHaveLength(0);
+  expect(signal).not.toHaveBeenCalled();
+});
+
+it("stops startup when the installed instance does not quit", () => {
+  const runner = () => ({
+    status: 0,
+    stdout: " 42 1 S /Applications/AgentHub.app/Contents/MacOS/agent-hub\n",
+  });
+  expect(() =>
+    stopDev({
+      platform: "darwin",
+      runner,
+      quitInstalled: () => [42],
+      installedGraceMs: 0,
+    }),
+  ).toThrow("安装版未退出");
+});
 
 it("protects the current launch chain, other checkouts, installed apps and desktop agents", () => {
   const root = "/workspace/demo";
@@ -70,7 +100,7 @@ it.skipIf(process.platform === "win32")(
         [
           "--input-type=module",
           "-e",
-          `import { stopDev } from ${JSON.stringify(moduleUrl)}; stopDev({root: process.argv[1], graceMs: 100});`,
+          `import { stopDev } from ${JSON.stringify(moduleUrl)}; stopDev({root: process.argv[1], graceMs: 100, platform: "linux"});`,
           join(sandbox, "current checkout"),
         ],
         { encoding: "utf8", timeout: 10000 },
@@ -89,7 +119,7 @@ it.skipIf(process.platform === "win32")(
         [
           "--input-type=module",
           "-e",
-          `import { stopDev } from ${JSON.stringify(moduleUrl)}; stopDev({root: process.argv[1]});`,
+          `import { stopDev } from ${JSON.stringify(moduleUrl)}; stopDev({root: process.argv[1], platform: "linux"});`,
           join(sandbox, "current checkout"),
         ],
         { encoding: "utf8", timeout: 10000 },
