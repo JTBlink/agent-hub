@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { Link, MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
+import type { AgentLaunchSchemes } from "../../lib/agentLaunchConfig";
 import type { Project } from "../../lib/tauri";
 import { makeProject, makeTool } from "../../../tests/fixtures/workspace";
 import {
@@ -13,6 +14,10 @@ import {
 import { TerminalWorkspace } from "./TerminalWorkspace";
 import { TerminalSessions } from "./TerminalSessions";
 import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
+
+const launchSchemes = vi.hoisted(() => ({
+  value: {} as Record<string, AgentLaunchSchemes>,
+}));
 
 vi.mock("../../hooks/useAgentLaunchSettings", () => ({
   useAgentLaunchSettings: () => ({
@@ -24,7 +29,11 @@ vi.mock("../../hooks/useAgentLaunchSettings", () => ({
         opencode: "opencode --auto",
         hermes: "hermes --yolo",
       },
-      document: { schema_version: 2, default_agent: "codex", schemes: {} },
+      document: {
+        schema_version: 2,
+        default_agent: "codex",
+        schemes: launchSchemes.value,
+      },
     },
     error: "",
     busy: false,
@@ -55,6 +64,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), Channel: class {} }));
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({ writeText: vi.fn() }));
 beforeEach(() => {
   localStorage.clear();
+  launchSchemes.value = {};
   vi.mocked(invoke).mockImplementation(async (command) =>
     command === "terminal_list" ? [] : undefined,
   );
@@ -887,13 +897,23 @@ it("attaches the selected checkout through default without adding a tab", async 
 
 it.each([
   ["Codex", "codex"],
+  ["Codex", "codex", "custom"],
   ["Claude Code", "claude"],
   ["Claude Agent Teams", "claude_teams"],
   ["OpenCode", "opencode"],
   ["Hermes Agent", "hermes"],
 ])(
-  "opens %s only after selecting it from the new menu, in the current worktree",
-  async (label, agent) => {
+  "opens %s in a new terminal in the current worktree (agent %s, scheme %s)",
+  async (label, agent, schemeId?) => {
+    if (schemeId) {
+      launchSchemes.value.codex = {
+        default_id: "default",
+        items: [
+          { id: "default", name: "Default", instruction: "codex" },
+          { id: schemeId, name: "Custom", instruction: "codex-wrapper" },
+        ],
+      };
+    }
     const project = makeProject();
     const topic = "<workspace>/topic";
     vi.mocked(invoke).mockImplementation(async (command) =>
@@ -928,6 +948,7 @@ it.each([
           .mocked(invoke)
           .mock.calls.filter(([command]) => command === "terminal_create");
       expect(creations()).toHaveLength(1);
+      const originalTab = host.querySelector('[role="tab"]');
       const plus = host.querySelector<HTMLButtonElement>(
         '[aria-label="terminal.newMenu"]',
       )!;
@@ -940,14 +961,29 @@ it.each([
       ].find(
         (item) =>
           item.textContent === label ||
-          item.getAttribute("aria-label") === label,
+          item.getAttribute("aria-label") === `terminal.new ${label}`,
       )!;
       await act(async () => option.click());
+      if (schemeId) {
+        expect(creations()).toHaveLength(1);
+        const selectedScheme = document.querySelector<HTMLButtonElement>(
+          '[role="menuitemradio"][aria-checked="false"]',
+        )!;
+        expect(selectedScheme.textContent).toBe("Custom");
+        await act(async () => selectedScheme.click());
+      }
+      expect(originalTab?.isConnected).toBe(true);
+      expect(host.querySelectorAll('[role="tab"]')).toHaveLength(2);
       expect(creations()).toHaveLength(2);
       expect(creations()[1][1]).toMatchObject({
         projectId: project.id,
         worktreePath: topic,
-        launch: { kind: "native_agent", agent, prompt: "" },
+        launch: {
+          kind: "native_agent",
+          agent,
+          prompt: "",
+          ...(schemeId ? { scheme_id: schemeId } : {}),
+        },
       });
       expect(
         host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,

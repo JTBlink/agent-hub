@@ -97,12 +97,13 @@ export function TerminalLaunchSchemeMenu({
               className={`flex min-h-8 min-w-0 flex-1 items-center gap-2 rounded-md py-1.5 pl-2 text-left text-sm text-secondary outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 ${allowHerdr ? "pr-11" : "pr-2"}`}
               onClick={() => onSelect(group.id, "terminal")}
             >
-              <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-accent">
-                {group.id === config.default_id && <Check size={14} />}
-              </span>
               <span className="min-w-0 flex-1 truncate">{group.name}</span>
               {group.id === config.default_id && (
-                <span className="shrink-0 text-xs text-muted">默认</span>
+                <Check
+                  size={14}
+                  className="shrink-0 text-accent"
+                  aria-hidden="true"
+                />
               )}
             </button>
             {allowHerdr && (
