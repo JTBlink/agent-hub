@@ -107,8 +107,11 @@ pub async fn git_backup_status(
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<git_backup::GitBackupStatus, AppError> {
     let store = store.inner().clone();
-    tokio::task::spawn_blocking(move || backup_workspace::status(&store).map_err(AppError::git))
-        .await?
+    tokio::task::spawn_blocking(move || backup_status_blocking(&store)).await?
+}
+
+fn backup_status_blocking(store: &SkillStore) -> Result<git_backup::GitBackupStatus, AppError> {
+    backup_workspace::status(store).map_err(classify_git_chain)
 }
 
 #[tauri::command]
@@ -125,7 +128,7 @@ pub async fn git_backup_init(store: State<'_, Arc<SkillStore>>) -> Result<(), Ap
             backup_workspace::write_metadata(&store, skills_dir)?;
             git_backup::init_repo_unlocked(skills_dir, &effective_device_name(&store))
         })
-        .map_err(AppError::git)
+        .map_err(classify_git_chain)
     })
     .await?
 }
@@ -215,7 +218,7 @@ pub async fn git_backup_commit(
             backup_workspace::write_metadata(&store, skills_dir)?;
             git_backup::commit_all_unlocked(skills_dir, &message)
         })
-        .map_err(AppError::git)
+        .map_err(classify_git_chain)
     })
     .await?
 }
@@ -416,7 +419,7 @@ pub async fn git_backup_restore_version(
             backup_workspace::reconcile(&store, skills_dir)?;
             Ok(safety_tag)
         })
-        .map_err(AppError::git)
+        .map_err(classify_git_chain)
     })
     .await?
 }

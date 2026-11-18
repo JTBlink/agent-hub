@@ -299,3 +299,23 @@ fn migrate_rolls_back_config_and_setting_on_verify_failure() {
         Some(token_url)
     );
 }
+
+#[test]
+fn backup_status_reports_the_configuration_reason_instead_of_only_prepare_context() {
+    let env = test_env();
+    let root = crate::core::user_config::ensure_root().unwrap();
+    std::fs::write(
+        root.join("agent-launch.json"),
+        r#"{"schema_version":99,"default_agent":"codex","schemes":{}}"#,
+    )
+    .unwrap();
+    let error = backup_status_blocking(&env.store).unwrap_err();
+    assert!(error.message.contains("Cannot prepare backup repository"));
+    assert!(
+        error
+            .message
+            .contains("Unsupported Agent launch configuration version"),
+        "{}",
+        error.message
+    );
+}
