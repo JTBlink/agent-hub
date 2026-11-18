@@ -194,6 +194,60 @@ it("keeps the desktop dev sibling CLI current before publishing", () => {
   expect(copies[1][1]).toMatch(/target\/debug\/agent-hub-cli$/);
 });
 
+it.each([
+  [["dev"], true],
+  [["build", "--debug"], true],
+  [["build"], false],
+  [["build", "--debug", "--target=aarch64-apple-darwin"], false],
+  [["build", "--debug", "--target", "universal-apple-darwin"], false],
+])(
+  "shares the native cache only for implicit local debug builds (%j)",
+  (args, native) => {
+    const cargoCalls = [];
+    const copies = [];
+    const publications = [];
+    const runner = (command, args) => {
+      if (command === "cargo") cargoCalls.push(args);
+      return { status: 0, stdout: "host: aarch64-apple-darwin\n" };
+    };
+    const prepare = (
+      target,
+      release,
+      run,
+      _fs,
+      _publish,
+      host,
+      product,
+      options,
+    ) =>
+      prepareCli(
+        target,
+        release,
+        run,
+        { mkdirSync() {}, copyFileSync: (from, to) => copies.push([from, to]) },
+        (request) => publications.push(request),
+        host,
+        product,
+        { ...options, linkCli: () => {} },
+      );
+    expect(main(args, runner, prepare, () => {})).toBe(0);
+    expect(cargoCalls.length).toBeGreaterThan(0);
+    expect(
+      cargoCalls.every((args) => args.includes("--target") === !native),
+    ).toBe(true);
+    if (native) {
+      expect(copies).toHaveLength(1);
+      expect(copies[0][0]).toMatch(/target\/debug\/agent-hub-cli$/);
+      expect(copies[0][1]).toMatch(/agent-hub-cli-aarch64-apple-darwin$/);
+      expect(publications[0].target).toBeUndefined();
+    } else {
+      expect(publications[0].target).toBe(
+        requestedTarget(args, "aarch64-apple-darwin"),
+      );
+    }
+  },
+);
+
 it("pins dev restarts to the prepared product sidecar rather than the shared Cargo output", () => {
   let product;
   let desktop;

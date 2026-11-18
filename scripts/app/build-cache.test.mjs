@@ -11,7 +11,10 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { cargoTargetDir, pruneBuildCache } from "./build-cache.mjs";
+import { cargoTargetDir, pruneBuildCache as prune } from "./build-cache.mjs";
+
+const pruneBuildCache = (options) =>
+  prune({ isBuildActive: () => false, ...options });
 
 const roots = [];
 afterEach(() =>
@@ -35,15 +38,9 @@ function fingerprint(
   root,
   hash,
   time,
-  { profile = "debug", mode = 1, features = "[]" } = {},
+  { profile = "debug", mode = 1, features = "[]", target = "lib-app_lib" } = {},
 ) {
-  const path = join(
-    root,
-    profile,
-    ".fingerprint",
-    `agent-hub-${hash}`,
-    "lib-app_lib",
-  );
+  const path = join(root, profile, ".fingerprint", `agent-hub-${hash}`, target);
   file(
     `${path}.json`,
     JSON.stringify({ profile: mode, features, rustflags: [], config: 1 }),
@@ -101,7 +98,7 @@ describe("build cache retention", () => {
     },
   );
 
-  it("keeps the latest application artifact per profile, mode, features and architecture", () => {
+  it("keeps the latest application artifact per profile, mode and architecture across feature changes", () => {
     const root = fixture();
     const old = "1111111111111111",
       current = "2222222222222222",
@@ -125,7 +122,10 @@ describe("build cache retention", () => {
       expect(
         existsSync(join(target, "debug/.fingerprint", `agent-hub-${old}`)),
       ).toBe(false);
-      for (const hash of [current, check, feature])
+      expect(
+        existsSync(join(target, "debug/deps", `libapp_lib-${feature}.rmeta`)),
+      ).toBe(false);
+      for (const hash of [current, check])
         expect(
           existsSync(join(target, "debug/deps", `libapp_lib-${hash}.rmeta`)),
         ).toBe(true);
@@ -134,6 +134,120 @@ describe("build cache retention", () => {
       ).toBe(true);
     }
   });
+
+  it("keeps only the newest incremental cache per crate and preserves unrelated directories", () => {
+    const root = fixture(),
+      base = join(root, "debug/incremental");
+    for (const [name, time] of [
+      ["app_lib-old123", 10],
+      ["app_lib-new456", 20],
+      ["agent_hub_cli-current123", 5],
+    ]) {
+      file(join(base, name, "session", "object.o"), "object", time);
+      utimesSync(join(base, name, "session"), time, time);
+      utimesSync(join(base, name), time, time);
+    }
+    const unknown = file(join(base, "unrecognized", "keep.o"));
+    pruneBuildCache({ targetDir: root });
+    expect(existsSync(join(base, "app_lib-old123"))).toBe(false);
+    expect(existsSync(join(base, "app_lib-new456"))).toBe(true);
+    expect(existsSync(join(base, "agent_hub_cli-current123"))).toBe(true);
+    expect(existsSync(unknown)).toBe(true);
+  });
+
+  it("keeps the highest installer version even when an older version was rebuilt later", () => {
+    const root = fixture(),
+      bundle = join(root, "release/bundle/dmg");
+    const current = file(
+      join(bundle, "AgentHub_0.1.10_aarch64.dmg"),
+      "current",
+      10,
+    );
+    const rebuilt = file(join(bundle, "AgentHub_0.1.9_aarch64.dmg"), "old", 30);
+    const signature = file(`${rebuilt}.sig`);
+    pruneBuildCache({ targetDir: root });
+    expect(existsSync(current)).toBe(true);
+    expect(existsSync(rebuilt)).toBe(false);
+    expect(existsSync(signature)).toBe(false);
+  });
+
+  it("retires old integration-test binaries using their own fingerprints", () => {
+    const root = fixture(),
+      old = "1111111111111111",
+      current = "2222222222222222";
+    const target = "test-integration-test-library_probe";
+    fingerprint(root, old, 10, { target, features: '["legacy"]' });
+    fingerprint(root, current, 20, { target });
+    const outdated = file(join(root, "debug/deps", `library_probe-${old}`));
+    const latest = file(join(root, "debug/deps", `library_probe-${current}`));
+    const unrelated = file(join(root, "debug/deps", `libserde-${old}.rlib`));
+    pruneBuildCache({ targetDir: root });
+    expect(existsSync(outdated)).toBe(false);
+    expect(existsSync(latest)).toBe(true);
+    expect(existsSync(unrelated)).toBe(true);
+  });
+
+  it("keeps only the latest completed incremental session and removes abandoned working sessions", () => {
+    const root = fixture(),
+      base = join(root, "debug/incremental/app_lib-cache123");
+    const session = (name, time) => {
+      const path = join(base, name);
+      file(join(path, "object.o"), "object", time);
+      utimesSync(path, time, time);
+      return path;
+    };
+    const old = session("s-old123-seed123-cache123", 10);
+    const current = session("s-new123-seed456-cache456", 20);
+    const abandoned = session("s-fail123-seed789-working", 30);
+    const oldLock = file(join(base, "s-old123-seed123.lock"));
+    const currentLock = file(join(base, "s-new123-seed456.lock"));
+    pruneBuildCache({ targetDir: root });
+    for (const path of [old, oldLock, abandoned])
+      expect(existsSync(path)).toBe(false);
+    for (const path of [current, currentLock])
+      expect(existsSync(path)).toBe(true);
+  });
+
+  it("does not let a failed incremental workspace displace the latest completed cache", () => {
+    const root = fixture(),
+      base = join(root, "debug/incremental");
+    const completed = join(base, "app_lib-valid123");
+    const failed = join(base, "app_lib-failed456");
+    for (const [path, name, time] of [
+      [completed, "s-good123-seed123-cache123", 10],
+      [failed, "s-fail123-seed456-working", 20],
+    ]) {
+      file(join(path, name, "object.o"), "object", time);
+      utimesSync(join(path, name), time, time);
+      utimesSync(path, time, time);
+    }
+    pruneBuildCache({ targetDir: root });
+    expect(existsSync(completed)).toBe(true);
+    expect(existsSync(failed)).toBe(false);
+  });
+
+  it.each([true, false])(
+    "preserves all artifacts when a Cargo build is active before deletion (initially=%s)",
+    (initially) => {
+      const root = fixture();
+      const old = file(
+        join(root, "release/bundle/dmg/AgentHub_0.1.8_aarch64.dmg"),
+      );
+      file(
+        join(root, "release/bundle/dmg/AgentHub_0.1.9_aarch64.dmg"),
+        "new",
+        20,
+      );
+      let checks = 0;
+      expect(
+        pruneBuildCache({
+          targetDir: root,
+          isBuildActive: () => initially || ++checks > 1,
+        }),
+      ).toEqual([]);
+      expect(existsSync(old)).toBe(true);
+    },
+  );
 
   it("removes old installers and their signatures without mixing architectures or formats", () => {
     const root = fixture(),

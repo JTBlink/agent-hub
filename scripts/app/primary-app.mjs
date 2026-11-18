@@ -34,7 +34,11 @@ export function prepareCli(
   publish = publishBuiltCli,
   host,
   product,
-  { updatePathCli = false, linkCli = linkDevelopmentCli } = {},
+  {
+    updatePathCli = false,
+    linkCli = linkDevelopmentCli,
+    useHostCache = false,
+  } = {},
 ) {
   const targetDir = product?.targetDir ?? cargoTargetDir();
   const output =
@@ -54,8 +58,7 @@ export function prepareCli(
         "agent-hub-cli",
         "--target-dir",
         targetDir,
-        "--target",
-        architecture,
+        ...(useHostCache ? [] : ["--target", architecture]),
         ...(release ? ["--release"] : []),
         ...(product ? cargoProductArguments(product) : []),
       ],
@@ -73,7 +76,12 @@ export function prepareCli(
     );
     if (status !== 0) return status;
     filesystem.copyFileSync(
-      resolve(targetDir, architecture, profile, `agent-hub-cli${suffix}`),
+      resolve(
+        targetDir,
+        ...(useHostCache ? [] : [architecture]),
+        profile,
+        `agent-hub-cli${suffix}`,
+      ),
       resolve(output, `agent-hub-cli-${architecture}${suffix}`),
     );
   }
@@ -96,7 +104,7 @@ export function prepareCli(
     filesystem.mkdirSync(universalDir, { recursive: true });
     filesystem.copyFileSync(fatBinary, resolve(universalDir, "agent-hub-cli"));
   }
-  if (host && target === host) {
+  if (!useHostCache && host && target === host) {
     // Tauri dev's desktop binary lives in the native profile directory. Keep
     // its sibling CLI current so startup cannot republish an older artifact.
     filesystem.mkdirSync(resolve(targetDir, profile), { recursive: true });
@@ -108,7 +116,7 @@ export function prepareCli(
   try {
     publish({
       targetDir,
-      target,
+      target: useHostCache ? undefined : target,
       profile,
       runner,
       env: product?.environment ?? process.env,
@@ -174,19 +182,24 @@ export function main(
     // Cargo may embed frontend assets while compiling the shared library.
     const frontend = runNpm(["run", "build"], productRunner);
     if (frontend !== 0) return frontend;
-    const target = requestedTarget(
+    const configuredTarget = requestedTarget(
       args,
-      process.env.CARGO_BUILD_TARGET || host,
+      product.environment.CARGO_BUILD_TARGET || undefined,
     );
+    const target = configuredTarget ?? host;
+    const release = command === "build" && !args.includes("--debug");
     const status = prepare(
       target,
-      command === "build" && !args.includes("--debug"),
+      release,
       productRunner,
       undefined,
       undefined,
       host,
       product,
-      { updatePathCli: command === "dev" },
+      {
+        updatePathCli: command === "dev",
+        useHostCache: !release && configuredTarget === undefined,
+      },
     );
     if (status !== 0) return status;
     if (command === "dev") {

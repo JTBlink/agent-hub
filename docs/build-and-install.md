@@ -42,6 +42,7 @@ Unix 也可执行 `./agent-hub.sh build`；Windows 可执行 `agent-hub.bat buil
 - CLI：`debug/agent-hub-cli` 或 `release/agent-hub-cli`，Windows 带 `.exe` 后缀。
 - 桌面安装包：`release/bundle/`；debug 打包在 `debug/bundle/`。
 - 指定 `--target` 后，在构建目录与 profile 之间增加目标架构目录，例如 `src-tauri/target/aarch64-apple-darwin/release/bundle/`。
+- 默认本机开发和调试打包的配套 CLI 共用 `target/debug`。正式发布及显式指定目标（含 Universal）的配套 CLI 仍使用目标架构目录。
 - sidecar 暂存于 `src-tauri/binaries/`，由脚本生成，不手动维护。
 
 macOS 可打开生成的 DMG，将应用拖入 Applications；Windows 运行生成的安装程序；Linux 使用生成的 deb/rpm 或 AppImage。`./agent-hub.sh install` 的含义是**构建安装包**，需要随后手动安装桌面应用。
@@ -89,9 +90,11 @@ dev 入口通过 `AGENT_HUB_DEV_CLI` 将桌面重启绑定到当前产品已准�
 - `app:test`、`app:lint` 全部成功后。
 - `./agent-hub.sh install --dev` 复用 CLI 构建入口的清理逻辑。
 
-同一架构、debug/release、编译模式和 feature 配置保留最新应用产物；安装包按名称、架构和格式保留最近构建的一份，并删除旧包签名。不同配置各保留一份；共享依赖、build-script 输出与增量缓存保留供下次复用。CLI 安装显式复用项目构建目录，避免每次使用临时目录重编依赖。
+保留规则以[构建产物保留规范](../.agents/skills/rust-dev/references/development.md#构建产物保留规范)为准：每个产品目录、架构、debug/release 和编译／检查／测试模式只保留最新应用产物，历史 feature、rustflags 与 Cargo 配置不各留一份。应用及集成测试二进制和 fingerprint 同步淘汰；每个当前 crate 只保留最新完成的增量工作目录及 session。安装包按名称、架构和格式保留最高版本的一份，同版本按最近构建选择，同时清理旧包签名。
 
-失败或被信号中断的构建保留产物。开发热更新期间不逐轮清理；直接运行 `cargo build/test/clippy` 不会触发项目脚本。清理会跳过本轮调用开始后更新的文件，因此保护中的残留可能在下次成功调用时才删除。清理失败报告原因，不改变成功构建的退出状态。
+共享第三方依赖、build-script 输出与工具链继续复用，不作为应用历史版本清空。CLI 安装显式复用项目构建目录，避免每次使用临时目录重编依赖。
+
+失败或被信号中断的构建不触发清理，后续成功构建会回收历史及遗留增量 session；开发热更新期间不逐轮清理。直接运行 `cargo build/test/clippy` 不会触发项目脚本。检测到 Cargo／Rust 编译仍在运行时，本轮跳过清理并提示空闲后补跑；进程检查失败时停止清理。清理会跳过本轮调用开始后更新的文件，因此保护中的残留可能在下次成功调用时才删除。清理失败报告原因，不改变成功构建的退出状态。
 
 可在没有其他 Cargo 编译运行时手动清理：
 
@@ -108,7 +111,7 @@ npm run app:clean              # 删除全部 Cargo 构建缓存，下次需要�
 - **找不到 Cargo**：安装 Rust stable，并确保 `cargo`、`rustc` 在 PATH 中。
 - **前端检查失败**：先执行 `npm run build` 查看具体错误；该阶段失败不会继续打包。
 - **缺少 sidecar**：通过 `npm run app:build` 或 `npm run tauri -- build` 重新构建。
-- **缓存持续增长**：先退出编译进程，再执行 `app:prune -- --dry-run`。共享依赖和增量缓存仍占空间是预期行为；确需彻底重建时使用 `app:clean`。
+- **缓存持续增长**：先用 `app:prune -- --dry-run` 查看候选，编译空闲后执行 `app:prune`。当前依赖缓存仍占空间是预期行为；历史应用、安装包和增量 session 应被淘汰。确需彻底重建时使用 `app:clean`。
 - **跨平台构建失败**：Rust target 不能替代目标平台的 SDK、链接器和打包工具。优先在对应平台构建并验收。
 
 ## 标准版与个人版

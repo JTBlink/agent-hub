@@ -11,6 +11,8 @@ import {
 } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { rcompare } from "semver";
+import { cargoBuildActive } from "./build-cache-activity.mjs";
 
 const ROOT = repositoryRoot;
 const packagePattern = /^agent-hub-([a-f0-9]{16})$/;
@@ -98,20 +100,18 @@ function fingerprints(profile) {
       const data = JSON.parse(readFileSync(path, "utf8"));
       // Build-script output can be shared by multiple feature/target variants.
       // Leave those Cargo-managed directories intact.
-      if (!/^(?:lib-|bin-|test-)/.test(file.name)) continue;
+      const target = file.name
+        .slice(0, -5)
+        .match(/^(?:test-)?(?:lib|bin|integration-test|example)-(.+)$/)?.[1];
+      if (!target) continue;
       const stamp = path.slice(0, -5);
       if (!existsSync(stamp)) continue;
       records.push({
         directory,
         hash: match[1],
+        target: target.replaceAll("-", "_"),
         time: lstatSync(stamp).mtimeMs,
-        key: JSON.stringify([
-          file.name,
-          data.profile,
-          data.features,
-          data.rustflags,
-          data.config,
-        ]),
+        key: JSON.stringify([file.name, data.profile]),
       });
     }
   }
@@ -132,6 +132,12 @@ function pruneProfile(profile, remove) {
   const obsolete = new Set(
     records.filter((r) => !retained.has(r.hash)).map((r) => r.hash),
   );
+  const targets = new Map();
+  for (const record of records) {
+    const names = targets.get(record.hash) ?? new Set();
+    names.add(record.target).add(`lib${record.target}`);
+    targets.set(record.hash, names);
+  }
   // A current rlib already contains the exact object list needed by the latest
   // library. Old compiler sessions otherwise leave thousands of loose copies.
   const members = archiveMembers(join(deps, "libapp_lib.rlib"));
@@ -159,11 +165,13 @@ function pruneProfile(profile, remove) {
       sessions.set(key, { session, time });
   }
   for (const entry of files) {
-    if (!entry.isFile()) continue;
+    if (!entry.isFile() && !entry.isDirectory()) continue;
     const path = join(deps, entry.name);
-    const hash = entry.name.match(
-      /^(?:lib)?(?:app_lib|agent_hub(?:_cli)?)-([a-f0-9]{16})(?:\.|$)/,
-    )?.[1];
+    const artifact = entry.name.match(/^(.+?)-([a-f0-9]{16})(?:\.|$)/);
+    const hash =
+      artifact && targets.get(artifact[2])?.has(artifact[1])
+        ? artifact[2]
+        : undefined;
     const object = objectSessions.get(entry.name);
     if (hash && obsolete.has(hash)) remove(path);
     else if (object && sessions.get(object.key).session !== object.session)
@@ -178,6 +186,77 @@ function pruneProfile(profile, remove) {
   }
   for (const record of records)
     if (obsolete.has(record.hash)) remove(record.directory);
+  pruneIncremental(profile, records, remove);
+}
+
+function modifiedTime(path) {
+  const stat = lstatSync(path);
+  let time = stat.mtimeMs;
+  if (stat.isDirectory())
+    for (const entry of entries(path))
+      time = Math.max(time, modifiedTime(join(path, entry.name)));
+  return time;
+}
+
+function incrementalSessions(directory) {
+  return entries(directory)
+    .flatMap((entry) => {
+      const match =
+        entry.isDirectory() &&
+        entry.name.match(/^(s-[a-z0-9]+-[a-z0-9]+)-[a-z0-9]+$/);
+      if (!match) return [];
+      const path = join(directory, entry.name);
+      return [
+        {
+          path,
+          lock: join(directory, `${match[1]}.lock`),
+          time: modifiedTime(path),
+          working: entry.name.endsWith("-working"),
+        },
+      ];
+    })
+    .sort((a, b) => b.time - a.time || a.path.localeCompare(b.path));
+}
+
+function pruneIncremental(profile, records, remove) {
+  const directory = join(profile, "incremental");
+  const known = new Set([
+    "app_lib",
+    "agent_hub",
+    "agent_hub_cli",
+    "build_script_build",
+    ...records.map((r) => r.target),
+  ]);
+  const groups = new Map();
+  for (const entry of entries(directory)) {
+    const name =
+      entry.isDirectory() &&
+      entry.name.match(/^([a-zA-Z0-9_]+)-[a-z0-9]+$/)?.[1];
+    if (!known.has(name)) continue;
+    const path = join(directory, entry.name);
+    const sessions = incrementalSessions(path);
+    const completed = sessions.find((session) => !session.working);
+    const group = groups.get(name) ?? [];
+    group.push({
+      path,
+      sessions,
+      time: sessions.length
+        ? (completed?.time ?? -Infinity)
+        : modifiedTime(path),
+    });
+    groups.set(name, group);
+  }
+  for (const group of groups.values()) {
+    group.sort((a, b) => b.time - a.time || a.path.localeCompare(b.path));
+    for (const old of group.slice(1)) remove(old.path);
+    const retained = group[0].sessions.find((session) => !session.working);
+    for (const session of group[0].sessions) {
+      if (session === retained) continue;
+      remove(session.path);
+      if (session.lock !== retained?.lock && existsSync(session.lock))
+        remove(session.lock);
+    }
+  }
 }
 
 // Preserve everything after the numeric version: installer suffixes such as
@@ -194,12 +273,21 @@ function pruneBundles(directory, remove) {
       if (!versionPattern.test(entry.name)) continue;
       const key = entry.name.replace(versionPattern, "{version}");
       const group = groups.get(key) || [];
-      group.push({ path, time: lstatSync(path).mtimeMs });
+      group.push({
+        path,
+        version: entry.name.match(versionPattern)[0],
+        time: lstatSync(path).mtimeMs,
+      });
       groups.set(key, group);
     }
   }
   for (const group of groups.values()) {
-    group.sort((a, b) => b.time - a.time || a.path.localeCompare(b.path));
+    group.sort(
+      (a, b) =>
+        rcompare(a.version, b.version) ||
+        b.time - a.time ||
+        a.path.localeCompare(b.path),
+    );
     for (const old of group.slice(1)) {
       remove(old.path);
       if (existsSync(`${old.path}.sig`)) remove(`${old.path}.sig`);
@@ -207,12 +295,14 @@ function pruneBundles(directory, remove) {
   }
 }
 
-/** Keep the newest application artifacts per target/profile/feature variant. */
+/** Keep the latest artifacts per target/profile/mode, retiring historical feature variants. */
 export function pruneBuildCache({
   targetDir = cargoTargetDir(),
   dryRun = false,
   before = Date.now(),
+  isBuildActive = cargoBuildActive,
 } = {}) {
+  if (!dryRun && isBuildActive()) return [];
   if (existsSync(targetDir) && lstatSync(targetDir).isSymbolicLink()) return [];
   const removed = new Set();
   const remove = (path) => {
@@ -239,6 +329,7 @@ export function pruneBuildCache({
   // Plan first: an unreadable archive/fingerprint must not cause a partial
   // cleanup. Never remove an entry updated since the invoking build started.
   const paths = [...removed].filter((path) => !updatedSince(path, before));
+  if (!dryRun && isBuildActive()) return [];
   if (!dryRun)
     for (const path of paths) rmSync(path, { recursive: true, force: true });
   return paths;
@@ -246,6 +337,12 @@ export function pruneBuildCache({
 
 export function cleanupBuildCache(options) {
   try {
+    if (!options?.dryRun && (options?.isBuildActive ?? cargoBuildActive)()) {
+      (options?.reportToStderr ? console.error : console.log)(
+        "构建缓存：检测到 Cargo 编译仍在运行，本次跳过清理；空闲后运行 npm run app:prune。",
+      );
+      return 0;
+    }
     const paths = pruneBuildCache(options);
     (options?.reportToStderr ? console.error : console.log)(
       `构建缓存：${options?.dryRun ? "可清理" : "已清理"} ${paths.length} 项历史产物，保留最新构建和共享依赖。`,
