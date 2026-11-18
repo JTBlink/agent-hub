@@ -3,6 +3,7 @@ import type {
   AutomationSchedule,
   AutomationTask,
 } from "./tauri";
+import { automationTaskAgentKind } from "./automationAgents";
 
 const KEY = "agent-hub:automation-overview:v1";
 const MAX_BYTES = 512 * 1024;
@@ -20,6 +21,7 @@ type TaskSummary = Pick<
   | "last_run"
   | "status"
   | "last_result"
+  | "agent_kind"
 > & { schedule_rule: AutomationSchedule | null };
 interface SavedOverview {
   locale: string;
@@ -31,6 +33,8 @@ const object = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const nullableString = (value: unknown) =>
   value === null || typeof value === "string";
+const agentKind = (value: unknown): value is string =>
+  typeof value === "string" && /^[a-zA-Z0-9_-]{1,128}$/.test(value);
 function schedule(value: unknown): value is AutomationSchedule | null {
   if (value === null) return true;
   if (!object(value)) return false;
@@ -63,6 +67,7 @@ function task(value: unknown): value is TaskSummary {
       nullableString(value[key]),
     ) &&
     typeof value.is_builtin === "boolean" &&
+    (value.agent_kind === undefined || agentKind(value.agent_kind)) &&
     typeof value.source === "string" &&
     ["launchd", "cron", "systemd", "windows", "hermes"].includes(
       value.source,
@@ -144,20 +149,24 @@ export function saveAutomationOverviewSummary(
     locale,
     savedAt: Date.now(),
     hermes_installed: data.hermes_installed,
-    tasks: data.tasks.map((value) => ({
-      id: value.id,
-      name: value.name,
-      source: value.source,
-      origin: value.origin,
-      is_builtin: value.is_builtin,
-      schedule: value.schedule,
-      project: value.project,
-      next_run: value.next_run,
-      last_run: value.last_run,
-      status: value.status,
-      last_result: value.last_result,
-      schedule_rule: value.definition?.schedule ?? null,
-    })),
+    tasks: data.tasks.map((value) => {
+      const kind = automationTaskAgentKind(value);
+      return {
+        agent_kind: agentKind(kind) ? kind : undefined,
+        id: value.id,
+        name: value.name,
+        source: value.source,
+        origin: value.origin,
+        is_builtin: value.is_builtin,
+        schedule: value.schedule,
+        project: value.project,
+        next_run: value.next_run,
+        last_run: value.last_run,
+        status: value.status,
+        last_result: value.last_result,
+        schedule_rule: value.definition?.schedule ?? null,
+      };
+    }),
   };
   try {
     const raw = JSON.stringify(

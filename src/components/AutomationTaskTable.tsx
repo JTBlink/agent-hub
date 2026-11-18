@@ -17,7 +17,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { ChevronRight, Clock3, GripVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { AutomationTask, Project } from "../lib/tauri";
+import type { AutomationTask, Project, ToolInfo } from "../lib/tauri";
+import { automationTaskAgent } from "../lib/automationAgents";
+import { useDefaultAgentKey } from "../hooks/useDefaultAgentKey";
 import {
   automationNextRun,
   automationProjectName,
@@ -27,12 +29,14 @@ import {
 import { AutomationOriginBadge } from "./AutomationOriginBadge";
 import { AutomationStatusBadge } from "./AutomationStatusBadge";
 import { AutomationTaskIcon } from "./AutomationTaskIcon";
+import { AutomationAgentCell } from "./AutomationAgentCell";
 import { cn } from "../utils";
 
 const columns = [
   "name",
   "schedule",
   "project",
+  "agent",
   "host",
   "nextRun",
   "lastRun",
@@ -43,6 +47,7 @@ const columns = [
 export function AutomationTaskTable({
   tasks,
   projects,
+  tools,
   loading,
   emptyMessage,
   reorderDisabled,
@@ -52,6 +57,7 @@ export function AutomationTaskTable({
 }: {
   tasks: AutomationTask[];
   projects: Project[];
+  tools: readonly ToolInfo[];
   loading: boolean;
   emptyMessage: string;
   reorderDisabled: boolean;
@@ -60,6 +66,7 @@ export function AutomationTaskTable({
   actions: (task: AutomationTask) => ReactNode;
 }) {
   const { t } = useTranslation();
+  const defaultAgent = useDefaultAgentKey();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
@@ -104,6 +111,12 @@ export function AutomationTaskTable({
                   key={task.id}
                   task={task}
                   projects={projects}
+                  agent={automationTaskAgent(
+                    task,
+                    tools,
+                    defaultAgent,
+                    t("herdr.defaultAgent"),
+                  )}
                   sortable={tasks.length > 1}
                   reorderDisabled={reorderDisabled}
                   onOpen={onOpen}
@@ -127,6 +140,7 @@ export function AutomationTaskTable({
 function AutomationTaskRow({
   task,
   projects,
+  agent,
   sortable,
   reorderDisabled,
   onOpen,
@@ -134,6 +148,7 @@ function AutomationTaskRow({
 }: {
   task: AutomationTask;
   projects: Project[];
+  agent: ReturnType<typeof automationTaskAgent>;
   sortable: boolean;
   reorderDisabled: boolean;
   onOpen: (id: string) => void;
@@ -231,6 +246,9 @@ function AutomationTaskRow({
         title={task.project ?? undefined}
       >
         {automationProjectName(task.project, projects) || "—"}
+      </td>
+      <td className="max-w-[160px] px-4 py-4 text-tertiary">
+        <AutomationAgentCell agent={agent} task={task} />
       </td>
       <td className="whitespace-nowrap px-4 py-4 text-tertiary">
         {t("automation.localHost")}

@@ -1,6 +1,7 @@
 /** POSIX shell text for copying only; commands are never evaluated by the renderer. */
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
-const words = (values: string[]) => values.map(quote).join(" ");
+export const formatPosixArgv = (values: string[]) =>
+  values.map(quote).join(" ");
 export function previewAgentCommand(input: {
   session: string;
   pane?: string;
@@ -12,7 +13,7 @@ export function previewAgentCommand(input: {
 }) {
   const { launch } = input;
   if (input.native)
-    return `cd ${quote(input.path)}\n${words([launch.program, ...launch.arguments])}`;
+    return `cd ${quote(input.path)}\n${formatPosixArgv([launch.program, ...launch.arguments])}`;
   const base = `herdr --session ${quote(input.session)}`;
   // Mirror the transport's positional handling for dash-prefixed feedback.
   const prompt = quote(
@@ -28,11 +29,11 @@ export function previewAgentCommand(input: {
     // Names must be unique across live Agents, including separately copied previews.
     lines.push(`name="page-$(date +%s)-$$"`);
     lines.push(
-      `${base} agent start "$name" --kind ${quote(launch.kind)} --pane "$pane" --timeout 30000 -- ${words(launch.arguments)} || exit 1`,
+      `${base} agent start "$name" --kind ${quote(launch.kind)} --pane "$pane" --timeout 30000 -- ${formatPosixArgv(launch.arguments)} || exit 1`,
     );
   } else {
     lines.push(
-      `${base} pane run "$pane" ${quote(words([launch.program, ...launch.arguments]))} || exit 1`,
+      `${base} pane run "$pane" ${quote(formatPosixArgv([launch.program, ...launch.arguments]))} || exit 1`,
     );
     lines.push(`${base} agent wait "$pane" --timeout 30000 || exit 1`);
   }

@@ -14,12 +14,19 @@ import {
 } from "react-router-dom";
 import { Automation } from "./Automation";
 import { automationOverviewCache } from "../lib/automationOverviewCache";
-import { saveAutomationOverviewSummary } from "../lib/automationOverviewStorage";
+import {
+  readAutomationOverviewSummary,
+  saveAutomationOverviewSummary,
+} from "../lib/automationOverviewStorage";
+import { getAgentIconSrc } from "../lib/agentIcons";
 import { open } from "@tauri-apps/plugin-dialog";
 import { codeEditor, installCodeEditorGeometry } from "../test/codeEditor";
 import { openDirectoryInVscode, openFileInVscode } from "../lib/openInVscode";
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn(), save: vi.fn() }));
+vi.mock("../context/AppContext", () => ({
+  useApp: () => ({ tools: localTools }),
+}));
 vi.mock("../lib/openInVscode", () => ({
   openDirectoryInVscode: vi.fn(),
   openFileInVscode: vi.fn(),
@@ -30,6 +37,7 @@ vi.mock("../lib/tauri", () => ({
   getProjects: vi.fn(),
   getToolStatus: vi.fn(),
   getAgentLaunchSettings: vi.fn(),
+  getAgentLaunchPlan: vi.fn(),
   openWorkspaceWindow: vi.fn().mockResolvedValue("workspace-task"),
   getAutomationOverview: vi.fn(),
   saveAutomation: vi.fn(),
@@ -320,6 +328,99 @@ it.each([undefined, "/workspace/task-scripts"])(
 it("omits task source when no local directory is available", async () => {
   await render("/automation?task=" + encodeURIComponent(native.id));
   expect(container.querySelector('button[aria-label="查看源码"]')).toBeNull();
+});
+
+it("shows explicit, default and native Agents with a placeholder for command tasks", async () => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  vi.mocked(api.getAgentLaunchPlan).mockResolvedValue({
+    key: "claude_code",
+    kind: "claude",
+    program: "/opt/claude",
+    arguments: ["--verbose"],
+  });
+  const systemTask = (kind: string): api.AutomationTask => ({
+    ...native,
+    id: kind,
+    name: kind,
+    origin: "agent_hub",
+    definition: {
+      name: kind,
+      provider: "system",
+      content: "run",
+      workdir: null,
+      schedule: { kind: "manual" },
+      enabled: true,
+      files: [
+        {
+          path: "config/agent.json",
+          content: JSON.stringify({
+            runner: { kind, session: "default", title: "Review" },
+            launch: { arguments: ["--name", "task name"], scheme_id: "custom" },
+            execution: { wait_timeout_seconds: 300 },
+          }),
+        },
+      ],
+    },
+  });
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [
+      systemTask("claude"),
+      systemTask("default"),
+      { ...hermes, origin: "agent_hub" },
+      { ...native, origin: "agent_hub" },
+    ],
+    issues: [],
+    hermes_installed: true,
+  });
+  await render();
+  const headers = [...container.querySelectorAll("thead th")];
+  const agentIndex = headers.findIndex(
+    (header) => header.textContent === "Agent",
+  );
+  expect(agentIndex).toBeGreaterThan(0);
+  const cells = [...container.querySelectorAll("tbody tr")].map((row) =>
+    row.children.item(agentIndex)!,
+  );
+  const agents = cells.map((cell) => cell.textContent);
+  expect(agents).toHaveLength(4);
+  expect(agents).toEqual(
+    expect.arrayContaining(["Claude Code", "Codex", "Hermes Agent", "—"]),
+  );
+  for (const [name, key] of [
+    ["Claude Code", "claude_code"],
+    ["Codex", "codex"],
+    ["Hermes Agent", "hermes"],
+  ]) {
+    const cell = cells.find((cell) => cell.textContent === name);
+    expect(cell?.querySelector("img")?.getAttribute("src")).toBe(
+      getAgentIconSrc(key),
+    );
+  }
+  expect(
+    cells.find((cell) => cell.textContent === "—")?.querySelector("img"),
+  ).toBeNull();
+  expect(
+    readAutomationOverviewSummary("zh")?.tasks.find(
+      (task) => task.id === "claude",
+    )?.agent_kind,
+  ).toBe("claude");
+  expect(api.getAgentLaunchPlan).not.toHaveBeenCalled();
+  const trigger = cells
+    .find((cell) => cell.textContent === "Claude Code")!
+    .querySelector("button")!;
+  await act(async () =>
+    trigger.dispatchEvent(new MouseEvent("mouseover", { bubbles: true })),
+  );
+  expect(api.getAgentLaunchPlan).toHaveBeenCalledWith("claude", "custom");
+  expect(document.querySelector('[role="tooltip"] code')?.textContent).toBe(
+    "'/opt/claude' '--verbose' '--name' 'task name'",
+  );
 });
 
 it("hides built-in maintenance by default and reveals it with a filter switch", async () => {

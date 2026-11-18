@@ -9,14 +9,17 @@ import {
 import { createPortal } from "react-dom";
 import { CircleHelp } from "lucide-react";
 import { getAppScale } from "../lib/textScale";
+import { cn } from "../utils";
 
 /** Short, non-interactive help anchored to an accessible icon button. */
 export function HelpTooltip({
   label,
   children,
+  triggerContent,
 }: {
   label: string;
   children: ReactNode;
+  triggerContent?: ReactNode;
 }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
@@ -94,7 +97,10 @@ export function HelpTooltip({
         type="button"
         aria-label={label}
         aria-describedby={open ? id : undefined}
-        className="inline-flex shrink-0 items-center rounded text-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className={cn(
+          "inline-flex items-center rounded hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          triggerContent ? "max-w-full gap-2 text-left" : "shrink-0 text-muted",
+        )}
         onMouseEnter={show}
         onMouseLeave={hideSoon}
         onFocus={show}
@@ -105,7 +111,7 @@ export function HelpTooltip({
           show();
         }}
       >
-        <CircleHelp size={14} aria-hidden="true" />
+        {triggerContent ?? <CircleHelp size={14} aria-hidden="true" />}
       </button>
       {open &&
         createPortal(

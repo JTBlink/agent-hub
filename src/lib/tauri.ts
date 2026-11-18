@@ -76,6 +76,8 @@ export interface AutomationDraft {
   enabled: boolean;
 }
 export interface AutomationTask {
+  /** Agent identifier retained in the frontend's read-only list snapshot. */
+  agent_kind?: string;
   id: string;
   name: string;
   identifier: string | null;

@@ -45,10 +45,12 @@ import {
   type AutomationSourceFilter,
 } from "../lib/automation";
 import { cn } from "../utils";
+import { useApp } from "../context/AppContext";
 
 const EMPTY_TASKS: AutomationTask[] = [];
 
 export function Automation() {
+  const { tools } = useApp();
   const [importing, setImporting] = useState(false);
   const { t, i18n } = useTranslation();
   const [params, setParams] = useSearchParams();
@@ -506,6 +508,7 @@ export function Automation() {
       <AutomationTaskTable
         tasks={tasks}
         projects={projects}
+        tools={tools}
         loading={loading}
         emptyMessage={emptyMessage}
         reorderDisabled={!orderReady}

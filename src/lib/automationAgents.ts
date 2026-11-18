@@ -1,4 +1,6 @@
-import type { ToolInfo } from "./tauri";
+import type { AutomationTask, ToolInfo } from "./tauri";
+import { automationAgentConfig } from "./automation";
+import { herdrAgents } from "./terminalAgents";
 import { orderedWorkspaceAgents } from "./workspaceAgents";
 
 /** Map application adapter keys to the installed Herdr CLI's agent-kind vocabulary. */
@@ -41,4 +43,43 @@ export function resolveAutomationAgent(
 ) {
   if (configuredAgent !== "default") return configuredAgent ?? "";
   return HERDR_KINDS[defaultAgent] ?? defaultAgent;
+}
+
+export function automationTaskAgentKind(
+  task: Pick<AutomationTask, "source" | "definition" | "agent_kind">,
+) {
+  if (task.source === "hermes" || task.definition?.provider === "hermes")
+    return "hermes";
+  return (
+    task.agent_kind ??
+    (task.definition
+      ? automationAgentConfig(task.definition)?.agent
+      : undefined)
+  );
+}
+
+/** Display the configured Agent, even if its executable is not available locally. */
+export function automationTaskAgent(
+  task: Pick<AutomationTask, "source" | "definition" | "agent_kind">,
+  tools: readonly Pick<ToolInfo, "key" | "display_name">[],
+  defaultAgent: string,
+  defaultLabel: string,
+) {
+  const configured = automationTaskAgentKind(task);
+  if (!configured) return null;
+  const kind = resolveAutomationAgent(configured, defaultAgent);
+  if (!kind) return { label: defaultLabel };
+  const preset = herdrAgents.find((agent) => agent.id === kind);
+  const tool = tools.find(
+    (tool) => tool.key === kind || herdrAgentKind(tool.key) === kind,
+  );
+  return {
+    kind,
+    label: preset?.label ?? tool?.display_name ?? kind,
+    iconKey:
+      preset?.toolKey ??
+      tool?.key ??
+      Object.keys(HERDR_KINDS).find((key) => herdrAgentKind(key) === kind) ??
+      kind,
+  };
 }
