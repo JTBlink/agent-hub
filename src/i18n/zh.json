@@ -3276,6 +3276,10 @@
     "syncSourceUA": "同时应用来源浏览器 UA"
   },
   "agentLaunch": {
+    "globalDefaultScheme": "默认启动方案",
+    "globalDefaultSchemeHelp": "在 Herdr 或终端启动该 Agent、但未指定具体方案时使用。手动选择具体方案时以该方案为准。方案的命令和参数统一在“设置 → Agent”维护；修改仅影响后续启动。",
+    "globalDefault": "全局默认 Agent",
+    "globalDefaultHelp": "仅在启动入口未指定 Agent 时使用，例如从预览页面交给 Agent 并新建会话。终端新建菜单也会标记该默认项。手动选择的 Agent 优先；普通 Shell 和已有会话不受影响。",
     "instruction": "启动指令",
     "description": "编辑完整命令与参数，使用 Agent 默认模型。保存后用于后续启动；运行中的会话保持原样。桌面工具使用宿主打开指令，Herdr 仅支持兼容的 CLI。路径包含空格时请加引号。",
     "reset": "恢复默认指令",

@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { ToggleSwitch } from "../../../components/ToggleSwitch";
 import { SidebarSettingsPage } from "../../../components/SidebarSettingsPage";
+import { useApp } from "../../../context/AppContext";
+import { useAgentLaunchSettings } from "../../../hooks/useAgentLaunchSettings";
+import { GlobalDefaultAgentField } from "../../../components/settings/GlobalDefaultAgentField";
 import type { useHerdrFollowProject } from "../hooks/useHerdrFollowProject";
 
 /** Herdr preferences stay inside its sidebar, alongside session controls. */
@@ -12,6 +15,8 @@ export function HerdrSettingsPanel({
   follow: ReturnType<typeof useHerdrFollowProject>;
 }) {
   const { t } = useTranslation();
+  const { tools } = useApp();
+  const launch = useAgentLaunchSettings();
   return (
     <SidebarSettingsPage title={t("herdr.settings")} onBack={onBack}>
       <div className="flex items-start gap-3">
@@ -36,6 +41,9 @@ export function HerdrSettingsPanel({
           {t("herdr.settingsFailed")}
         </p>
       )}
+      <div className="mt-4 border-t border-border-subtle pt-4">
+        <GlobalDefaultAgentField tools={tools} controller={launch} />
+      </div>
     </SidebarSettingsPage>
   );
 }

@@ -3236,6 +3236,10 @@
     "syncSourceUA": "同時套用來源瀏覽器 UA"
   },
   "agentLaunch": {
+    "globalDefaultScheme": "預設啟動方案",
+    "globalDefaultSchemeHelp": "在 Herdr 或終端機啟動此 Agent、但未指定特定方案時使用。手動選擇特定方案時以該方案為準。方案的命令和參數統一在「設定 → Agent」維護；修改僅影響之後的啟動。",
+    "globalDefault": "全域預設 Agent",
+    "globalDefaultHelp": "僅在啟動入口未指定 Agent 時使用，例如從預覽頁面交給 Agent 並建立工作階段。終端機新增選單也會標記此預設項目。手動選擇的 Agent 優先；一般 Shell 和既有工作階段不受影響。",
     "instruction": "啟動指令",
     "description": "編輯完整命令與參數，使用 Agent 預設模型。儲存後用於後續啟動；執行中的工作階段保持原樣。桌面工具使用宿主開啟指令，Herdr 僅支援相容的 CLI。路徑包含空格時請加引號。",
     "reset": "還原預設指令",

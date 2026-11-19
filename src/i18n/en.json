@@ -3279,6 +3279,10 @@
     "syncSourceUA": "Also apply the source browser UA"
   },
   "agentLaunch": {
+    "globalDefaultScheme": "Default launch scheme",
+    "globalDefaultSchemeHelp": "Used when starting this Agent in Herdr or a terminal without an explicit scheme. An explicitly selected scheme takes priority. Manage scheme commands and arguments in Settings → Agent. Changes apply to future launches only.",
+    "globalDefault": "Global default Agent",
+    "globalDefaultHelp": "Used only when a launch entry does not specify an Agent, such as creating a new Agent session from a preview page. The terminal menu also marks this default. An explicit Agent selection takes priority; plain shells and existing sessions are unaffected.",
     "instruction": "Launch instruction",
     "description": "Edit the full command and arguments. Agents use their default model. Saved changes apply to future launches. Desktop tools use their host command; Herdr supports compatible CLIs only. Quote paths containing spaces.",
     "reset": "Reset instruction",
