@@ -10,12 +10,35 @@ pub struct PlatformCli<'a> {
     pub host: &'a str,
     pub launcher: Option<&'a CliLauncher>,
     pub cwd: &'a Path,
+    pub proxy_url: Option<&'a str>,
 }
 impl PlatformCli<'_> {
     pub fn command(&self, args: &[String]) -> Result<(PathBuf, Vec<String>), TaskFailure> {
+        self.command_with_cancel(args, &AtomicBool::new(false))
+    }
+    fn command_with_cancel(
+        &self,
+        args: &[String],
+        cancel: &AtomicBool,
+    ) -> Result<(PathBuf, Vec<String>), TaskFailure> {
         let default = self.provider.cli()?;
-        let name = self
-            .launcher
+        #[cfg(feature = "gitlab")]
+        let detected = if self.provider == Provider::Gitlab && self.launcher.is_none() {
+            Some(
+                super::gitlab::cli::GlabCli::default()
+                    .resolve(cancel, self.proxy_url)
+                    .map_err(|error| TaskFailure::cli(format!("Cannot prepare glab: {error}")))?,
+            )
+        } else {
+            None
+        };
+        #[cfg(not(feature = "gitlab"))]
+        let detected: Option<CliLauncher> = {
+            let _ = (cancel, self.proxy_url);
+            None
+        };
+        let launcher = self.launcher.or(detected.as_ref());
+        let name = launcher
             .map(|launcher| launcher.program.as_str())
             .unwrap_or(default);
         let path = if Path::new(name).is_absolute() {
@@ -25,8 +48,7 @@ impl PlatformCli<'_> {
             crate::core::tool_detection::find_command(name)
         }
         .ok_or_else(|| TaskFailure::new("missing_cli", "Platform CLI launcher is unavailable"))?;
-        let mut arguments = self
-            .launcher
+        let mut arguments = launcher
             .map(|launcher| launcher.args.clone())
             .unwrap_or_default();
         arguments.extend_from_slice(args);
@@ -36,7 +58,7 @@ impl PlatformCli<'_> {
         if cancel.load(std::sync::atomic::Ordering::Acquire) {
             return Err(TaskFailure::new("cancelled", "Query cancelled"));
         }
-        let (path, args) = self.command(args)?;
+        let (path, args) = self.command_with_cancel(args, cancel)?;
         crate::core::cli_process::run(
             &path.to_string_lossy(),
             &args.iter().map(String::as_str).collect::<Vec<_>>(),

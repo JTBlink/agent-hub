@@ -74,6 +74,7 @@ fn declared_launcher_is_required_and_cancellation_stops_reads() {
         }),
     };
     let client = TaskClient::new(SystemCli {
+        proxy_url: None,
         cwd: directory.path().into(),
     });
     let cancel = AtomicBool::new(false);

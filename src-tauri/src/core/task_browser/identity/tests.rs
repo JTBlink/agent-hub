@@ -80,9 +80,11 @@ fn login_scope_separates_hosts_providers_and_project_launchers() {
     use super::super::{Binding, CliLauncher, CliReader, Provider, SystemCli};
     let cli = SystemCli {
         cwd: "project-a".into(),
+        proxy_url: None,
     };
     let other = SystemCli {
         cwd: "project-b".into(),
+        proxy_url: None,
     };
     let mut binding = Binding {
         id: scope(),

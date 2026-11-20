@@ -13,7 +13,7 @@ standard = ["herdr", "cloud-sync", "github", "gitlab"]
 herdr = []
 cloud-sync = []
 github = []
-gitlab = []
+gitlab = ["dep:glob", "dep:flate2", "dep:tar"]
 
 [lib]
 name = "app_lib"
@@ -62,6 +62,9 @@ urlencoding = "2"
 zip = "2"
 tempfile = "3.26.0"
 semver = "1"
+glob = { version = "0.3", optional = true }
+flate2 = { version = "1", optional = true }
+tar = { version = "0.4", optional = true }
 aes-gcm = "0.10"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust", "vendored"] }
 rand = "0.8"

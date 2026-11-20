@@ -10,6 +10,8 @@ import { SkillsSettings } from "../components/settings/SkillsSettings";
 import { AppearanceSettings } from "../components/settings/AppearanceSettings";
 import { cloudSyncEnabled, BackupSettings } from "@app/cloud-sync";
 import { NetworkSettings } from "../components/settings/NetworkSettings";
+import { GitlabCliSettings } from "../components/settings/GitlabCliSettings";
+import { gitlabEnabled } from "@app/platforms";
 import { AboutSettings } from "../components/settings/AboutSettings";
 import { AppDataDirectorySetting } from "../components/settings/AppDataDirectorySetting";
 import { SettingsAlerts } from "../components/settings/SettingsAlerts";
@@ -53,7 +55,12 @@ export function Settings() {
           skills: <SkillsSettings />,
           appearance: <AppearanceSettings />,
           backup: cloudSyncEnabled ? <BackupSettings /> : undefined,
-          network: <NetworkSettings />,
+          network: (
+            <>
+              <NetworkSettings />
+              {gitlabEnabled && <GitlabCliSettings />}
+            </>
+          ),
           hosts: <HostsSettings active={hash === "#hosts"} />,
           permissions: <PermissionSettings active={hash === "#permissions"} />,
           about: (

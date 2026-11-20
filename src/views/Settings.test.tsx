@@ -25,6 +25,11 @@ const api = vi.hoisted(() => ({
     upstream_health: "no_remote",
   })),
   getSettings: vi.fn(),
+  getGitlabCliSettings: vi.fn(async () => ({
+    search_paths: [],
+    path: null,
+    source: null,
+  })),
   setSettings: vi.fn(),
   getCentralRepoPath: vi.fn(),
   getCentralRepoPathOverride: vi.fn(),

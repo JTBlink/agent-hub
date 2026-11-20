@@ -8,14 +8,27 @@ use std::{
 
 pub struct SystemCli {
     pub cwd: PathBuf,
+    pub proxy_url: Option<String>,
 }
 impl CliReader for SystemCli {
     fn identity_scope(&self, binding: &Binding) -> Option<String> {
         // Project launchers can choose accounts by cwd; standard CLIs share their global login.
+        #[cfg(feature = "gitlab")]
+        let detected = if binding.provider == super::Provider::Gitlab && binding.launcher.is_none()
+        {
+            crate::core::platforms::gitlab::cli::GlabCli::default()
+                .local_launcher()
+                .ok()?
+        } else {
+            None
+        };
+        #[cfg(not(feature = "gitlab"))]
+        let detected: Option<super::CliLauncher> = None;
         let scope = serde_json::to_vec(&(
             binding.provider,
             binding.host.to_ascii_lowercase(),
             &binding.launcher,
+            detected,
             binding.launcher.as_ref().map(|_| &self.cwd),
         ))
         .ok()?;
@@ -36,6 +49,7 @@ impl CliReader for SystemCli {
             host: &binding.host,
             launcher: binding.launcher.as_ref(),
             cwd: &self.cwd,
+            proxy_url: self.proxy_url.as_deref(),
         }
         .run(args, cancel)?;
         serde_json::from_str(&text)

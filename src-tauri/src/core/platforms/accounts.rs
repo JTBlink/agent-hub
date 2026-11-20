@@ -164,6 +164,7 @@ pub struct AccountSession {
     pub target: AccountTarget,
     binding: Option<Binding>,
     cwd: PathBuf,
+    proxy_url: Option<String>,
 }
 impl AccountSession {
     pub fn resolve(store: &SkillStore, target: AccountTarget) -> Result<Self, TaskFailure> {
@@ -198,6 +199,7 @@ impl AccountSession {
             target,
             binding,
             cwd,
+            proxy_url: store.proxy_url(),
         })
     }
     fn cli(&self) -> PlatformCli<'_> {
@@ -209,6 +211,7 @@ impl AccountSession {
                 .as_ref()
                 .and_then(|binding| binding.launcher.as_ref()),
             cwd: &self.cwd,
+            proxy_url: self.proxy_url.as_deref(),
         }
     }
     pub fn list(&self, cancel: &AtomicBool) -> Result<Vec<LoginAccount>, TaskFailure> {

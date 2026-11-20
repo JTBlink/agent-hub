@@ -25,6 +25,15 @@ export interface PlatformLoginAccount {
   authenticated: boolean;
   switchable: boolean;
 }
+export interface GitlabCliSettings {
+  search_paths: string[];
+  path: string | null;
+  source: "environment" | "custom" | "installed" | "downloaded" | null;
+}
+export const getGitlabCliSettings = () =>
+  invoke<GitlabCliSettings>("gitlab_cli_settings", { searchPaths: null });
+export const saveGitlabCliSettings = (searchPaths: string[]) =>
+  invoke<GitlabCliSettings>("gitlab_cli_settings", { searchPaths });
 export const getPlatformAccountContexts = () =>
   invoke<PlatformAccountContext[]>("platform_account_contexts");
 export const listPlatformAccounts = (

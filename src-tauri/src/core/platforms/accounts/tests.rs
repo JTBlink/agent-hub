@@ -53,6 +53,7 @@ fi
         target,
         binding: Some(binding),
         cwd: temp.path().into(),
+        proxy_url: None,
     };
     (temp, session)
 }

@@ -1848,6 +1848,23 @@
         "description": "Tools capturing other applications or the desktop may need this permission; authorize the tool taking the capture. Chromium page screenshots do not record the desktop."
       },
       "previewNote": "A busy browser profile, missing browser engine or stopped development server is a runtime issue. System permissions do not resolve these conditions."
+    },
+    "gitlabCli": {
+      "title": "GitLab CLI",
+      "paths": "Preferred search paths",
+      "help": "One path per line, searched in order. Accepts an executable, installation directory or .mjs launcher. Use * for version directories; newer versions are preferred within each pattern. Custom paths stay on this device.",
+      "placeholder": "~/tools/glab\n~/tools/cli/*/scripts/glab.mjs",
+      "found": "Found · {{source}}",
+      "missing": "glab was not found on this device",
+      "fallback": "Falls back to PATH and common installation directories, then a previously downloaded copy. If none is available, first use downloads and verifies an official stable release. AGENT_HUB_GLAB_PATH overrides these search paths.",
+      "save": "Save and detect",
+      "detect": "Detect again",
+      "sources": {
+        "environment": "Environment variable",
+        "custom": "Custom path",
+        "installed": "Local installation",
+        "downloaded": "Downloaded by AgentHub"
+      }
     }
   },
   "closeAction": {

@@ -1846,6 +1846,23 @@
         "description": "抓取其他应用或桌面的工具可能需要此权限，请给实际抓屏工具授权。预览页面的 Chromium 截图不需要录制整个屏幕。"
       },
       "previewNote": "浏览器配置被占用、内核未安装和开发服务停止属于运行问题，开启系统权限不能修复这些情况。"
+    },
+    "gitlabCli": {
+      "title": "GitLab CLI",
+      "paths": "优先查找路径",
+      "help": "每行一个路径，按顺序查找。支持可执行文件、安装目录或 .mjs 启动器；* 可匹配版本目录，同一路径优先使用较新版本。自定义路径仅保存在本机。",
+      "placeholder": "~/tools/glab\n~/tools/cli/*/scripts/glab.mjs",
+      "found": "已找到 · {{source}}",
+      "missing": "本机尚未找到 glab",
+      "fallback": "未匹配时自动查找 PATH 和常用安装目录，再复用 AgentHub 下载的版本；仍未找到时，首次使用会下载官方稳定版并校验。AGENT_HUB_GLAB_PATH 环境变量可覆盖查找路径。",
+      "save": "保存并检测",
+      "detect": "重新检测",
+      "sources": {
+        "environment": "环境变量",
+        "custom": "自定义路径",
+        "installed": "本机安装",
+        "downloaded": "AgentHub 下载"
+      }
     }
   },
   "closeAction": {

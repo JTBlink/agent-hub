@@ -8,6 +8,27 @@ use crate::core::{
 };
 use std::sync::Arc;
 use tauri::{ipc::Channel, State, Webview};
+#[cfg(feature = "gitlab")]
+#[tauri::command]
+pub async fn gitlab_cli_settings(
+    search_paths: Option<Vec<String>>,
+) -> Result<crate::core::platforms::gitlab::cli::Settings, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let cli = crate::core::platforms::gitlab::cli::GlabCli::default();
+        match search_paths {
+            Some(search_paths) => {
+                let settings = cli
+                    .save(crate::core::platforms::gitlab::cli::Preferences { search_paths })
+                    .map_err(AppError::io)?;
+                crate::core::platforms::hosts::refresh_hosts();
+                crate::core::task_browser::clear_identities();
+                Ok(settings)
+            }
+            None => cli.settings().map_err(AppError::io),
+        }
+    })
+    .await?
+}
 fn request_key(window: &Webview, id: &str) -> Result<String, TaskFailure> {
     super::terminal::owner(window)
         .map_err(|_| TaskFailure::new("permission", "Account access requires the main window"))?;

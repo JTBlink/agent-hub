@@ -68,7 +68,13 @@ fn client(store: &SkillStore, id: &str) -> Result<(Binding, TaskClient<SystemCli
         TaskFailure::new("not_connected", "Repository binding is no longer available")
     })?;
     let cwd = crate::core::project_paths::project_directory(store, &binding.project_id)?;
-    Ok((binding, TaskClient::new(SystemCli { cwd })))
+    Ok((
+        binding,
+        TaskClient::new(SystemCli {
+            cwd,
+            proxy_url: store.proxy_url(),
+        }),
+    ))
 }
 #[tauri::command]
 pub async fn task_list(
