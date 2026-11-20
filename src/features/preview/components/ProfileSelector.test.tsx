@@ -13,6 +13,7 @@ it("opens another profile in a new tab without modifying the existing page and d
   document.body.append(container);
   const root = createRoot(container);
   const open = vi.fn();
+  const openExternal = vi.fn();
   const active: PreviewTab = {
     id: "original",
     kind: "web",
@@ -31,7 +32,12 @@ it("opens another profile in a new tab without modifying the existing page and d
   try {
     await act(async () =>
       root.render(
-        <ProfileSelector active={active} profiles={profiles} onOpen={open} />,
+        <ProfileSelector
+          active={active}
+          profiles={profiles}
+          onOpen={open}
+          onOpenExternal={openExternal}
+        />,
       ),
     );
     const trigger =
@@ -66,6 +72,17 @@ it("opens another profile in a new tab without modifying the existing page and d
     expect(open).toHaveBeenCalledExactlyOnceWith(active.address, "remote");
     expect(active.profile).toBe("default");
     expect(active.revision).toBe("draft");
+    await act(async () => trigger.click());
+    const external =
+      document.querySelector<HTMLButtonElement>("[data-menu-footer]")!;
+    expect(external.textContent).toBe("preview.openExternal");
+    await act(async () => external.click());
+    expect(openExternal).toHaveBeenCalledExactlyOnceWith();
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(active.profile).toBe("default");
+    expect(active.revision).toBe("draft");
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
     await act(async () =>
       root.render(
         <ProfileSelector

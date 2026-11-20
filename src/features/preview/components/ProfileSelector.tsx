@@ -1,4 +1,4 @@
-import { Cpu, Chrome, VenetianMask } from "lucide-react";
+import { Cpu, Chrome, ExternalLink, VenetianMask } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ThemedSelect } from "../../../components/ThemedSelect";
 import type { BrowserProfile } from "../api";
@@ -14,10 +14,12 @@ export function ProfileSelector({
   active,
   profiles,
   onOpen,
+  onOpenExternal,
 }: {
   active?: PreviewTab;
   profiles?: BrowserProfile[];
   onOpen: (address: string, profile: string) => void;
+  onOpenExternal?: () => void;
 }) {
   const { t } = useTranslation();
   const availableProfiles = profiles ?? [
@@ -59,6 +61,15 @@ ${t("preview.profileNewTabHint")}`}
       optionIcon={profileIcon}
       fitContent
       singleLineOptions
+      menuFooterAction={
+        onOpenExternal
+          ? {
+              label: t("preview.openExternal"),
+              icon: <ExternalLink size={16} aria-hidden="true" />,
+              onSelect: onOpenExternal,
+            }
+          : undefined
+      }
       onChange={(event) => {
         if (active && event.target.value !== active.profile)
           onOpen(active.address, event.target.value);

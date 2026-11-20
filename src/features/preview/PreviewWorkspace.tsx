@@ -28,6 +28,7 @@ import {
 import { usePreviewWorkspace } from "./usePreviewWorkspace";
 import { type PreviewDocument } from "./api";
 import { ProfileSelector } from "./components/ProfileSelector";
+import { openPreviewAddress } from "./shared/documentLinks";
 import { AnnotationPanel } from "./components/AnnotationPanel";
 import { BrowserSettings } from "./components/BrowserSettings";
 import "./preview.css";
@@ -229,6 +230,13 @@ export function PreviewWorkspace({
           active={active}
           profiles={model.info?.profiles}
           onOpen={model.openWeb}
+          onOpenExternal={
+            active && /^https?:/.test(active.address)
+              ? () => {
+                  void openPreviewAddress(active.address).catch(model.report);
+                }
+              : undefined
+          }
         />
         {sourceToolbarContainer === undefined
           ? sourceAction
