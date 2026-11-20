@@ -3,6 +3,9 @@ use super::*;
 use sha2::{Digest, Sha256};
 use std::{fs, io::Read};
 
+#[cfg(test)]
+mod tests;
+
 pub(in crate::core::automation) fn regular_directory(path: &Path) -> Result<(), String> {
     let metadata = fs::symlink_metadata(path).map_err(|e| e.to_string())?;
     if !metadata.is_dir() || crate::core::path_guard::is_link_or_reparse_point(&metadata) {
@@ -141,6 +144,25 @@ pub(in crate::core::automation) fn read(path: &Path) -> Result<ManagedAutomation
     })
 }
 
+fn discovery_error(path: &Path, error: &str) -> String {
+    let directory = path.file_name().unwrap_or_default().to_string_lossy();
+    // A broken script or receipt need not hide the human-readable task name.
+    // Reuse the bounded, nonlinked manifest reader without validating the bundle.
+    let name = super::layout::read_manifest(path)
+        .ok()
+        .map(|manifest| manifest.draft.name)
+        .filter(|name| {
+            let name = name.trim();
+            !name.is_empty() && name.len() <= 200 && !name.chars().any(char::is_control)
+        });
+    match name {
+        Some(name) if name.trim() != directory => {
+            format!("{} [{directory}]: {error}", name.trim())
+        }
+        _ => format!("{directory}: {error}"),
+    }
+}
+
 pub(in crate::core::automation) fn discover(state: &Path) -> (Vec<ManagedAutomation>, Vec<String>) {
     let root = root(state);
     let mut records = Vec::new();
@@ -164,8 +186,7 @@ pub(in crate::core::automation) fn discover(state: &Path) -> (Vec<ManagedAutomat
             {
                 return Ok(None);
             }
-            let record =
-                read(&path).map_err(|e| format!("{}: {e}", entry.file_name().to_string_lossy()))?;
+            let record = read(&path).map_err(|e| discovery_error(&path, &e))?;
             if super::receipt(&record)?.archived {
                 return Ok(None);
             }
