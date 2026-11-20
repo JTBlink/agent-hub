@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.23.0"
+  version: "1.23.1"
 description: Create and manage local scheduled tasks through agent-hub-cli, including scripts, schedules, prompt variants, persistent state, execution limits and run inspection. Also manage the shared agent-skill library, deployments and skill groups, open local files in the desktop, and operate the preview browser or Hosts profiles. Use when creating or maintaining an AgentHub automation or managing managed skills across coding agents.
 ---
 
@@ -119,6 +119,12 @@ Resolve the installed CLI, inspect `automations --help`, and use native
 templates read-only. Read back the real instance ID, schedule, version and enabled
 state; creation or `state=requested` does not prove a successful execution.
 Preserve existing schedules, activation and state unless the user requests changes.
+
+Before saving a file-based draft, run the bundled read-only
+`scripts/check_task_files.py <draft.json>`. After saving, check the real package
+directory and read it back through CLI. Recheck after external file edits too:
+they can invalidate a previously readable task. See the reference's
+[file budget checks](references/automations.md#保存前的任务包预算).
 
 For Agent automations, use `[auto] <automation name>` as the Tab title through
 `config/agent.json` → `runner.title`. Custom business pools read this same field;
