@@ -1,5 +1,14 @@
 [
   {
+    "id": "git-folder-menu",
+    "title": "Git 文件夹右键菜单",
+    "description": "暂存、取消暂存、放弃、忽略和查看文件夹更改的交互演示。",
+    "status": "仅原型",
+    "path": "/docs/prototypes/git-folder-menu/",
+    "source": "docs/prototypes/git-folder-menu/",
+    "implementation": "正式 Git 侧栏已有目录行快捷操作；此处只演示右键菜单和操作边界。"
+  },
+  {
     "id": "agent-settings",
     "title": "全局智能体设置",
     "description": "单套全自动默认方案、用户自建方案，以及自动化、终端与 Herdr 的动态方案选择和统一备份。",

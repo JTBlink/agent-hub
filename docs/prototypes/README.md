@@ -14,16 +14,17 @@
 
 浏览器索引为 `docs/prototypes/index.html`。原型名称、实现状态、当前实现说明（`implementation`）、入口及旧网址集中在 [catalog.json](catalog.json)，终端和目录页共用这一份数据，按清单顺序展示；新增需求插入列表顶部，方便优先查看最新原型。
 
-| 名称             | 目录                                         | 用途                               |
-| ---------------- | -------------------------------------------- | ---------------------------------- |
-| `subagents`      | [subagents/](subagents/index.html)           | Subagent 契约库与原生入口部署      |
-| `ai-native`      | [ai-native/](ai-native/README.md)            | 实验性入口与场景流程编排（单文件） |
-| `preview`        | [preview/](preview/README.md)                | 网页、HTML 与 Markdown 预览和检查  |
-| `tasks-terminal` | [tasks-terminal/](tasks-terminal/index.html) | 任务与项目终端的历史交互方案       |
-| `herdr-sidebar`  | [herdr-sidebar/](herdr-sidebar/README.md)    | Herdr 工作空间与 Agent 侧栏方案    |
-| `install`        | [install/](install/index.html)               | 发现入口、技能与自动化任务安装     |
-| `hosts`          | [hosts/](hosts/index.html)                   | Hosts 列表与编辑器实现对照         |
-| `agent-settings` | [agent-settings/](agent-settings/index.html) | Agent 多组启动方案与自定义命令     |
+| 名称              | 目录                                           | 用途                               |
+| ----------------- | ---------------------------------------------- | ---------------------------------- |
+| `git-folder-menu` | [git-folder-menu/](git-folder-menu/index.html) | Git 文件夹右键动作与批量范围       |
+| `subagents`       | [subagents/](subagents/index.html)             | Subagent 契约库与原生入口部署      |
+| `ai-native`       | [ai-native/](ai-native/README.md)              | 实验性入口与场景流程编排（单文件） |
+| `preview`         | [preview/](preview/README.md)                  | 网页、HTML 与 Markdown 预览和检查  |
+| `tasks-terminal`  | [tasks-terminal/](tasks-terminal/index.html)   | 任务与项目终端的历史交互方案       |
+| `herdr-sidebar`   | [herdr-sidebar/](herdr-sidebar/README.md)      | Herdr 工作空间与 Agent 侧栏方案    |
+| `install`         | [install/](install/index.html)                 | 发现入口、技能与自动化任务安装     |
+| `hosts`           | [hosts/](hosts/index.html)                     | Hosts 列表与编辑器实现对照         |
+| `agent-settings`  | [agent-settings/](agent-settings/index.html)   | Agent 多组启动方案与自定义命令     |
 
 `tasks-herdr` 是任务与终端原型的旧名称，统一归入 `tasks-terminal`。历史 `/docs/prototypes/*.html` 和 `/tests/browser/preview-module-prototype.html` 网址在 Vite 开发服务中保留跳转，查询参数沿用。
 

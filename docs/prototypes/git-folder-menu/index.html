@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Git 文件夹右键菜单</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font:
+          14px/1.5 system-ui,
+          sans-serif;
+        background: #171923;
+        color: #e2e6f2;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 1020px;
+        margin: 48px auto;
+        padding: 0 24px;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0 0 4px;
+      }
+      p {
+        color: #aab4ca;
+        margin: 0 0 14px;
+      }
+      .workbench {
+        display: grid;
+        grid-template-columns: minmax(240px, 330px) minmax(0, 1fr);
+        border: 1px solid #363b50;
+        background: #1b1e2b;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      nav,
+      article {
+        padding: 16px;
+        min-width: 0;
+      }
+      nav {
+        border-right: 1px solid #363b50;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 0 0 12px;
+      }
+      h3 {
+        font-size: 12px;
+        color: #aab4ca;
+        margin: 16px 0 4px;
+      }
+      button {
+        background: #262b3c;
+        color: inherit;
+        font: inherit;
+        padding: 5px 10px;
+        border: 1px solid #3c435c;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #303950;
+      }
+      button:disabled {
+        color: #929bb0;
+        cursor: default;
+      }
+      button:focus-visible {
+        outline: 2px solid #9ac3ff;
+        outline-offset: 1px;
+      }
+      .folder {
+        display: flex;
+        align-items: center;
+        margin: 0 0 2px;
+        border-radius: 5px;
+        background: #242a3c;
+      }
+      .folder button {
+        border: 0;
+        background: transparent;
+      }
+      .folder button:hover,
+      #menu button:not(:disabled):hover,
+      #menu button:focus {
+        background: #303c56;
+      }
+      .folder button:first-child {
+        flex: 1;
+        text-align: left;
+        min-width: 0;
+      }
+      .file {
+        display: flex;
+        justify-content: space-between;
+        padding: 3px 9px 3px 23px;
+        color: #cad3e7;
+        font-size: 13px;
+      }
+      .mark {
+        color: #edc68f;
+      }
+      #menu {
+        position: fixed;
+        z-index: 1;
+        width: min(285px, calc(100vw - 16px));
+        max-height: calc(100vh - 16px);
+        overflow: auto;
+        background: #232838;
+        border: 1px solid #444e68;
+        border-radius: 8px;
+        box-shadow: 0 12px 28px #0008;
+        padding: 5px;
+      }
+      #menu button {
+        display: block;
+        text-align: left;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        min-height: 32px;
+      }
+      .menu-info {
+        padding: 5px 10px;
+        color: #aab4ca;
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+      hr {
+        border: 0;
+        border-top: 1px solid #3b435b;
+        margin: 5px;
+      }
+      .danger {
+        color: #ff9d9d;
+      }
+      dialog {
+        width: min(470px, calc(100% - 24px));
+        padding: 20px;
+        background: #232838;
+        color: inherit;
+        border: 1px solid #444e68;
+        border-radius: 10px;
+      }
+      dialog::backdrop {
+        background: #121522b9;
+      }
+      footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        padding: 12px;
+        border-radius: 6px;
+        background: #151823;
+        color: #cee0fb;
+      }
+      fieldset {
+        border: 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        margin: 12px 0;
+      }
+      @media (max-width: 620px) {
+        main {
+          margin: 20px auto;
+          padding: 0 12px;
+        }
+        .workbench {
+          grid-template-columns: 1fr;
+        }
+        nav {
+          border-right: 0;
+          border-bottom: 1px solid #363b50;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Git 文件夹右键菜单</h1>
+      <p>
+        右键文件夹或点击「···」，体验批量操作的范围和确认。演示只修改页面中的数据。
+      </p>
+      <div class="workbench">
+        <nav aria-label="源代码管理">
+          <h2>源代码管理</h2>
+          <div id="tree"></div>
+        </nav>
+        <article>
+          <h2 id="result-title">当前操作</h2>
+          <p id="result" role="status">请选择一个文件夹。</p>
+          <pre id="details" hidden></pre>
+          <fieldset>
+            <legend>演示条件</legend>
+            <label><input id="limited" type="checkbox" /> 变更列表不完整</label>
+            <label
+              ><input id="conflicts" type="checkbox" /> 文件夹内有冲突</label
+            >
+            <button id="reset">重置演示</button>
+          </fieldset>
+        </article>
+      </div>
+    </main>
+    <div id="menu" role="menu" aria-label="文件夹操作" hidden></div>
+    <dialog id="discard" aria-labelledby="discard-title">
+      <h2 id="discard-title">放弃文件夹中的未暂存更改？</h2>
+      <p>
+        以下文件将恢复到暂存区中的版本。未跟踪文件将被删除，已暂存内容会保留。
+      </p>
+      <ul id="discard-files"></ul>
+      <form method="dialog">
+        <footer>
+          <button value="cancel" autofocus>取消</button
+          ><button value="discard" class="danger">放弃更改</button>
+        </footer>
+      </form>
+    </dialog>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const initial = [
+        { path: "src/editor/panel.ts", staged: true, unstaged: true },
+        { path: "src/editor/layout.ts", staged: false, unstaged: true },
+        { path: "src/preview/sandbox.ts", staged: false, unstaged: true },
+        {
+          path: "scratch/demo.md",
+          staged: false,
+          unstaged: true,
+          untracked: true,
+        },
+      ];
+      const folders = ["src/editor", "src/preview", "scratch"];
+      let files = structuredClone(initial);
+      let ignored = [];
+      let opener;
+      let discardTarget;
+      function scope(folder, staged) {
+        return files.filter(
+          (file) =>
+            file.path.startsWith(folder + "/") &&
+            (staged ? file.staged : file.unstaged),
+        );
+      }
+      function node(tag, content, className) {
+        const element = document.createElement(tag);
+        element.textContent = content;
+        if (className) element.className = className;
+        return element;
+      }
+      function report(message, detail = "") {
+        $("result").textContent = message;
+        $("details").textContent = detail;
+        $("details").hidden = !detail;
+      }
+      function closeMenu(restore = true) {
+        if ($("menu").hidden) return;
+        $("menu").hidden = true;
+        if (restore && opener?.isConnected) opener.focus();
+      }
+      function render() {
+        $("tree").replaceChildren();
+        for (const staged of [true, false]) {
+          const count = files.filter((file) =>
+            staged ? file.staged : file.unstaged,
+          ).length;
+          $("tree").append(
+            node("h3", `${staged ? "已暂存更改" : "未暂存更改"} · ${count}`),
+          );
+          for (const folder of folders) {
+            const entries = scope(folder, staged);
+            if (!entries.length) continue;
+            const row = node("div", "", "folder");
+            const label = node("button", "▾  " + folder);
+            label.setAttribute("aria-expanded", "true");
+            const list = node("div", "");
+            label.onclick = () => {
+              list.hidden = !list.hidden;
+              label.textContent = (list.hidden ? "▸  " : "▾  ") + folder;
+              label.setAttribute("aria-expanded", String(!list.hidden));
+            };
+            const more = node("button", "···");
+            more.setAttribute("aria-label", `${folder} 文件夹操作`);
+            more.setAttribute("aria-haspopup", "menu");
+            const open = (event, fromPointer) => {
+              event.preventDefault();
+              const anchor = more.getBoundingClientRect();
+              openMenu(
+                folder,
+                staged,
+                fromPointer ? event.clientX : anchor.left,
+                fromPointer ? event.clientY : anchor.bottom,
+                event.currentTarget,
+              );
+            };
+            more.onclick = (event) => open(event, false);
+            label.oncontextmenu = (event) => open(event, true);
+            more.oncontextmenu = (event) => open(event, true);
+            label.onkeydown = (event) => {
+              if (
+                event.key === "ContextMenu" ||
+                (event.shiftKey && event.key === "F10")
+              )
+                open(event, false);
+            };
+            row.append(label, more);
+            for (const file of entries) {
+              const line = node("div", file.path.split("/").at(-1), "file");
+              line.append(
+                node(
+                  "span",
+                  file.untracked ? (staged ? "A" : "U") : "M",
+                  "mark",
+                ),
+              );
+              list.append(line);
+            }
+            $("tree").append(row, list);
+          }
+        }
+      }
+      function openMenu(folder, staged, x, y, trigger) {
+        opener = trigger;
+        const menu = $("menu");
+        const entries = scope(folder, staged);
+        const conflict = $("conflicts").checked && folder === "src/editor";
+        const limited = $("limited").checked || conflict;
+        menu.replaceChildren(
+          node(
+            "div",
+            `${folder} · ${staged ? "已暂存" : "未暂存"} · ${entries.length} 个文件`,
+            "menu-info",
+          ),
+        );
+        if (limited)
+          menu.append(
+            node(
+              "div",
+              conflict
+                ? "请先解决目录中的冲突"
+                : "刷新完整列表后再进行批量操作",
+              "menu-info",
+            ),
+          );
+        const action = (label, handler, disabled = false, danger = false) => {
+          const button = node("button", label, danger ? "danger" : "");
+          button.setAttribute("role", "menuitem");
+          button.disabled = disabled;
+          button.onclick = () => {
+            closeMenu();
+            handler();
+          };
+          menu.append(button);
+        };
+        const paths = entries.map((file) => file.path).join("\n");
+        action(
+          staged ? "取消暂存文件夹更改" : "暂存文件夹更改",
+          () => {
+            for (const file of entries) {
+              file.staged = !staged;
+              file.unstaged = staged;
+            }
+            report(staged ? "已取消暂存" : "已暂存", paths);
+            render();
+          },
+          limited,
+        );
+        if (!staged && entries.every((file) => file.untracked)) {
+          action(
+            "将文件夹添加到 .gitignore…",
+            () => {
+              if (!confirm(`将 /${folder}/ 加入仓库的 .gitignore？`)) return;
+              ignored.push("/" + folder + "/");
+              files = files.filter((file) => !entries.includes(file));
+              report("已模拟添加忽略规则", ignored.join("\n"));
+              render();
+            },
+            limited,
+          );
+        }
+        if (!staged) {
+          action(
+            "放弃未暂存更改…",
+            () => {
+              discardTarget = entries;
+              $("discard-files").replaceChildren(
+                ...entries.map((file) =>
+                  node(
+                    "li",
+                    file.path + (file.untracked ? "（删除未跟踪文件）" : ""),
+                  ),
+                ),
+              );
+              $("discard").returnValue = "";
+              $("discard").showModal();
+            },
+            limited,
+            true,
+          );
+        }
+        menu.append(node("hr", ""));
+        action("查看文件夹更改", () => report("本组更改", paths));
+        action("查看文件夹历史", () =>
+          report(
+            `文件夹历史 · ${folder}`,
+            "当前分支\n最近一次更改 · 更新目录中的文件",
+          ),
+        );
+        action(
+          "复制更改（补丁）",
+          async () => {
+            const patch = entries
+              .map(
+                (file) =>
+                  `diff --git a/${file.path} b/${file.path}\n@@ -1 +1 @@\n-previous example\n+updated example`,
+              )
+              .join("\n");
+            report("演示补丁", patch);
+            try {
+              await navigator.clipboard.writeText(patch);
+              report("已复制演示补丁", patch);
+            } catch {
+              /* Text remains selectable. */
+            }
+          },
+          limited || (!staged && entries.some((file) => file.untracked)),
+        );
+        menu.hidden = false;
+        menu.style.left =
+          Math.max(8, Math.min(x, innerWidth - menu.offsetWidth - 8)) + "px";
+        menu.style.top =
+          Math.max(8, Math.min(y, innerHeight - menu.offsetHeight - 8)) + "px";
+        menu.querySelector("button:not(:disabled)")?.focus();
+      }
+      $("menu").onkeydown = (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeMenu();
+          return;
+        }
+        const buttons = [
+          ...$("menu").querySelectorAll("button:not(:disabled)"),
+        ];
+        const index = buttons.indexOf(document.activeElement);
+        const next =
+          event.key === "ArrowDown"
+            ? (index + 1) % buttons.length
+            : event.key === "ArrowUp"
+              ? (index + buttons.length - 1) % buttons.length
+              : event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? buttons.length - 1
+                  : -1;
+        if (next >= 0) {
+          event.preventDefault();
+          buttons[next].focus();
+        }
+      };
+      document.addEventListener("pointerdown", (event) => {
+        if (!$("menu").contains(event.target)) closeMenu(false);
+      });
+      $("menu").addEventListener("focusout", (event) => {
+        if (!$("menu").contains(event.relatedTarget)) closeMenu(false);
+      });
+      $("discard").onclose = () => {
+        if ($("discard").returnValue !== "discard") return;
+        for (const file of discardTarget) file.unstaged = false;
+        files = files.filter((file) => file.staged || file.unstaged);
+        report(
+          "已放弃未暂存更改",
+          discardTarget.map((file) => file.path).join("\n"),
+        );
+        render();
+      };
+      $("reset").onclick = () => {
+        files = structuredClone(initial);
+        ignored = [];
+        $("conflicts").checked = $("limited").checked = false;
+        report("请选择一个文件夹。");
+        render();
+      };
+      render();
+    </script>
+  </body>
+</html>
