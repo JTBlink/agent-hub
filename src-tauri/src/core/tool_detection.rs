@@ -251,6 +251,18 @@ pub(super) fn find_command(name: &str) -> Option<PathBuf> {
     InstallationProbe::system().command_path(name)
 }
 
+/// Let CLI shims resolve their runtime using the same roots as tool discovery.
+/// Preserve inherited PATH precedence and change only the child environment.
+pub(super) fn command_search_path(
+    executable: &Path,
+) -> Result<std::ffi::OsString, std::env::JoinPathsError> {
+    let mut bins = InstallationProbe::system().bins;
+    if let Some(parent) = executable.parent() {
+        bins.push(parent.to_path_buf());
+    }
+    std::env::join_paths(bins)
+}
+
 pub(super) fn is_installed(key: &str) -> bool {
     InstallationProbe::system().installed(key)
 }

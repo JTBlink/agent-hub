@@ -53,6 +53,11 @@ where
     Fut: std::future::Future<Output = Result<T, UsageStatus>>,
 {
     let mut command = tokio::process::Command::new(executable);
+    command.env(
+        "PATH",
+        crate::core::tool_detection::command_search_path(executable)
+            .map_err(|_| UsageStatus::QueryFailed)?,
+    );
     if let Some(proxy) = proxy {
         reqwest::Proxy::all(proxy).map_err(|_| UsageStatus::NetworkError)?;
         command

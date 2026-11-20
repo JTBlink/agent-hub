@@ -180,3 +180,64 @@ fn distinguishes_missing_reset_data_zero_credits_and_count_only_responses() {
     assert!(legacy.reset_credits.is_none());
     assert_eq!(legacy.status, UsageStatus::Ready);
 }
+
+#[cfg(unix)]
+#[test]
+fn queries_cli_wrapper_with_a_minimal_desktop_path() {
+    const FIXTURE: &str = "AGENT_HUB_USAGE_PATH_FIXTURE";
+    if let Some(directory) = std::env::var_os(FIXTURE) {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let snapshot = runtime
+            .block_on(query_command(
+                &Path::new(&directory).join("codex"),
+                Duration::from_secs(3),
+                None,
+            ))
+            .unwrap();
+        assert_eq!(snapshot.status, UsageStatus::Ready);
+        assert_eq!(snapshot.windows[0].used_percent, 49.0);
+        assert_eq!(snapshot.reset_credits.unwrap().available_count, 1);
+        return;
+    }
+
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    for (name, script) in [
+        (
+            "codex",
+            "#!/bin/sh\nexec /usr/bin/env agent-hub-fixture-runtime\n",
+        ),
+        (
+            "agent-hub-fixture-runtime",
+            r#"#!/bin/sh
+read -r request
+printf '%s\n' '{"id":1,"result":{}}'
+read -r request
+read -r request
+printf '%s\n' '{"id":2,"result":{"account":{"type":"chatgpt"}}}'
+read -r request
+printf '%s\n' '{"id":3,"result":{"rateLimits":{"primary":{"usedPercent":49}},"rateLimitResetCredits":{"availableCount":1}}}'
+"#,
+        ),
+    ] {
+        let path = dir.path().join(name);
+        std::fs::write(&path, script).unwrap();
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
+    // Isolate the desktop environment without mutating PATH for other tests.
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "core::agent_usage::codex::tests::queries_cli_wrapper_with_a_minimal_desktop_path",
+            "--nocapture",
+        ])
+        .env("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
+        .env(FIXTURE, dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}
