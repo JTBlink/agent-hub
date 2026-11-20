@@ -5,12 +5,14 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { WorktreeExplorer } from "./WorktreeExplorer";
 import { getWorktreeFiles } from "../../lib/worktreeApi";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import type { GitFile } from "../../lib/gitApi";
 
 vi.mock("../../lib/worktreeApi", async (original) => ({
   ...(await original<typeof import("../../lib/worktreeApi")>()),
   getWorktreeFiles: vi.fn(),
 }));
+vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({ writeText: vi.fn() }));
 vi.mock("../../hooks/useWorktreeDocument", () => ({
   hasPendingWorktreeDocument: vi.fn(),
 }));
@@ -237,4 +239,178 @@ it("refreshes newly created files only for the matching checkout", async () => {
   expect(host.textContent).not.toContain("notes.md");
   await changed("demo");
   expect(host.textContent).toContain("notes.md");
+});
+
+it("selects visible ranges in both directions and keeps the anchor when shrinking", async () => {
+  vi.mocked(getWorktreeFiles).mockImplementation(async (_id, _root, path) =>
+    (path ? ["nested.ts"] : ["a.ts", "folder", "b.ts", "c.ts"]).map((name) => ({
+      name,
+      path: path ? `${path}/${name}` : name,
+      is_dir: name === "folder",
+      is_symlink: false,
+    })),
+  );
+  const select = vi.fn();
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <WorktreeExplorer
+          projectId="demo"
+          worktreePath="<workspace>"
+          onSelect={select}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  const click = async (path: string, modifiers: MouseEventInit = {}) =>
+    act(async () => {
+      host
+        .querySelector<HTMLButtonElement>(`[data-explorer-path="${path}"]`)!
+        .dispatchEvent(
+          new MouseEvent("click", { bubbles: true, ...modifiers }),
+        );
+    });
+  const selected = () =>
+    Array.from(
+      host.querySelectorAll<HTMLButtonElement>(
+        '[data-explorer-path][aria-pressed="true"]',
+      ),
+      (row) => row.dataset.explorerPath,
+    );
+  await click("a.ts");
+  await click("c.ts", { shiftKey: true });
+  expect(selected()).toEqual(["a.ts", "folder", "b.ts", "c.ts"]);
+  expect(
+    host
+      .querySelector('[data-explorer-path="folder"]')
+      ?.getAttribute("aria-expanded"),
+  ).toBe("false");
+  expect(select.mock.calls).toEqual([["a.ts"]]);
+  await click("b.ts", { shiftKey: true });
+  expect(selected()).toEqual(["a.ts", "folder", "b.ts"]);
+  await click("folder");
+  await click("c.ts");
+  await click("a.ts", { shiftKey: true });
+  expect(selected()).toEqual([
+    "a.ts",
+    "folder",
+    "folder/nested.ts",
+    "b.ts",
+    "c.ts",
+  ]);
+  await click("b.ts");
+  expect(selected()).toEqual(["b.ts"]);
+});
+
+it("toggles individual rows, adds ranges and resets selection for another checkout", async () => {
+  vi.mocked(getWorktreeFiles).mockResolvedValue(
+    ["a.ts", "link.ts", "b.ts", "c.ts"].map((name) => ({
+      name,
+      path: name,
+      is_dir: false,
+      is_symlink: name === "link.ts",
+    })),
+  );
+  const select = vi.fn();
+  const render = (worktreePath: string) =>
+    root.render(
+      <MemoryRouter>
+        <WorktreeExplorer
+          projectId="demo"
+          worktreePath={worktreePath}
+          onSelect={select}
+        />
+      </MemoryRouter>,
+    );
+  await act(async () => render("<workspace>/one"));
+  const click = async (path: string, modifiers: MouseEventInit = {}) =>
+    act(async () => {
+      host
+        .querySelector<HTMLButtonElement>(`[data-explorer-path="${path}"]`)!
+        .dispatchEvent(
+          new MouseEvent("click", { bubbles: true, ...modifiers }),
+        );
+    });
+  const selected = () =>
+    Array.from(
+      host.querySelectorAll<HTMLButtonElement>(
+        '[data-explorer-path][aria-pressed="true"]',
+      ),
+      (row) => row.dataset.explorerPath,
+    );
+  await click("a.ts", { shiftKey: true });
+  expect(selected()).toEqual(["a.ts"]);
+  await click("c.ts", { metaKey: true });
+  expect(selected()).toEqual(["a.ts", "c.ts"]);
+  await click("c.ts", { ctrlKey: true });
+  expect(selected()).toEqual(["a.ts"]);
+  await click("b.ts", { ctrlKey: true, shiftKey: true });
+  expect(selected()).toEqual(["a.ts", "b.ts", "c.ts"]);
+  expect(select).not.toHaveBeenCalled();
+  await act(async () => render("<workspace>/two"));
+  expect(selected()).toEqual([]);
+  await click("c.ts", { shiftKey: true });
+  expect(selected()).toEqual(["c.ts"]);
+});
+
+it("uses the visible selection for right-click and keyboard menus and selects an unselected context target", async () => {
+  vi.mocked(getWorktreeFiles).mockResolvedValue(
+    ["a.ts", "b.ts", "c.ts"].map((name) => ({
+      name,
+      path: name,
+      is_dir: false,
+      is_symlink: false,
+    })),
+  );
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <WorktreeExplorer
+          projectId="demo"
+          worktreePath="/workspace/demo"
+          onSelect={vi.fn()}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  const row = (path: string) =>
+    host.querySelector<HTMLButtonElement>(`[data-explorer-path="${path}"]`)!;
+  const copy = async (path: string, keyboard = false) => {
+    await act(async () =>
+      row(path).dispatchEvent(
+        keyboard
+          ? new KeyboardEvent("keydown", {
+              key: "F10",
+              shiftKey: true,
+              bubbles: true,
+            })
+          : new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+      ),
+    );
+    await act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+        .find((item) => item.textContent === "fileTree.copyRelativePath")!
+        .click(),
+    );
+  };
+  await act(async () => row("c.ts").click());
+  await act(async () =>
+    row("a.ts").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, shiftKey: true }),
+    ),
+  );
+  await copy("b.ts");
+  expect(writeText).toHaveBeenLastCalledWith("a.ts\nb.ts\nc.ts");
+  await copy("a.ts", true);
+  expect(writeText).toHaveBeenLastCalledWith("a.ts\nb.ts\nc.ts");
+  await act(async () =>
+    row("b.ts").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, metaKey: true }),
+    ),
+  );
+  await copy("b.ts");
+  expect(writeText).toHaveBeenLastCalledWith("b.ts");
+  expect(row("a.ts").getAttribute("aria-pressed")).toBe("false");
+  expect(row("b.ts").getAttribute("aria-pressed")).toBe("true");
+  expect(row("c.ts").getAttribute("aria-pressed")).toBe("false");
 });

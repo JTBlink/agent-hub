@@ -10,7 +10,10 @@ import {
   startDevelopment,
 } from "../../lib/developmentPreview";
 import { WorktreePreviewsProvider } from "../../hooks/useWorktreePreviews";
-import { WorktreeEntryMenu } from "./WorktreeEntryMenu";
+import {
+  WorktreeEntryMenu,
+  type WorktreeContextEntry,
+} from "./WorktreeEntryMenu";
 import {
   pasteWorktreeFiles,
   modifyWorktreeEntry,
@@ -69,6 +72,7 @@ async function render(
   directory = false,
   symlink = false,
   withPreviews = false,
+  targets?: WorktreeContextEntry[],
 ) {
   const entry = (
     <WorktreeEntryMenu
@@ -77,6 +81,7 @@ async function render(
       path={path}
       directory={directory}
       symlink={symlink}
+      resolveContextEntries={targets ? () => targets : undefined}
       onChanged={changed}
       onRefresh={refresh}
       onSelect={select}
@@ -535,4 +540,71 @@ it("keeps direct file preview separate from an existing development preview", as
   await choose("fileTree.previewInBrowser");
   expect(previewApi.openProject).toHaveBeenCalledTimes(2);
   expect(startDevelopment).not.toHaveBeenCalled();
+});
+
+it("copies all selected paths and offers only applicable multi-file actions", async () => {
+  await render("src/notes.md", false, false, false, [
+    { path: "src/notes.md", directory: false },
+    { path: "src/other file.ts", directory: false },
+  ]);
+  await open();
+  expect(menuItems().map((item) => item.textContent)).toEqual([
+    "fileTree.copyPath",
+    "fileTree.copyRelativePath",
+    "worktree.refreshFiles",
+    "common.delete",
+  ]);
+  await choose("fileTree.copyPath");
+  expect(writeText).toHaveBeenLastCalledWith(
+    "/workspace/demo/src/notes.md\n/workspace/demo/src/other file.ts",
+  );
+  await open(true);
+  await choose("fileTree.copyRelativePath");
+  expect(writeText).toHaveBeenLastCalledWith("src/notes.md\nsrc/other file.ts");
+});
+
+it("confirms batch deletion, checks all unsaved targets before deleting and retries only remaining entries", async () => {
+  await render("src/notes.md", false, false, false, [
+    { path: "src/notes.md", directory: false },
+    { path: "assets", directory: true },
+    { path: "assets/icon.svg", directory: false },
+    { path: "other.ts", directory: false },
+  ]);
+  await open();
+  expect(menuItems().some((item) => item.textContent === "fileTree.open")).toBe(
+    false,
+  );
+  await choose("common.delete");
+  expect(modifyWorktreeEntry).not.toHaveBeenCalled();
+  const deleteButton = () =>
+    [...host.querySelectorAll<HTMLButtonElement>("button")].find(
+      (item) => item.textContent === "common.delete",
+    )!;
+  vi.mocked(hasPendingWorktreeDocument).mockImplementation(
+    (_project, _tree, path) => path === "other.ts",
+  );
+  await act(async () => deleteButton().click());
+  expect(modifyWorktreeEntry).not.toHaveBeenCalled();
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+    "fileTree.saveFirst",
+  );
+  vi.mocked(hasPendingWorktreeDocument).mockReturnValue(false);
+  vi.mocked(modifyWorktreeEntry)
+    .mockResolvedValueOnce("src/notes.md")
+    .mockRejectedValueOnce(new Error("Delete failed"));
+  await act(async () => deleteButton().click());
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+    "Delete failed",
+  );
+  expect(
+    vi.mocked(modifyWorktreeEntry).mock.calls.map((call) => call[2]),
+  ).toEqual(["src/notes.md", "assets"]);
+  vi.mocked(modifyWorktreeEntry).mockImplementation(
+    async (_project, _tree, path) => path,
+  );
+  await act(async () => deleteButton().click());
+  expect(
+    vi.mocked(modifyWorktreeEntry).mock.calls.map((call) => call[2]),
+  ).toEqual(["src/notes.md", "assets", "assets", "other.ts"]);
+  expect(host.querySelector('[role="alertdialog"]')).toBeNull();
 });

@@ -20,6 +20,7 @@ import {
 import { FileTypeIcon } from "../FileTypeIcon";
 import { GitStatusIndicator } from "../git/GitStatusIndicator";
 import { WorkspaceUnavailable } from "./WorkspaceUnavailable";
+import { useExplorerSelection } from "./useExplorerSelection";
 
 interface Props {
   projectId: string;
@@ -31,6 +32,10 @@ interface Props {
 }
 
 type TreeProps = Props & {
+  selection: Pick<
+    ReturnType<typeof useExplorerSelection>,
+    "selectedPaths" | "selectEntry" | "contextEntries"
+  >;
   decorations: ReadonlyMap<string, WorktreeDecoration>;
   revision: number;
   onRefresh: () => void;
@@ -39,6 +44,12 @@ type TreeProps = Props & {
 
 export function WorktreeExplorer(props: Props) {
   const { t } = useTranslation();
+  const { containerRef, selectedPaths, selectEntry, contextEntries } =
+    useExplorerSelection(
+      `${props.projectId}:${props.worktreePath}`,
+      props.selected,
+    );
+  const selection = { selectedPaths, selectEntry, contextEntries };
   const [revision, setRevision] = useState(0);
   const [collapse, setCollapse] = useState(0);
   const [open, setOpen] = useState(true);
@@ -72,6 +83,7 @@ export function WorktreeExplorer(props: Props) {
       .at(-1) || props.worktreePath;
   return (
     <aside
+      ref={containerRef}
       aria-label={t("fileReader.explorer")}
       className="flex min-h-0 flex-1 flex-col bg-bg-secondary"
     >
@@ -126,6 +138,7 @@ export function WorktreeExplorer(props: Props) {
           onLoadingChange={setLoading}
           depth={0}
           collapse={collapse}
+          selection={selection}
           decorations={decorations}
           revision={revision}
           onRefresh={refresh}
@@ -258,6 +271,7 @@ function Directory({
               <WorktreeEntryMenu
                 {...props}
                 path={file.path}
+                resolveContextEntries={props.selection.contextEntries}
                 directory={false}
                 symlink={file.is_symlink}
               >
@@ -268,12 +282,16 @@ function Directory({
                   aria-description={
                     file.is_ignored ? t("worktree.gitIgnored") : undefined
                   }
-                  aria-pressed={props.selected === file.path}
-                  onClick={() => props.onSelect(file.path)}
+                  data-explorer-path={file.path}
+                  aria-pressed={props.selection.selectedPaths.has(file.path)}
+                  onClick={(event) => {
+                    if (!props.selection.selectEntry(file.path, event))
+                      props.onSelect(file.path);
+                  }}
                   style={{ paddingLeft: 28 + depth * 12 }}
                   className={cn(
-                    "flex h-[22px] w-full min-w-0 items-center gap-1 pr-2 text-left text-[13px] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40",
-                    props.selected === file.path
+                    "flex h-[22px] w-full select-none min-w-0 items-center gap-1 pr-2 text-left text-[13px] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40",
+                    props.selection.selectedPaths.has(file.path)
                       ? "bg-surface-active"
                       : "hover:bg-surface-hover",
                     file.is_ignored
@@ -323,6 +341,7 @@ function FolderEntry({
       <WorktreeEntryMenu
         {...props}
         path={file.path}
+        resolveContextEntries={props.selection.contextEntries}
         directory
         symlink={file.is_symlink}
         onCreated={() => setOpen(true)}
@@ -334,10 +353,20 @@ function FolderEntry({
           aria-description={
             file.is_ignored ? t("worktree.gitIgnored") : undefined
           }
-          onClick={() => setOpen(!open)}
+          data-explorer-path={file.path}
+          data-explorer-directory="true"
+          aria-pressed={props.selection.selectedPaths.has(file.path)}
+          onClick={(event) => {
+            if (event.shiftKey || event.metaKey || event.ctrlKey)
+              props.selection.selectEntry(file.path, event);
+            else setOpen(!open);
+          }}
           style={{ paddingLeft: 12 + depth * 12 }}
           className={cn(
-            "flex h-[22px] w-full min-w-0 items-center gap-1 pr-2 text-left text-[13px] hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+            "flex h-[22px] w-full select-none min-w-0 items-center gap-1 pr-2 text-left text-[13px] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+            props.selection.selectedPaths.has(file.path)
+              ? "bg-surface-active"
+              : "hover:bg-surface-hover",
             file.is_ignored
               ? "text-muted"
               : (decoration?.color ?? "text-primary"),

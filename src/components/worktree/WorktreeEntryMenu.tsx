@@ -32,6 +32,11 @@ import { canPreviewDocument } from "../../features/preview/shared/projectPreview
 import { useWorktreeBrowserPreview } from "../../hooks/useWorktreeBrowserPreview";
 import { getErrorMessage } from "../../lib/error";
 
+export interface WorktreeContextEntry {
+  path: string;
+  directory: boolean;
+}
+
 export interface WorktreeEntryChange {
   kind: WorktreeFileAction["kind"];
   path: string;
@@ -48,6 +53,7 @@ export function WorktreeEntryMenu({
   onChanged,
   onRefresh,
   onCreated,
+  resolveContextEntries,
   children,
 }: {
   projectId: string;
@@ -59,6 +65,10 @@ export function WorktreeEntryMenu({
   onChanged: (change: WorktreeEntryChange) => void;
   onRefresh: () => void;
   onCreated?: () => void;
+  resolveContextEntries?: (
+    path: string,
+    directory: boolean,
+  ) => WorktreeContextEntry[];
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -69,6 +79,17 @@ export function WorktreeEntryMenu({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef(false);
+  const [contextEntries, setContextEntries] = useState<WorktreeContextEntry[]>(
+    [],
+  );
+  const [deleteEntries, setDeleteEntries] = useState<WorktreeContextEntry[]>(
+    [],
+  );
+  const targets =
+    resolveContextEntries && contextEntries.length
+      ? contextEntries
+      : [{ path, directory }];
+  const multiple = targets.length > 1;
   const browserPreview = useWorktreeBrowserPreview(
     projectId,
     worktreePath,
@@ -95,6 +116,18 @@ export function WorktreeEntryMenu({
   const begin = (kind: WorktreeFileAction["kind"]) => {
     setName(kind === "rename" ? (path.split("/").at(-1) ?? "") : "");
     setError("");
+    if (kind === "delete")
+      setDeleteEntries(
+        targets.filter(
+          (entry) =>
+            !targets.some(
+              (parent) =>
+                parent.directory &&
+                parent.path !== entry.path &&
+                entry.path.startsWith(`${parent.path}/`),
+            ),
+        ),
+      );
     setOperation(kind);
   };
   const report = async (action: () => Promise<unknown>, copied = false) => {
@@ -105,12 +138,52 @@ export function WorktreeEntryMenu({
       toast.error(getErrorMessage(cause, t("common.error")));
     }
   };
+  const submitDelete = async (): Promise<void | false> => {
+    if (pending.current) return false;
+    if (
+      deleteEntries.some((entry) =>
+        hasPendingWorktreeDocument(projectId, worktreePath, entry.path),
+      )
+    ) {
+      setError(t("fileTree.saveFirst"));
+      return false;
+    }
+    pending.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      for (const entry of deleteEntries) {
+        const nextPath = await modifyWorktreeEntry(
+          projectId,
+          worktreePath,
+          entry.path,
+          { kind: "delete" },
+        );
+        setDeleteEntries((remaining) =>
+          remaining.filter((item) => item.path !== entry.path),
+        );
+        onChanged({ kind: "delete", path: entry.path, nextPath });
+      }
+      toast.success(t("fileTree.completed"));
+      setOperation(undefined);
+    } catch (cause) {
+      const message = getErrorMessage(cause, t("common.error"));
+      setError(message);
+      toast.error(message);
+      return false;
+    } finally {
+      onRefresh();
+      pending.current = false;
+      setBusy(false);
+    }
+  };
   const submit = async (): Promise<void | false> => {
     if (!operation || pending.current) return false;
+    if (operation === "delete") return submitDelete();
     const mutationPath =
       operation === "new_file" || operation === "new_directory" ? folder : path;
     if (
-      (operation === "rename" || operation === "delete") &&
+      operation === "rename" &&
       hasPendingWorktreeDocument(projectId, worktreePath, path)
     ) {
       setError(t("fileTree.saveFirst"));
@@ -120,10 +193,7 @@ export function WorktreeEntryMenu({
     setBusy(true);
     setError("");
     try {
-      const action: WorktreeFileAction =
-        operation === "delete"
-          ? { kind: operation }
-          : { kind: operation, name };
+      const action: WorktreeFileAction = { kind: operation, name };
       const nextPath = await modifyWorktreeEntry(
         projectId,
         worktreePath,
@@ -239,9 +309,13 @@ export function WorktreeEntryMenu({
         void report(
           () =>
             writeText(
-              path
-                ? `${worktreePath.replace(/[\\/]+$/, "")}/${path}`
-                : worktreePath,
+              targets
+                .map((entry) =>
+                  entry.path
+                    ? `${worktreePath.replace(/[\\/]+$/, "")}/${entry.path}`
+                    : worktreePath,
+                )
+                .join("\n"),
             ),
           true,
         ),
@@ -250,7 +324,11 @@ export function WorktreeEntryMenu({
       key: "copy_relative",
       label: t("fileTree.copyRelativePath"),
       icon: <Copy size={14} />,
-      onSelect: () => void report(() => writeText(path || "."), true),
+      onSelect: () =>
+        void report(
+          () => writeText(targets.map((entry) => entry.path || ".").join("\n")),
+          true,
+        ),
     },
     {
       key: "refresh",
@@ -320,7 +398,21 @@ export function WorktreeEntryMenu({
         <CardActionMenu
           contextTarget={target}
           contextOnly
-          actions={actions}
+          actions={
+            multiple
+              ? actions.filter((action) =>
+                  ["copy_path", "copy_relative", "refresh", "delete"].includes(
+                    action.key,
+                  ),
+                )
+              : actions
+          }
+          shouldOpenContextMenu={() => {
+            setContextEntries(
+              resolveContextEntries?.(path, directory) ?? [{ path, directory }],
+            );
+            return true;
+          }}
           label={t("fileTree.actions")}
           disabled={busy || browserPreview.opening}
         />
@@ -329,7 +421,14 @@ export function WorktreeEntryMenu({
         <ConfirmDialog
           open
           title={t("fileTree.deleteTitle")}
-          message={t("fileTree.deleteMessage", { path })}
+          message={t("fileTree.deleteMessage", {
+            path: deleteEntries.map((entry) => entry.path).join(", "),
+          })}
+          details={
+            deleteEntries.length > 1
+              ? deleteEntries.map((entry) => entry.path)
+              : undefined
+          }
           onClose={() => setOperation(undefined)}
           onConfirm={submit}
         >
