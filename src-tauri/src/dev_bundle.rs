@@ -1,6 +1,6 @@
 //! Give `tauri dev` a real application bundle so Dock uses the product name.
 
-use std::os::unix::{fs::symlink, process::CommandExt};
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 
 fn bundle_executable(executable: &Path, name: &str) -> Option<PathBuf> {
@@ -52,6 +52,10 @@ fn prepare_bundle(
         ("CFBundlePackageType", "APPL"),
         ("CFBundleIconFile", "icon.icns"),
         (
+            "NSDownloadsFolderUsageDescription",
+            "Access files in Downloads when you open them or run commands in the integrated terminal.",
+        ),
+        (
             "CFBundleVersion",
             config.version.as_deref().unwrap_or("0.0.0"),
         ),
@@ -64,21 +68,59 @@ fn prepare_bundle(
         include_bytes!("../icons/icon.icns"),
     )?;
 
-    // Cargo replaces its output on rebuild. A hard link avoids copying the large
-    // debug executable and keeps the running image valid until the next restart.
+    // Signing must never modify Cargo's executable or the running image through
+    // a hard link. Stage independent files and replace the previous bundle copy.
     let staged = directory.join(".agent-hub.staged");
     if staged.exists() {
         std::fs::remove_file(&staged)?;
     }
-    std::fs::hard_link(executable, &staged)?;
+    std::fs::copy(executable, &staged)?;
     std::fs::rename(staged, &bundled)?;
     let cli = directory.join("agent-hub-cli");
+    let staged_cli = directory.join(".agent-hub-cli.staged");
+    if staged_cli.exists() {
+        std::fs::remove_file(&staged_cli)?;
+    }
+    std::fs::copy(executable.with_file_name("agent-hub-cli"), &staged_cli)?;
     if cli.symlink_metadata().is_ok() {
         std::fs::remove_file(&cli)?;
     }
-    symlink(executable.with_file_name("agent-hub-cli"), cli)?;
+    std::fs::rename(staged_cli, cli)?;
+
+    // The linker signature does not seal Info.plist or resources. TCC needs a
+    // valid app identity; an external CLI symlink also fails strict validation.
+    let app = contents.parent().ok_or("missing development app bundle")?;
+    sign_bundle(app, &config.identifier)?;
 
     Ok(Some(bundled))
+}
+
+fn sign_bundle(app: &Path, identifier: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let output = std::process::Command::new("/usr/bin/codesign")
+        .args(["--force", "--sign", "-", "--timestamp=none", "--identifier"])
+        .arg(identifier)
+        .arg(app)
+        .output()?;
+    if !output.status.success() {
+        return Err(format!(
+            "Cannot sign macOS development app: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        )
+        .into());
+    }
+    let output = std::process::Command::new("/usr/bin/codesign")
+        .args(["--verify", "--strict"])
+        .arg(app)
+        .output()?;
+    if !output.status.success() {
+        return Err(format!(
+            "Invalid macOS development app signature: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        )
+        .into());
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

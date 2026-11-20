@@ -5,8 +5,10 @@ fn dev_bundle_keeps_product_identity_and_refreshes_the_executable() {
     let root = tempfile::tempdir().unwrap();
     let executable = root.path().join("agent-hub");
     let cli = root.path().join("agent-hub-cli");
-    std::fs::write(&executable, "first build").unwrap();
-    std::fs::write(&cli, "companion cli").unwrap();
+    std::fs::copy("/usr/bin/true", &executable).unwrap();
+    let original = std::fs::read(&executable).unwrap();
+    std::fs::copy("/usr/bin/true", &cli).unwrap();
+    let original_cli = std::fs::read(&cli).unwrap();
     let config = tauri::Config {
         product_name: Some("Example App".into()),
         identifier: "invalid.example.app".into(),
@@ -23,15 +25,37 @@ fn dev_bundle_keeps_product_identity_and_refreshes_the_executable() {
     );
     assert_eq!(
         std::fs::read(bundled.with_file_name("agent-hub-cli")).unwrap(),
-        b"companion cli"
+        original_cli
     );
     assert!(contents.join("Resources/icon.icns").is_file());
+    assert!(info["NSDownloadsFolderUsageDescription"]
+        .as_string()
+        .is_some());
+    let verification = std::process::Command::new("/usr/bin/codesign")
+        .args(["--verify", "--strict"])
+        .arg(contents.parent().unwrap())
+        .output()
+        .unwrap();
+    assert!(
+        verification.status.success(),
+        "{}",
+        String::from_utf8_lossy(&verification.stderr)
+    );
+    assert_eq!(std::fs::read(&executable).unwrap(), original);
+    assert_eq!(std::fs::read(&cli).unwrap(), original_cli);
+    assert!(std::process::Command::new(&bundled)
+        .status()
+        .unwrap()
+        .success());
 
     // Model Cargo replacing its output while the old bundle is still present.
     std::fs::remove_file(&executable).unwrap();
-    std::fs::write(&executable, "second build").unwrap();
+    std::fs::copy("/usr/bin/false", &executable).unwrap();
     prepare_bundle(&executable, &config).unwrap();
-    assert_eq!(std::fs::read(bundled).unwrap(), b"second build");
+    assert!(!std::process::Command::new(&bundled)
+        .status()
+        .unwrap()
+        .success());
 }
 
 #[test]

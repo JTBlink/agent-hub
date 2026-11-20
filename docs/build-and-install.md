@@ -35,6 +35,12 @@ Unix 也可执行 `./agent-hub.sh build`；Windows 可执行 `agent-hub.bat buil
 
 请使用项目包装入口打包，使 sidecar 与桌面版本一致。普通本地打包不会创建 Git tag 或发布 Release；签名、更新器与正式发布见[发布流程](../.agents/skills/github-cli/references/release-flow.md)。
 
+macOS 开发启动会生成完整的 `.app`，使用本机 ad-hoc 签名并验证包内资源，
+让系统识别开发应用的文件访问请求。首次通过内嵌终端访问下载目录时，需由
+用户确认系统提示；已有拒绝记录在“隐私与安全性 → 文件与文件夹”中管理。
+此流程不授予完全磁盘访问，也不修改系统隐私数据库。开发签名随重编译变化，
+系统可能要求重新授权；安装版与开发版应按实际运行的应用核对权限。
+
 ## 产物位置与安装
 
 默认 Cargo 构建目录为 `src-tauri/target/`：
