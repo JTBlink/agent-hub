@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,6 +20,7 @@ import {
   CalendarClock,
   FileText,
 } from "lucide-react";
+import { WorkspaceFilesContext } from "../hooks/useWorkspaceFiles";
 import { usePaletteFile } from "../hooks/usePaletteFile";
 import { useApp } from "../context/AppContext";
 import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
@@ -69,7 +77,8 @@ export function CommandPalette({
     setActiveIndex(0);
   }, [onOpenChange]);
 
-  const file = usePaletteFile(query, open, close);
+  const checkout = useContext(WorkspaceFilesContext)?.checkout;
+  const file = usePaletteFile(query, open, close, checkout);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

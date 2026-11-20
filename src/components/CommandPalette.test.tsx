@@ -10,12 +10,20 @@ import zhTW from "../i18n/zh-TW.json";
 import { makeProject } from "../../tests/fixtures/workspace";
 import { makeSkillGroup } from "../../tests/fixtures/skillGroup";
 import { makeSkill } from "../../tests/fixtures/managedSkill";
+import {
+  WorkspaceFilesContext,
+  type ActiveCheckout,
+} from "../hooks/useWorkspaceFiles";
 import { CommandPalette } from "./CommandPalette";
 import { previewApi, type PreviewDocument } from "../features/preview/api";
 import { queuePreviewDocument } from "../features/preview/shared/openRequests";
 
 vi.mock("../features/preview/api", () => ({
-  previewApi: { openDocument: vi.fn(), closeDocument: vi.fn() },
+  previewApi: {
+    openDocument: vi.fn(),
+    openProject: vi.fn(),
+    closeDocument: vi.fn(),
+  },
 }));
 vi.mock("../features/preview/shared/openRequests", () => ({
   queuePreviewDocument: vi.fn(),
@@ -79,11 +87,20 @@ function Shell() {
     </>
   );
 }
-async function render() {
+async function render(checkout?: ActiveCheckout) {
   await act(async () =>
     root.render(
       <MemoryRouter initialEntries={["/tasks"]}>
-        <Shell />
+        <WorkspaceFilesContext.Provider
+          value={{
+            files: {},
+            checkout,
+            setCheckout: vi.fn(),
+            setFiles: vi.fn(),
+          }}
+        >
+          <Shell />
+        </WorkspaceFilesContext.Provider>
       </MemoryRouter>,
     ),
   );
@@ -202,6 +219,23 @@ it.each(["/tmp/external/guide.md", "~/notes/guide.md"])(
     expect(container.querySelector('[role="dialog"]')).toBeNull();
   },
 );
+
+it("opens an explicit hidden relative path in the active checkout", async () => {
+  vi.mocked(previewApi.openProject).mockResolvedValue(externalDocument);
+  const path = ".agents/skills/example/references/guide.md";
+  await render({ projectId: "first", worktreePath: "/workspace/topic" });
+  await query(path);
+  expect(previewApi.openProject).not.toHaveBeenCalled();
+  expect(options()[0].textContent).toContain(path);
+  await key("Enter");
+  expect(previewApi.openProject).toHaveBeenCalledWith(
+    "first",
+    "/workspace/topic",
+    path,
+  );
+  expect(previewApi.openDocument).not.toHaveBeenCalled();
+  expect(queuePreviewDocument).toHaveBeenCalledWith(externalDocument);
+});
 
 it("keeps a failed file path and error visible and allows click to retry", async () => {
   vi.mocked(previewApi.openDocument).mockRejectedValueOnce({

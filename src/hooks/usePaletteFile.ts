@@ -3,9 +3,15 @@ import { useTranslation } from "react-i18next";
 import { previewApi } from "../features/preview/api";
 import { queuePreviewDocument } from "../features/preview/shared/openRequests";
 import { getErrorMessage } from "../lib/error";
+import type { ActiveCheckout } from "./useWorkspaceFiles";
 
 /** Only explicit local paths become commands; ordinary search never reads disk. */
-export function paletteFilePath(query: string): string | null {
+const absolutePath = /^(\/|~\/|[a-z]:[\\/]|\\\\)/i;
+
+export function paletteFilePath(
+  query: string,
+  inWorkspace = false,
+): string | null {
   let path = query.trim();
   if (
     (path.startsWith('"') && path.endsWith('"')) ||
@@ -13,16 +19,24 @@ export function paletteFilePath(query: string): string | null {
   ) {
     path = path.slice(1, -1);
   }
-  return /^(\/|~\/|[a-z]:[\\/]|\\\\)/i.test(path) ? path : null;
+  if (absolutePath.test(path)) return path;
+  // Treat a path with directory separators as explicit only when its base
+  // checkout is known. Bare filenames and URLs remain search terms.
+  return inWorkspace && /^[^:\\/]+(?:[\\/][^:\\/]+)+$/.test(path)
+    ? path.replaceAll("\\", "/").replace(/^(?:\.\/)+/, "")
+    : null;
 }
 
 export function usePaletteFile(
   query: string,
   open: boolean,
   onOpened: () => void,
+  checkout?: ActiveCheckout,
 ) {
   const { t } = useTranslation();
-  const path = paletteFilePath(query);
+  const projectId = checkout?.projectId;
+  const worktreePath = checkout?.worktreePath;
+  const path = paletteFilePath(query, !!checkout);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const lifetime = useRef({ active: false });
@@ -37,7 +51,7 @@ export function usePaletteFile(
     return () => {
       current.active = false;
     };
-  }, [query, open]);
+  }, [query, open, projectId, worktreePath]);
 
   const openFile = async () => {
     if (!open || !path || inFlight.current) return;
@@ -46,7 +60,10 @@ export function usePaletteFile(
     setBusy(true);
     setError("");
     try {
-      const document = await previewApi.openDocument(path);
+      const document =
+        projectId && worktreePath && !absolutePath.test(path)
+          ? await previewApi.openProject(projectId, worktreePath, path)
+          : await previewApi.openDocument(path);
       if (!request.active) {
         await previewApi.closeDocument(document.id);
         return;

@@ -13,3 +13,16 @@ it.each([
 ])("recognizes explicit local file input %s", (query, expected) => {
   expect(paletteFilePath(query)).toBe(expected);
 });
+
+it.each([
+  [".agents/skills/example/guide.md", ".agents/skills/example/guide.md"],
+  ["./guide.md", "guide.md"],
+  ["docs\\my notes\\guide.md", "docs/my notes/guide.md"],
+  ["https://example.invalid/guide.md", null],
+  ["guide.md", null],
+])(
+  "only interprets explicit checkout-relative paths (%s)",
+  (input, expected) => {
+    expect(paletteFilePath(input, true)).toBe(expected);
+  },
+);
