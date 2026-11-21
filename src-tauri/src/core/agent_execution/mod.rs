@@ -76,6 +76,7 @@ pub fn run(request: &ExecutionRequest, mut output: impl FnMut(&str)) -> Result<E
     };
     let bridge = super::cli_bridge::validated_path()?;
     let mut command = Command::new(python);
+    super::python_support::configure_utf8(&mut command);
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;

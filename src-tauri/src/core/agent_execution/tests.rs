@@ -34,7 +34,9 @@ fn lifecycle_preserves_ownership_and_recovers_without_duplicate_delivery() {
     // The fixture exceeds Windows' command-line limit when passed through `-c`.
     let checks = root.path().join("lifecycle_checks.py");
     std::fs::write(&checks, include_str!("fixtures/lifecycle_checks.py")).unwrap();
-    let result = Command::new(crate::core::python_support::interpreter().unwrap())
+    let mut command = Command::new(crate::core::python_support::interpreter().unwrap());
+    crate::core::python_support::configure_utf8(&mut command);
+    let result = command
         .arg(&checks)
         .arg(root.path().join("scripts/runtime.py"))
         .env_remove("AGENT_HUB_CLI")

@@ -1,6 +1,35 @@
 use super::*;
 
 #[test]
+fn unicode_requests_and_logs_use_utf8_even_with_a_legacy_console_encoding() {
+    use std::process::{Command, Stdio};
+
+    let mut command = Command::new(interpreter().unwrap());
+    command.env("PYTHONIOENCODING", "cp1252");
+    configure_utf8(&mut command);
+    let mut child = command
+        .args([
+            "-c",
+            "import sys; assert sys.stdin.read() == '反馈'; print('中文回执'); sys.stderr.write('诊断')",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all("反馈".as_bytes())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success(), "{:?}", output);
+    assert_eq!(String::from_utf8(output.stdout).unwrap().trim(), "中文回执");
+    assert_eq!(String::from_utf8(output.stderr).unwrap(), "诊断");
+}
+
+#[test]
 fn shared_revisions_are_reused_and_old_executions_remain_available() {
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("runtime/core");

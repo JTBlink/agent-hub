@@ -7,6 +7,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Rust's JSON input and line reader use UTF-8 regardless of the host console code page.
+pub(crate) fn configure_utf8(command: &mut std::process::Command) {
+    command.env("PYTHONIOENCODING", "utf-8");
+}
+
 pub(crate) fn interpreter() -> Result<PathBuf> {
     for name in ["python3", "python"] {
         if let Some(path) = super::tool_detection::find_command(name) {
