@@ -1,0 +1,2 @@
+// Common Controls v6 and long-path support apply to application and test targets.
+1 24 "windows-app-manifest.xml"
