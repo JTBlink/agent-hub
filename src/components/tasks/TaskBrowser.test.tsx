@@ -770,3 +770,187 @@ it("updates the account picker and unlocks switching while repository refresh is
     HTMLDialogElement.prototype.close = originalClose;
   }
 });
+
+it("filters real runner inventories by platform and retains task search when returning", async () => {
+  const bindings = [
+    ...scopedBindings,
+    { ...scopedBindings[1], id: "restricted", repository: "team/restricted" },
+  ];
+  vi.mocked(invoke).mockImplementation(async (command, args) => {
+    if (command === "task_bindings") return bindings;
+    if (command === "task_list")
+      return { items: [], identity: "demo", has_more: false, limited: false };
+    if (command === "task_runners") {
+      const binding = bindings.find(
+        ({ id }) => args && "bindingId" in args && id === args.bindingId,
+      )!;
+      if (binding.id === "restricted")
+        throw { kind: "permission", message: "HTTP 403" };
+      const runner = {
+        id: 128,
+        name: binding.provider + " machine",
+        state: binding.provider === "github" ? "online" : "stale",
+        paused: null,
+        busy: true,
+        os: "Linux",
+        scope: null,
+        labels: null,
+        contacted_at: null,
+      };
+      const extraRunner = {
+        ...runner,
+        id: 129,
+        short_id: "demo1234",
+        name: "initializing machine",
+        state: "initializing",
+        created_by: "Demo Creator",
+        created_at: "2026-11-01T08:00:00Z",
+        labels: ["linux-ci"],
+        version: "18.0.0",
+      };
+      if (args && "runnerId" in args)
+        return {
+          ...(args.runnerId === 129 ? extraRunner : runner),
+          job_count: 11,
+        };
+      return {
+        items: binding.provider === "github" ? [runner] : [runner, extraRunner],
+        identity: "demo",
+        limited: false,
+      };
+    }
+    return undefined;
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <TaskBrowser
+          projects={scopedBindings.map((binding) => ({
+            ...makeProject(),
+            id: binding.project_id,
+            name: binding.project_id,
+          }))}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  const input = () =>
+    host.querySelector<HTMLInputElement>('[aria-label="tasks.search"]')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )!.set!.call(input(), "assignee:@me");
+    input().dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  const chooseView = (name: string) =>
+    act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          `[role="radio"][aria-label="${name}"]`,
+        )!
+        .click(),
+    );
+  await chooseView("runners.title");
+  expect(host.querySelectorAll("tbody tr")).toHaveLength(3);
+  expect(
+    [...host.querySelectorAll("thead th")].map((cell) => cell.textContent),
+  ).toEqual(
+    expect.arrayContaining([
+      "runners.work",
+      "runners.labels",
+      "runners.createdAt",
+    ]),
+  );
+  expect(host.querySelector("thead")?.textContent).not.toContain(
+    "runners.contacted",
+  );
+  expect(host.textContent).toContain("github machine");
+  expect(host.textContent).toContain("gitlab machine");
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+    "HTTP 403",
+  );
+  const runnerButtons = [
+    ...host.querySelectorAll<HTMLButtonElement>("tbody button"),
+  ];
+  await act(async () => runnerButtons[0].click());
+  const details = host.querySelector("aside[aria-labelledby]");
+  expect(
+    details?.previousElementSibling?.querySelector("table"),
+  ).not.toBeNull();
+  expect(details?.textContent).toContain("github.example.invalid");
+  expect(host.querySelector("dialog")).toBeNull();
+  expect(runnerButtons[1].disabled).toBe(false);
+  await act(async () => {
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+  });
+  expect(host.querySelector("aside[aria-labelledby]")).toBeNull();
+  expect(document.activeElement).toBe(runnerButtons[0]);
+  expect(runnerButtons[1].closest("tr")?.textContent).toContain(
+    "runners.stale",
+  );
+  const chooseTag = async (label: string) => {
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[role="combobox"][aria-label="runners.labels"]',
+        )!
+        .click(),
+    );
+    const option = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+    ].find((button) => button.textContent === label)!;
+    await act(async () => option.click());
+  };
+  await chooseTag("linux-ci");
+  expect(host.querySelectorAll("tbody tr")).toHaveLength(1);
+  expect(host.querySelector("tbody")?.textContent).toContain(
+    "initializing machine",
+  );
+  await chooseTag("runners.allTags");
+  const tagBadge = [
+    ...host.querySelectorAll<HTMLButtonElement>("tbody button"),
+  ].find((button) => button.textContent === "linux-ci")!;
+  await act(async () => tagBadge.click());
+  expect(host.querySelectorAll("tbody tr")).toHaveLength(1);
+  expect(tagBadge.getAttribute("aria-pressed")).toBe("true");
+  await act(async () => tagBadge.click());
+  const rawStateFilter = [
+    ...host.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
+  ].find((button) => button.textContent?.trim() === "initializing 1")!;
+  await act(async () => rawStateFilter.click());
+  expect(host.querySelectorAll("tbody tr")).toHaveLength(1);
+  expect(host.querySelector("tbody")?.textContent).toContain("#129 (demo1234)");
+  expect(host.querySelector("tbody")?.textContent).toContain("18.0.0");
+  await act(async () =>
+    host.querySelector<HTMLButtonElement>("tbody button")!.click(),
+  );
+  expect(
+    [...host.querySelectorAll("aside dd")].map((field) => field.textContent),
+  ).toEqual(
+    expect.arrayContaining([
+      "initializing",
+      "11",
+      "Demo Creator",
+      "18.0.0",
+      "linux-ci",
+    ]),
+  );
+  const allStatesFilter = [
+    ...host.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
+  ].find((button) => button.textContent?.trim() === "runners.all 3")!;
+  await act(async () => allStatesFilter.click());
+  await chooseProvider(host, "GitHub");
+  expect(host.querySelectorAll("tbody tr")).toHaveLength(1);
+  expect(host.textContent).toContain("github machine");
+  expect(host.textContent).not.toContain("gitlab machine");
+  await chooseView("tasks.issues");
+  expect(input().value).toBe("assignee:@me");
+  await act(async () => root.unmount());
+  host.remove();
+});

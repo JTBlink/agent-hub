@@ -14,6 +14,10 @@ import * as api from "../../lib/tauri";
 import type { Project, RepositoryTask, TaskFilters } from "../../lib/tauri";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { TaskToolbar } from "./TaskToolbar";
+import { TaskProjectIcon } from "./TaskProjectSelect";
+import { TaskSelectedProjects } from "./TaskSelectedProjects";
+import { TaskWorkspaceSidebar } from "./TaskWorkspaceSidebar";
+import { RunnerWorkspace } from "./RunnerWorkspace";
 import { TaskListTable } from "./TaskListTable";
 import { PlatformAccountsProvider } from "../accounts/PlatformAccountsProvider";
 import { TaskConnections } from "./TaskConnections";
@@ -70,6 +74,10 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     inWorkspace ? workspace.path : undefined,
   ]);
   const [provider, setProvider] = useState(initial.provider);
+  const [runnerProvider, setRunnerProvider] = useState<
+    api.TaskProvider | "all"
+  >("all");
+  const [showRunners, setShowRunners] = useState(false);
   const [projectScope, setProjectScope] = useState({
     workspaceKey,
     projectIds: workspaceId ? [workspaceId] : initial.projectIds,
@@ -96,17 +104,20 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     setSelection(null);
   }
   const returnFocus = useRef<HTMLElement | null>(null);
-  const refreshBindings = useCallback(async (recheckIdentity = false) => {
-    setDiscovering(true);
-    try {
-      const next = await api.getTaskBindings(recheckIdentity);
-      setBindings(next);
-      if (!recheckIdentity) setAccountRefresh((value) => value + 1);
-      setSettingsError("");
-    } finally {
-      setDiscovering(false);
-    }
-  }, []);
+  const refreshBindings = useCallback(
+    async (recheckIdentity = false, refreshAccounts = !recheckIdentity) => {
+      setDiscovering(true);
+      try {
+        const next = await api.getTaskBindings(recheckIdentity);
+        setBindings(next);
+        if (refreshAccounts) setAccountRefresh((value) => value + 1);
+        setSettingsError("");
+      } finally {
+        setDiscovering(false);
+      }
+    },
+    [],
+  );
   useEffect(() => {
     let disposed = false;
     void api
@@ -194,6 +205,33 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     appliedFilters,
     taskRefresh,
   );
+  const runnerBindings = useMemo(
+    () =>
+      projectBindings.filter(
+        (binding) =>
+          runnerProvider === "all" || binding.provider === runnerProvider,
+      ),
+    [projectBindings, runnerProvider],
+  );
+  const changeFilters = (patch: Partial<TaskFilters>) => {
+    const next = changeTaskFilters(
+      {
+        ...defaultTaskFilters,
+        kind: appliedFilters.kind,
+        state: "all",
+        text: search,
+      },
+      patch,
+    );
+    const text = serializeTaskFilters(next);
+    setFilters({ ...next, text });
+    setSearch(text);
+    setSelection(null);
+  };
+  const changeProjects = (value: string[]) => {
+    setProjectScope({ workspaceKey, projectIds: value });
+    setSelection(null);
+  };
   const taskUpdated = (task: RepositoryTask) => {
     setSelection((previous) =>
       previous?.task.key === task.key ? { ...previous, task } : previous,
@@ -220,242 +258,303 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     void openUrl(
       `https://${repository.host}/${repository.repository.split("/").map(encodeURIComponent).join("/")}`,
     ).catch((error) => setSettingsError(api.taskFailure(error).message));
+  const selectedProjects = projects.filter(
+    (project) =>
+      !activeProjectIds.length || activeProjectIds.includes(project.id),
+  );
+  const projectTitle = (label: string, tasks?: readonly RepositoryTask[]) => (
+    <div className="flex min-w-0 max-w-[45%] items-center gap-3">
+      <h1 className="shrink-0 text-lg font-semibold">{label}</h1>
+      {selectedProjects.length > 0 && (
+        <TaskSelectedProjects
+          compact
+          projects={selectedProjects}
+          tasks={tasks}
+          projectIcon={(id) => <TaskProjectIcon bindings={bindings} id={id} />}
+        />
+      )}
+    </div>
+  );
+  const reviewLabel =
+    provider === "gitlab" ? "MR" : provider === "github" ? "PR" : "PR / MR";
+  const refresh = () =>
+    void refreshBindings(showRunners, true).catch((error) =>
+      setSettingsError(api.taskFailure(error).message),
+    );
+  const activeProvider = showRunners ? runnerProvider : provider;
+  const sharedToolbar = {
+    connections,
+    accountRefresh,
+    onConnections: () => setConnections((value) => !value),
+    onAccounts: () => setAccountsOpen(true),
+  };
+  const settingsNotice = settingsError && (
+    <p role="alert" className="my-3 text-xs text-danger">
+      {settingsError}
+      <button type="button" onClick={refresh}>
+        {t("common.retry")}
+      </button>
+    </p>
+  );
+  const connectionsPanel = connections && (
+    <TaskConnections
+      projects={projects}
+      bindings={bindings}
+      onChanged={refreshBindings}
+      onClose={() => setConnections(false)}
+    />
+  );
   return (
     <PlatformAccountsProvider refreshKey={accountRefresh}>
-      <div className="flex min-h-0 flex-1 flex-col gap-0">
-        <TaskToolbar
-          provider={provider}
-          projectIds={activeProjectIds}
+      <div className="flex min-h-0 min-w-0 flex-1 gap-3">
+        <TaskWorkspaceSidebar
+          view={showRunners ? "runner" : appliedFilters.kind}
+          reviewLabel={reviewLabel}
           projects={projects}
           bindings={bindings}
-          identities={[
-            ...new Set(
-              sources
-                .filter((source) => source.identity)
-                .map((source) => `${source.binding.host} · ${source.identity}`),
-            ),
-          ]}
-          filters={appliedFilters}
-          items={items}
-          search={search}
-          loading={loading}
-          connections={connections}
-          accountRefresh={accountRefresh}
-          notice={
-            !discovering &&
-            !settingsError &&
-            selectedBindings.length === 0 &&
-            mismatchedProjects.length > 0 && (
-              <p role="alert" className="mb-2 text-xs text-warning">
-                {t(
-                  activeProjectIds.length > 1
-                    ? "tasks.providerMismatchSelection"
-                    : "tasks.providerMismatch",
-                  {
-                    projects: mismatchedProjects
-                      .map((project) => project.name)
-                      .join(", "),
-                    current: taskPlatforms.find(
-                      (platform) => platform.id !== provider,
-                    )?.label,
-                    selected: taskPlatforms.find(
-                      (platform) => platform.id === provider,
-                    )?.label,
-                  },
-                )}
-              </p>
-            )
-          }
-          onProvider={(value) => {
-            setProvider(value);
+          projectIds={activeProjectIds}
+          onProjects={changeProjects}
+          onConnections={() => setConnections(true)}
+          onView={(view) => {
+            setShowRunners(view === "runner");
             setSelection(null);
+            if (view !== "runner" && view !== appliedFilters.kind)
+              changeFilters({ kind: view });
           }}
-          onProjects={(value) => {
-            setProjectScope({ workspaceKey, projectIds: value });
-            setSelection(null);
-          }}
-          onFilters={(patch) => {
-            const next = changeTaskFilters(
-              {
-                ...defaultTaskFilters,
-                kind: appliedFilters.kind,
-                state: "all",
-                text: search,
-              },
-              patch,
-            );
-            const text = serializeTaskFilters(next);
-            setFilters({ ...next, text });
-            setSearch(text);
-            setSelection(null);
-          }}
-          onSearch={setSearch}
-          onRefresh={() =>
-            void refreshBindings().catch((error) =>
-              setSettingsError(api.taskFailure(error).message),
-            )
-          }
-          onAccounts={() => setAccountsOpen(true)}
-          onConnections={() => setConnections((value) => !value)}
-          onOpenRepository={openRepository}
         />
-        {settingsError && (
-          <p role="alert" className="my-3 text-xs text-danger">
-            {settingsError}
-            <button
-              type="button"
-              onClick={() =>
-                void refreshBindings().catch((error) =>
-                  setSettingsError(api.taskFailure(error).message),
-                )
-              }
-            >
-              {t("common.retry")}
-            </button>
-          </p>
-        )}
-        {accountsOpen && (
-          <Suspense fallback={null}>
-            <PlatformAccountsDialog
-              initialProvider={provider === "all" ? undefined : provider}
-              onChanged={async () => {
-                void refreshBindings(true).catch((error) =>
-                  setSettingsError(api.taskFailure(error).message),
-                );
-              }}
-              onClose={() => setAccountsOpen(false)}
-            />
-          </Suspense>
-        )}
-        {connections && (
-          <TaskConnections
-            projects={projects}
-            bindings={bindings}
-            onChanged={refreshBindings}
-            onClose={() => setConnections(false)}
-          />
-        )}
-
-        {sources
-          .filter((source) => source.error)
-          .map((source) => (
-            <div
-              role="alert"
-              key={source.binding.id}
-              className="my-2 flex flex-wrap items-center gap-2 text-xs text-danger"
-            >
-              <span>
-                {source.binding.repository} ·{" "}
-                {t(`tasks.errors.${source.error?.kind}`, {
-                  defaultValue: t("common.error"),
-                })}
-                : {source.error?.message}
-              </span>
-              <button
-                type="button"
-                className="app-button-ghost"
-                disabled={source.loading}
-                onClick={() => void load(source.binding, source.nextPage)}
-              >
-                {t("common.retry")}
-              </button>
-            </div>
-          ))}
-        {sources.some((source) => source.limited) && (
-          <p className="text-xs text-muted">{t("tasks.limited")}</p>
-        )}
-        <div className="flex min-h-0 flex-1 gap-3">
-          <div
-            hidden={selection?.full}
-            className={cn(
-              "min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-border-subtle [color-scheme:var(--color-scheme)]",
-              selection?.full && "hidden",
-            )}
-          >
-            <TaskListTable
-              items={items}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {showRunners ? null : (
+            <TaskToolbar
+              scopeInSidebar
+              leading={projectTitle(
+                appliedFilters.kind === "review"
+                  ? reviewLabel
+                  : t("tasks.issues"),
+                items,
+              )}
+              {...sharedToolbar}
+              provider={provider}
+              projectIds={activeProjectIds}
               projects={projects}
-              selectedKey={selection?.task.key}
-              onOpen={open}
-              onOpenRepository={openRepository}
-              onUpdated={taskUpdated}
-              onStart={startTask}
-              empty={
-                loading ? (
-                  <p role="status">{t("common.loading")}</p>
-                ) : settingsError ||
-                  sources.some(
-                    (source) => source.error,
-                  ) ? null : selectedBindings.length ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <Inbox
-                      size={32}
-                      strokeWidth={1.5}
-                      aria-hidden="true"
-                      className="text-muted opacity-60"
-                    />
-                    <p>{t("tasks.empty")}</p>
-                  </div>
-                ) : mismatchedProjects.length ? null : (
-                  <div className="mx-auto max-w-md space-y-3">
-                    <p>{t("tasks.notConnected")}</p>
-                    <button
-                      type="button"
-                      className="app-button-secondary"
-                      onClick={() => setConnections(true)}
-                    >
-                      {t("tasks.connections")}
-                    </button>
-                  </div>
+              bindings={bindings}
+              identities={[
+                ...new Set(
+                  sources
+                    .filter((source) => source.identity)
+                    .map(
+                      (source) => `${source.binding.host} · ${source.identity}`,
+                    ),
+                ),
+              ]}
+              filters={appliedFilters}
+              items={items}
+              search={search}
+              loading={loading}
+              notice={
+                !discovering &&
+                !settingsError &&
+                selectedBindings.length === 0 &&
+                mismatchedProjects.length > 0 && (
+                  <p role="alert" className="mb-2 text-xs text-warning">
+                    {t(
+                      activeProjectIds.length > 1
+                        ? "tasks.providerMismatchSelection"
+                        : "tasks.providerMismatch",
+                      {
+                        projects: mismatchedProjects
+                          .map((project) => project.name)
+                          .join(", "),
+                        current: taskPlatforms.find(
+                          (platform) => platform.id !== provider,
+                        )?.label,
+                        selected: taskPlatforms.find(
+                          (platform) => platform.id === provider,
+                        )?.label,
+                      },
+                    )}
+                  </p>
                 )
               }
-            />
-            {sources.some((source) => source.hasMore) && (
-              <button
-                type="button"
-                disabled={loading}
-                className="app-button-secondary m-2"
-                onClick={() =>
-                  sources
-                    .filter((source) => source.hasMore)
-                    .forEach(
-                      (source) => void load(source.binding, source.nextPage),
-                    )
-                }
-              >
-                {t("tasks.loadMore")}
-              </button>
-            )}
-          </div>
-          {selection && (
-            <TaskDetails
-              key={`${selection.task.binding_id}/${selection.task.key}`}
-              task={selection.task}
-              full={selection.full}
-              onClose={close}
-              onExpand={() => setSelection({ ...selection, full: true })}
-              onUpdated={taskUpdated}
-              onStart={startTask}
+              onProvider={(value) => {
+                setProvider(value);
+                setSelection(null);
+              }}
+              onProjects={changeProjects}
+              onFilters={changeFilters}
+              onSearch={setSearch}
+              onRefresh={refresh}
+              onOpenRepository={openRepository}
             />
           )}
-        </div>
-        {startingTask && (
-          <Suspense
-            fallback={
-              <p role="status" className="text-xs text-muted">
-                {t("common.loading")}
-              </p>
-            }
-          >
-            <TaskStartDialog
-              key={`${startingTask.task.key}/${startingTask.action ?? "start"}`}
-              task={startingTask.task}
-              action={startingTask.action}
+          {!showRunners && settingsNotice}
+          {accountsOpen && (
+            <Suspense fallback={null}>
+              <PlatformAccountsDialog
+                initialProvider={
+                  activeProvider === "all" ? undefined : activeProvider
+                }
+                onChanged={async () => {
+                  void refreshBindings(true).catch((error) =>
+                    setSettingsError(api.taskFailure(error).message),
+                  );
+                }}
+                onClose={() => setAccountsOpen(false)}
+              />
+            </Suspense>
+          )}
+          {!showRunners && connectionsPanel}
+
+          {showRunners ? (
+            <RunnerWorkspace
+              bindings={runnerBindings}
               projects={projects}
-              onClose={() => setStartingTask(null)}
+              title={projectTitle(t("runners.title"))}
+              discovering={discovering}
+              notice={
+                <>
+                  {settingsNotice}
+                  {connectionsPanel}
+                </>
+              }
+              scopeKey={JSON.stringify([
+                workspaceKey,
+                activeProjectIds,
+                runnerProvider,
+              ])}
+              refreshKey={accountRefresh}
+              toolbar={{
+                ...sharedToolbar,
+                provider: runnerProvider,
+                onProvider: setRunnerProvider,
+                onRefresh: refresh,
+              }}
             />
-          </Suspense>
-        )}
+          ) : (
+            <>
+              {sources
+                .filter((source) => source.error)
+                .map((source) => (
+                  <div
+                    role="alert"
+                    key={source.binding.id}
+                    className="my-2 flex flex-wrap items-center gap-2 text-xs text-danger"
+                  >
+                    <span>
+                      {source.binding.repository} ·{" "}
+                      {t(`tasks.errors.${source.error?.kind}`, {
+                        defaultValue: t("common.error"),
+                      })}
+                      : {source.error?.message}
+                    </span>
+                    <button
+                      type="button"
+                      className="app-button-ghost"
+                      disabled={source.loading}
+                      onClick={() => void load(source.binding, source.nextPage)}
+                    >
+                      {t("common.retry")}
+                    </button>
+                  </div>
+                ))}
+              {sources.some((source) => source.limited) && (
+                <p className="text-xs text-muted">{t("tasks.limited")}</p>
+              )}
+              <div className="flex min-h-0 flex-1 gap-3">
+                <div
+                  hidden={selection?.full}
+                  className={cn(
+                    "min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-border-subtle [color-scheme:var(--color-scheme)]",
+                    selection?.full && "hidden",
+                  )}
+                >
+                  <TaskListTable
+                    items={items}
+                    projects={projects}
+                    selectedKey={selection?.task.key}
+                    onOpen={open}
+                    onOpenRepository={openRepository}
+                    onUpdated={taskUpdated}
+                    onStart={startTask}
+                    empty={
+                      loading ? (
+                        <p role="status">{t("common.loading")}</p>
+                      ) : settingsError ||
+                        sources.some(
+                          (source) => source.error,
+                        ) ? null : selectedBindings.length ? (
+                        <div className="flex flex-col items-center gap-3">
+                          <Inbox
+                            size={32}
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                            className="text-muted opacity-60"
+                          />
+                          <p>{t("tasks.empty")}</p>
+                        </div>
+                      ) : mismatchedProjects.length ? null : (
+                        <div className="mx-auto max-w-md space-y-3">
+                          <p>{t("tasks.notConnected")}</p>
+                          <button
+                            type="button"
+                            className="app-button-secondary"
+                            onClick={() => setConnections(true)}
+                          >
+                            {t("tasks.connections")}
+                          </button>
+                        </div>
+                      )
+                    }
+                  />
+                  {sources.some((source) => source.hasMore) && (
+                    <button
+                      type="button"
+                      disabled={loading}
+                      className="app-button-secondary m-2"
+                      onClick={() =>
+                        sources
+                          .filter((source) => source.hasMore)
+                          .forEach(
+                            (source) =>
+                              void load(source.binding, source.nextPage),
+                          )
+                      }
+                    >
+                      {t("tasks.loadMore")}
+                    </button>
+                  )}
+                </div>
+                {selection && (
+                  <TaskDetails
+                    key={`${selection.task.binding_id}/${selection.task.key}`}
+                    task={selection.task}
+                    full={selection.full}
+                    onClose={close}
+                    onExpand={() => setSelection({ ...selection, full: true })}
+                    onUpdated={taskUpdated}
+                    onStart={startTask}
+                  />
+                )}
+              </div>
+              {startingTask && (
+                <Suspense
+                  fallback={
+                    <p role="status" className="text-xs text-muted">
+                      {t("common.loading")}
+                    </p>
+                  }
+                >
+                  <TaskStartDialog
+                    key={`${startingTask.task.key}/${startingTask.action ?? "start"}`}
+                    task={startingTask.task}
+                    action={startingTask.action}
+                    projects={projects}
+                    onClose={() => setStartingTask(null)}
+                  />
+                </Suspense>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </PlatformAccountsProvider>
   );

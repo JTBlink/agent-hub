@@ -1,6 +1,7 @@
 import { gitFixture } from "./git-fixture";
 import type {
   RepositoryTask,
+  RepositoryRunner,
   TaskBinding,
   PlatformAccountContext,
 } from "../../src/lib/tauri";
@@ -191,6 +192,47 @@ export function taskTerminalFixture(
   }
   if (command === "task_bindings")
     return { handled: true, value: [...bindings] };
+  if (command === "task_runners") {
+    const binding = bindings.find(
+      (binding) => "bindingId" in args && binding.id === args.bindingId,
+    );
+    if (!binding)
+      throw {
+        kind: "not_connected",
+        message: "Demo repository is not connected",
+      };
+    const github = binding.provider === "github";
+    const runner: RepositoryRunner = {
+      id: 128,
+      name: github ? "desktop-macos" : "linux-build",
+      short_id: github ? null : "demo1234",
+      created_by: github ? null : "Demo Creator",
+      created_at: github ? null : "2026-11-01T08:00:00Z",
+      state: github ? "online" : "stale",
+      paused: github ? null : true,
+      busy: github ? true : false,
+      os: github ? "macOS" : null,
+      scope: github ? null : "group",
+      labels: github ? ["self-hosted", "ARM64"] : null,
+      contacted_at: null,
+    };
+    return {
+      handled: true,
+      value:
+        "runnerId" in args
+          ? {
+              ...runner,
+              os: "Linux",
+              labels: ["linux-ci"],
+              contacted_at: "2026-11-21T08:30:00Z",
+            }
+          : {
+              items: [runner],
+              identity: github ? activeGithub : "demo",
+              limited: false,
+            },
+    };
+  }
   if (command === "herdr_inventory")
     return { handled: true, value: { installed: true, sessions: [] } };
   if (command === "task_list") {

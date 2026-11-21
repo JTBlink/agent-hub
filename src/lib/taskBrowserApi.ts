@@ -212,3 +212,42 @@ export function taskFailure(error: unknown): TaskFailure {
     message: error instanceof Error ? error.message : String(error),
   };
 }
+
+export interface RepositoryRunner {
+  id: number;
+  short_id?: string | null;
+  name: string;
+  /** Connection status as reported by the platform, with a fallback for missing data. */
+  state: string;
+  paused: boolean | null;
+  busy: boolean | null;
+  job_status?: string | null;
+  os: string | null;
+  scope: "instance" | "group" | "project" | null;
+  labels: string[] | null;
+  contacted_at: string | null;
+  created_by?: string | null;
+  created_at?: string | null;
+  version?: string | null;
+  manager_address?: string | null;
+  owner_project?: string | null;
+  project_count?: number | null;
+  job_count?: number | null;
+  locked?: boolean | null;
+}
+
+export interface RepositoryRunnerInventory {
+  items: RepositoryRunner[];
+  identity: string;
+  limited: boolean;
+}
+
+export const getRepositoryRunners = (bindingId: string, requestId: string) =>
+  invoke<RepositoryRunnerInventory>("task_runners", { bindingId, requestId });
+
+export const getRepositoryRunnerDetails = (
+  bindingId: string,
+  runnerId: number,
+  requestId: string,
+) =>
+  invoke<RepositoryRunner>("task_runners", { bindingId, runnerId, requestId });

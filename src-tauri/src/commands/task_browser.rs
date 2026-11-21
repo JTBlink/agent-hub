@@ -99,6 +99,45 @@ pub async fn task_list(
     registry.remove(&key);
     result?
 }
+#[derive(serde::Serialize)]
+#[serde(untagged)]
+pub enum RunnerResponse {
+    Inventory(task_browser::RunnerInventory),
+    Detail(Box<task_browser::RunnerSummary>),
+}
+
+#[tauri::command]
+pub async fn task_runners(
+    window: Webview,
+    store: State<'_, Arc<SkillStore>>,
+    registry: State<'_, Arc<InstallCancelRegistry>>,
+    binding_id: String,
+    runner_id: Option<u64>,
+    request_id: String,
+) -> Result<RunnerResponse, TaskFailure> {
+    let key = request_key(&window, &request_id)?;
+    let registry = registry.inner().clone();
+    let cancel = registry.register(&key);
+    let store = store.inner().clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let (binding, client) = client(&store, &binding_id)?;
+        match runner_id {
+            Some(id) => client
+                .runner_details(&binding, id, &cancel)
+                .map(|details| RunnerResponse::Detail(Box::new(details))),
+            None => {
+                let mut inventory = client.runners(&binding, &cancel)?;
+                inventory.identity = client.identity(&binding, &cancel).unwrap_or_default();
+                Ok(RunnerResponse::Inventory(inventory))
+            }
+        }
+    })
+    .await
+    .map_err(|error| TaskFailure::new("internal", error.to_string()));
+    registry.remove(&key);
+    result?
+}
+
 #[derive(serde::Deserialize)]
 pub struct DetailQuery {
     binding_id: String,

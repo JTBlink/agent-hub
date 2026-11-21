@@ -8,18 +8,24 @@ export function SingleChoiceGroup<T extends string>({
   options,
   onChange,
   compact = false,
+  vertical = false,
 }: {
   label: string;
   value: T;
   options: { value: T; label: string; icon?: ReactNode }[];
   onChange: (value: T) => void;
   compact?: boolean;
+  vertical?: boolean;
 }) {
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className="inline-flex shrink-0 items-center gap-1"
+      aria-orientation={vertical ? "vertical" : undefined}
+      className={cn(
+        "gap-1",
+        vertical ? "flex flex-col" : "inline-flex shrink-0 items-center",
+      )}
     >
       {options.map((option, index) => (
         <button
@@ -54,6 +60,7 @@ export function SingleChoiceGroup<T extends string>({
           className={cn(
             "inline-flex h-7 items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             compact ? "w-7" : "px-2",
+            vertical && "w-full justify-start gap-2",
             value === option.value
               ? "bg-surface-active text-primary"
               : "text-muted hover:bg-surface-hover hover:text-primary",
