@@ -2450,6 +2450,14 @@
     "schemeCount": "{{count}} schemes"
   },
   "runners": {
+    "actions": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "delete": "Delete",
+      "pauseMessage": "Pause this runner so it stops accepting new jobs.",
+      "resumeMessage": "Resume this runner so it can accept eligible new jobs.",
+      "deleteMessage": "Permanently delete this runner from the GitLab instance and all projects that use it."
+    },
     "offlineHelp": "Offline runners cannot accept new jobs.",
     "pausedHelp": "This runner is paused and cannot accept new jobs.",
     "eligibilityHelp": "Job assignment depends on repository access, labels, and platform rules.",

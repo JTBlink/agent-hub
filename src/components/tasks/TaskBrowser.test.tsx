@@ -772,6 +772,7 @@ it("updates the account picker and unlocks switching while repository refresh is
 });
 
 it("filters real runner inventories by platform and retains task search when returning", async () => {
+  let paused = false;
   const bindings = [
     ...scopedBindings,
     { ...scopedBindings[1], id: "restricted", repository: "team/restricted" },
@@ -780,6 +781,10 @@ it("filters real runner inventories by platform and retains task search when ret
     if (command === "task_bindings") return bindings;
     if (command === "task_list")
       return { items: [], identity: "demo", has_more: false, limited: false };
+    if (command === "task_manage_runner") {
+      if (args && "action" in args && args.action === "pause") paused = true;
+      return undefined;
+    }
     if (command === "task_runners") {
       const binding = bindings.find(
         ({ id }) => args && "bindingId" in args && id === args.bindingId,
@@ -790,7 +795,7 @@ it("filters real runner inventories by platform and retains task search when ret
         id: 128,
         name: binding.provider + " machine",
         state: binding.provider === "github" ? "online" : "stale",
-        paused: null,
+        paused: false,
         busy: true,
         os: "Linux",
         scope: null,
@@ -812,6 +817,9 @@ it("filters real runner inventories by platform and retains task search when ret
         return {
           ...(args.runnerId === 129 ? extraRunner : runner),
           job_count: 11,
+          paused: args.runnerId === 129 && paused,
+          can_update: args.runnerId === 129,
+          can_delete: false,
         };
       return {
         items: binding.provider === "github" ? [runner] : [runner, extraRunner],
@@ -894,6 +902,20 @@ it("filters real runner inventories by platform and retains task search when ret
   expect(runnerButtons[1].closest("tr")?.textContent).toContain(
     "runners.stale",
   );
+  const actionButton = (label: string, root: ParentNode | null = host) =>
+    [...(root?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find(
+      (button) => button.textContent === label,
+    );
+  await act(async () => runnerButtons[1].click());
+  expect(actionButton("runners.actions.pause")).toBeUndefined();
+  expect(actionButton("runners.actions.delete")).toBeUndefined();
+  await act(async () =>
+    host
+      .querySelector<HTMLButtonElement>(
+        'aside button[aria-label="common.close"]',
+      )!
+      .click(),
+  );
   const chooseTag = async (label: string) => {
     await act(async () =>
       host
@@ -941,6 +963,24 @@ it("filters real runner inventories by platform and retains task search when ret
       "linux-ci",
     ]),
   );
+  expect(actionButton("runners.actions.delete")).toBeUndefined();
+  await act(async () => actionButton("runners.actions.pause")!.click());
+  expect(vi.mocked(invoke)).not.toHaveBeenCalledWith(
+    "task_manage_runner",
+    expect.anything(),
+  );
+  await act(async () =>
+    actionButton(
+      "runners.actions.pause",
+      document.querySelector('[role="alertdialog"]'),
+    )!.click(),
+  );
+  expect(vi.mocked(invoke)).toHaveBeenCalledWith("task_manage_runner", {
+    bindingId: scopedBindings[1].id,
+    runnerId: 129,
+    action: "pause",
+  });
+  expect(actionButton("runners.actions.resume")).toBeDefined();
   const allStatesFilter = [
     ...host.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
   ].find((button) => button.textContent?.trim() === "runners.all 3")!;

@@ -9,7 +9,9 @@ import { ThemedSelect } from "../ThemedSelect";
 import { ToggleSwitch } from "../ToggleSwitch";
 import { RunnerDetails } from "./RunnerDetails";
 import {
-  runnerConnectionStates,
+  getRunnerConnectionStates,
+  matchesRunnerFilter,
+  type RunnerFilter,
   runnerTimeAgo,
   runnerReference,
   runnerStateLabel,
@@ -24,14 +26,6 @@ import {
   type VisibleRunner,
 } from "./useRepositoryRunners";
 import { cn } from "../../utils";
-
-type RunnerFilter = "all" | "paused" | `state:${string}`;
-
-function matches(item: VisibleRunner, filter: RunnerFilter) {
-  if (filter === "all") return true;
-  if (filter === "paused") return item.runner.paused === true;
-  return item.runner.state === filter.slice("state:".length);
-}
 
 export function RunnerWorkspace({
   bindings,
@@ -72,6 +66,7 @@ export function RunnerWorkspace({
   const [selection, setSelection] = useState<{
     scopeKey: string;
     item: VisibleRunner;
+    bindings: TaskBinding[];
   } | null>(null);
   const [auto, setAuto] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(0);
@@ -87,21 +82,21 @@ export function RunnerWorkspace({
     );
     return () => window.clearTimeout(timer);
   }, [auto, loading, discovering, bindings.length, autoRefresh, refreshKey]);
-  if (selection && selection.scopeKey !== scopeKey) setSelection(null);
-  const selected = selection?.scopeKey === scopeKey ? selection.item : null;
+  const selected =
+    selection?.scopeKey === scopeKey && selection.bindings === bindings
+      ? selection.item
+      : null;
+  if (selection && !selected) setSelection(null);
   const osChoices = [
-    "Linux",
-    "macOS",
-    "Windows",
     ...new Set(items.flatMap(({ runner }) => (runner.os ? [runner.os] : []))),
-  ].filter((value, index, all) => all.indexOf(value) === index);
-  const connectionStates = [
-    ...new Set([
-      ...runnerConnectionStates,
-      ...items.map(({ runner }) => runner.state),
-      ...(status.startsWith("state:") ? [status.slice("state:".length)] : []),
-    ]),
-  ];
+    ...(os !== "all" && os !== "unknown" ? [os] : []),
+  ]
+    .filter((value, index, all) => all.indexOf(value) === index)
+    .sort();
+  const connectionStates = getRunnerConnectionStates(
+    items.map(({ runner }) => runner.state),
+    status,
+  );
   const filters: RunnerFilter[] = [
     "all",
     ...connectionStates.map((state): RunnerFilter => `state:${state}`),
@@ -139,7 +134,7 @@ export function RunnerWorkspace({
         bindings: [source],
       } = item;
       return (
-        matches(item, status) &&
+        matchesRunnerFilter(item.runner, status) &&
         (tag === null || runner.labels?.includes(tag)) &&
         (os === "all" ||
           runner.os === os ||
@@ -261,7 +256,9 @@ export function RunnerWorkspace({
                   </div>
                   <strong className="text-lg tabular-nums">
                     {sources.some((source) => source.inventory)
-                      ? items.filter((item) => matches(item, state)).length
+                      ? items.filter((item) =>
+                          matchesRunnerFilter(item.runner, state),
+                        ).length
                       : "—"}
                   </strong>
                 </div>
@@ -289,7 +286,11 @@ export function RunnerWorkspace({
                     ? t(`runners.${state}`)
                     : runnerStateLabel(state.slice("state:".length), t)}{" "}
                   <span className="tabular-nums text-muted">
-                    {items.filter((item) => matches(item, state)).length}
+                    {
+                      items.filter((item) =>
+                        matchesRunnerFilter(item.runner, state),
+                      ).length
+                    }
                   </span>
                 </button>
               ))}
@@ -402,7 +403,7 @@ export function RunnerWorkspace({
                               }
                               onClick={(event) => {
                                 detailsTrigger.current = event.currentTarget;
-                                setSelection({ scopeKey, item });
+                                setSelection({ scopeKey, item, bindings });
                               }}
                               className="flex max-w-full items-center gap-2 rounded text-left hover:text-accent focus-visible:outline focus-visible:outline-accent"
                             >
@@ -587,6 +588,7 @@ export function RunnerWorkspace({
                 item={selected}
                 projects={names(selected)}
                 onClose={closeDetails}
+                onInventoryChanged={() => setAutoRefresh((value) => value + 1)}
               />
             )}
           </div>

@@ -10,7 +10,7 @@ pub(crate) mod metadata;
 mod mutation;
 mod query;
 mod runners;
-pub use runners::{RunnerInventory, RunnerSummary};
+pub use runners::{RunnerAction, RunnerInventory, RunnerSummary};
 mod types;
 use anyhow::{bail, Context, Result};
 pub use cli::SystemCli;

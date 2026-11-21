@@ -2447,6 +2447,14 @@
     "schemeCount": "{{count}} 套"
   },
   "runners": {
+    "actions": {
+      "pause": "暂停",
+      "resume": "恢复",
+      "delete": "删除",
+      "pauseMessage": "暂停后，此 Runner 将停止接收新任务。",
+      "resumeMessage": "恢复后，此 Runner 可接收符合条件的新任务。",
+      "deleteMessage": "这会从 GitLab 实例永久删除此 Runner，并影响使用它的所有项目。"
+    },
     "offlineHelp": "离线 Runner 无法接收新任务。",
     "pausedHelp": "已暂停接收新任务。",
     "eligibilityHelp": "任务能否分配给这台 Runner，取决于仓库权限、标签和平台规则。",

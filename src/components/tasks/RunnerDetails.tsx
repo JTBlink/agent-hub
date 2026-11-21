@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { RunnerActions } from "./RunnerActions";
 import { RepositoryPlatformIcon } from "../RepositoryPlatformIcon";
 import {
   cancelTaskQuery,
@@ -17,17 +18,19 @@ export function RunnerDetails({
   item,
   projects,
   onClose,
+  onInventoryChanged,
 }: {
   id: string;
   item: VisibleRunner;
   projects: string[];
   onClose: () => void;
+  onInventoryChanged: () => void;
 }) {
   const { t } = useTranslation();
   const closeButton = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => closeButton.current?.focus(), []);
   const [result, setResult] = useState<
-    { details: RepositoryRunner } | { error: string }
+    { details: RepositoryRunner; bindingId: string } | { error: string }
   >();
   const [attempt, setAttempt] = useState(0);
   const { runner, bindings } = item;
@@ -48,7 +51,7 @@ export function RunnerDetails({
             runner.id,
             id,
           );
-          if (!disposed) setResult({ details });
+          if (!disposed) setResult({ details, bindingId: binding.id });
           return;
         } catch (reason) {
           error = taskFailure(reason).message;
@@ -68,6 +71,7 @@ export function RunnerDetails({
         ...runner,
         ...details,
         short_id: details.short_id ?? runner.short_id,
+        paused: details.paused ?? runner.paused,
         job_status: details.job_status ?? runner.job_status,
         busy:
           details.job_status != null
@@ -166,6 +170,24 @@ export function RunnerDetails({
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-4">
+        {gitlab &&
+          result &&
+          "details" in result &&
+          (result.details.can_update || result.details.can_delete) && (
+            <RunnerActions
+              bindingId={result.bindingId}
+              host={host}
+              runner={current}
+              onChanged={(action) => {
+                onInventoryChanged();
+                if (action === "delete") onClose();
+                else {
+                  setResult(undefined);
+                  setAttempt((value) => value + 1);
+                }
+              }}
+            />
+          )}
         {gitlab && !result && (
           <p role="status" className="mb-3 text-xs text-muted">
             {t("common.loading")}

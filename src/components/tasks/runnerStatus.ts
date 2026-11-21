@@ -49,3 +49,24 @@ export function runnerTimeAgo(
   ) ?? ["second", 1000];
   return formatter.format(Math.trunc(elapsed / milliseconds), unit);
 }
+
+export type RunnerFilter = "all" | "paused" | `state:${string}`;
+
+export function matchesRunnerFilter(
+  runner: RepositoryRunner,
+  filter: RunnerFilter,
+) {
+  if (filter === "all") return true;
+  if (filter === "paused") return runner.paused === true;
+  return runner.state === filter.slice("state:".length);
+}
+
+export function getRunnerConnectionStates(
+  observed: string[],
+  selected: RunnerFilter,
+) {
+  const states = new Set<string>([...runnerConnectionStates, ...observed]);
+  if (selected.startsWith("state:"))
+    states.add(selected.slice("state:".length));
+  return [...states];
+}

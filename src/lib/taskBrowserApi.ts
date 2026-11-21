@@ -234,6 +234,8 @@ export interface RepositoryRunner {
   project_count?: number | null;
   job_count?: number | null;
   locked?: boolean | null;
+  can_update?: boolean;
+  can_delete?: boolean;
 }
 
 export interface RepositoryRunnerInventory {
@@ -251,3 +253,11 @@ export const getRepositoryRunnerDetails = (
   requestId: string,
 ) =>
   invoke<RepositoryRunner>("task_runners", { bindingId, runnerId, requestId });
+
+export type RepositoryRunnerAction = "pause" | "resume" | "delete";
+
+export const manageRepositoryRunner = (
+  bindingId: string,
+  runnerId: number,
+  action: RepositoryRunnerAction,
+) => invoke<void>("task_manage_runner", { bindingId, runnerId, action });

@@ -1,6 +1,6 @@
 #![cfg(all(feature = "github", feature = "gitlab"))]
 
-use app_lib::core::task_browser::{Binding, Provider, TaskClient, TaskFailure};
+use app_lib::core::task_browser::{Binding, Provider, RunnerAction, TaskClient, TaskFailure};
 use serde_json::json;
 use std::sync::atomic::AtomicBool;
 
@@ -12,7 +12,9 @@ fn reads_repository_runners_and_keeps_platform_specific_states() {
             assert_eq!(&args[..3], ["api", "--method", "POST"]);
             if args.iter().any(|arg| arg.contains("jobs(first: 1)")) {
                 assert!(args.iter().any(|arg| arg.contains("Ci::Runner/128")));
-                return Ok(json!({"data": {"runner": {"jobs": {"count": 11}}}}));
+                return Ok(
+                    json!({"data": {"runner": {"jobs": {"count": 11}, "userPermissions": {"updateRunner": true, "deleteRunner": false}}}}),
+                );
             }
             assert!(args.iter().any(|arg| arg.contains("nodes { id shortSha")));
             return Ok(json!({"data": {"project": {"runners": {
@@ -96,4 +98,79 @@ fn reads_repository_runners_and_keeps_platform_specific_states() {
     assert_eq!(gitlab.items[3].job_status.as_deref(), Some("draining"));
     let details = client.runner_details(&binding, 128, &cancel).unwrap();
     assert_eq!(details.job_count, Some(11));
+    assert!(details.can_update);
+    assert!(!details.can_delete);
+}
+
+#[test]
+fn runner_mutations_require_current_project_membership_and_action_permission() {
+    let allow_delete = std::cell::Cell::new(false);
+    let requests = std::cell::RefCell::new(Vec::new());
+    let client = TaskClient::new(|_: &Binding, args: &[String], _: &AtomicBool| {
+        requests
+            .borrow_mut()
+            .push((args[2].clone(), args[5].clone()));
+        Ok::<_, TaskFailure>(match args[2].as_str() {
+            "GET" => json!([{"id": 128}]),
+            "POST" => {
+                assert_eq!(args[5], "graphql");
+                json!({"data": {"runner": {"userPermissions": {
+                    "updateRunner": true,
+                    "deleteRunner": allow_delete.get()
+                }}}})
+            }
+            "PUT" => {
+                assert_eq!(args[5], "runners/128");
+                assert!(args.contains(&"paused=true".to_owned()));
+                json!({"id": 128, "paused": true})
+            }
+            "DELETE" => {
+                assert_eq!(args[5], "runners/128");
+                serde_json::Value::Null
+            }
+            _ => panic!("unexpected provider request"),
+        })
+    });
+    let binding = Binding {
+        id: "00000000-0000-0000-0000-000000000001".into(),
+        project_id: "demo".into(),
+        provider: Provider::Gitlab,
+        host: "gitlab.example.invalid".into(),
+        repository: "team/repo".into(),
+        launcher: None,
+    };
+    let cancel = AtomicBool::new(false);
+    assert_eq!(
+        client
+            .manage_runner(&binding, 129, RunnerAction::Pause, &cancel)
+            .unwrap_err()
+            .kind,
+        "permission"
+    );
+    assert_eq!(
+        client
+            .manage_runner(&binding, 128, RunnerAction::Delete, &cancel)
+            .unwrap_err()
+            .kind,
+        "permission"
+    );
+    assert!(!requests
+        .borrow()
+        .iter()
+        .any(|(method, _)| method == "PUT" || method == "DELETE"));
+    client
+        .manage_runner(&binding, 128, RunnerAction::Pause, &cancel)
+        .unwrap();
+    allow_delete.set(true);
+    client
+        .manage_runner(&binding, 128, RunnerAction::Delete, &cancel)
+        .unwrap();
+    assert_eq!(
+        requests
+            .borrow()
+            .iter()
+            .filter(|(method, _)| method == "DELETE")
+            .count(),
+        1
+    );
 }

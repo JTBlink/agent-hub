@@ -1,10 +1,11 @@
 use super::{adapter::string, Binding, CliReader, Provider, TaskClient, TaskFailure};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::HashMap, sync::atomic::AtomicBool};
 
 const PAGE_SIZE: usize = 100;
 const MAX_PAGES: usize = 20;
+const RUNNER_PERMISSIONS: &str = "userPermissions { updateRunner deleteRunner }";
 
 #[derive(Debug, Serialize)]
 pub struct RunnerSummary {
@@ -27,6 +28,16 @@ pub struct RunnerSummary {
     pub project_count: Option<u64>,
     pub job_count: Option<u64>,
     pub locked: Option<bool>,
+    pub can_update: bool,
+    pub can_delete: bool,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RunnerAction {
+    Pause,
+    Resume,
+    Delete,
 }
 
 #[derive(Debug, Serialize)]
@@ -144,6 +155,8 @@ fn summary(provider: Provider, item: &Value) -> Result<RunnerSummary, TaskFailur
         project_count: None,
         job_count: None,
         locked: item["locked"].as_bool(),
+        can_update: false,
+        can_delete: false,
     })
 }
 
@@ -314,6 +327,96 @@ impl<R: CliReader> TaskClient<R> {
         id: u64,
         cancel: &AtomicBool,
     ) -> Result<RunnerSummary, TaskFailure> {
+        self.require_project_runner(binding, id, cancel)?;
+        let item = self.api(binding, format!("runners/{id}"), cancel)?;
+        let mut details = summary(binding.provider, &item)?;
+        if details.id != id {
+            return Err(TaskFailure::new(
+                "invalid_response",
+                "Runner identity mismatch",
+            ));
+        }
+        let fields = format!("{RUNNER_PERMISSIONS} jobs(first: 1) {{ count }}");
+        if let Ok(runner) = self
+            .gitlab_runner_info(binding, id, &fields, cancel)
+            .or_else(|_| self.gitlab_runner_info(binding, id, RUNNER_PERMISSIONS, cancel))
+        {
+            details.can_update = runner["userPermissions"]["updateRunner"].as_bool() == Some(true);
+            details.can_delete = runner["userPermissions"]["deleteRunner"].as_bool() == Some(true);
+            details.job_count = runner["jobs"]["count"].as_u64();
+        }
+        Ok(details)
+    }
+
+    /// Manage a GitLab runner through the authenticated glab connection.
+    pub fn manage_runner(
+        &self,
+        binding: &Binding,
+        id: u64,
+        action: RunnerAction,
+        cancel: &AtomicBool,
+    ) -> Result<(), TaskFailure> {
+        self.require_project_runner(binding, id, cancel)?;
+        let runner = self.gitlab_runner_info(binding, id, RUNNER_PERMISSIONS, cancel)?;
+        let endpoint = format!("runners/{id}");
+        let permissions = &runner["userPermissions"];
+        match action {
+            RunnerAction::Delete if permissions["deleteRunner"].as_bool() == Some(true) => {
+                self.request(binding, "DELETE", endpoint, &[], cancel)?;
+                Ok(())
+            }
+            RunnerAction::Pause | RunnerAction::Resume
+                if permissions["updateRunner"].as_bool() == Some(true) =>
+            {
+                let paused = matches!(action, RunnerAction::Pause);
+                let response = self.request(
+                    binding,
+                    "PUT",
+                    endpoint,
+                    &[("paused", paused.to_string())],
+                    cancel,
+                )?;
+                if response["id"].as_u64() != Some(id)
+                    || response["paused"].as_bool() != Some(paused)
+                {
+                    return Err(TaskFailure::new(
+                        "invalid_response",
+                        "Could not verify the runner's pause status",
+                    ));
+                }
+                Ok(())
+            }
+            _ => Err(TaskFailure::new(
+                "permission",
+                "The authenticated account cannot perform this runner action",
+            )),
+        }
+    }
+
+    fn gitlab_runner_info(
+        &self,
+        binding: &Binding,
+        id: u64,
+        fields: &str,
+        cancel: &AtomicBool,
+    ) -> Result<Value, TaskFailure> {
+        let query = format!(r#"{{ runner(id: "gid://gitlab/Ci::Runner/{id}") {{ {fields} }} }}"#);
+        self.request(
+            binding,
+            "POST",
+            "graphql".into(),
+            &[("query", query)],
+            cancel,
+        )
+        .map(|mut response| response["data"]["runner"].take())
+    }
+
+    fn require_project_runner(
+        &self,
+        binding: &Binding,
+        id: u64,
+        cancel: &AtomicBool,
+    ) -> Result<(), TaskFailure> {
         if binding.provider != Provider::Gitlab || id == 0 {
             return Err(TaskFailure::new("invalid_input", "Invalid GitLab runner"));
         }
@@ -321,28 +424,7 @@ impl<R: CliReader> TaskClient<R> {
         for page in 1..=MAX_PAGES {
             let (values, more) = self.runner_page(binding, page, cancel)?;
             if values.iter().any(|value| value["id"].as_u64() == Some(id)) {
-                let item = self.api(binding, format!("runners/{id}"), cancel)?;
-                let mut details = summary(binding.provider, &item)?;
-                if details.id != id {
-                    return Err(TaskFailure::new(
-                        "invalid_response",
-                        "Runner identity mismatch",
-                    ));
-                }
-                let query = format!(
-                    r#"{{ runner(id: "gid://gitlab/Ci::Runner/{id}") {{ jobs(first: 1) {{ count }} }} }}"#
-                );
-                details.job_count = self
-                    .request(
-                        binding,
-                        "POST",
-                        "graphql".into(),
-                        &[("query", query)],
-                        cancel,
-                    )
-                    .ok()
-                    .and_then(|response| response["data"]["runner"]["jobs"]["count"].as_u64());
-                return Ok(details);
+                return Ok(());
             }
             if !more {
                 break;

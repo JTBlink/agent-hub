@@ -59,6 +59,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::task_browser::task_project_remotes,
         commands::task_browser::task_list,
         commands::task_browser::task_runners,
+        commands::task_browser::task_manage_runner,
         commands::platform_accounts::platform_account_contexts,
         #[cfg(feature = "gitlab")]
         commands::platform_accounts::gitlab_cli_settings,

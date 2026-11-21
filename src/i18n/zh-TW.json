@@ -2407,6 +2407,14 @@
     "schemeCount": "{{count}} 套"
   },
   "runners": {
+    "actions": {
+      "pause": "暫停",
+      "resume": "恢復",
+      "delete": "刪除",
+      "pauseMessage": "暫停後，此 Runner 將停止接收新工作。",
+      "resumeMessage": "恢復後，此 Runner 可接收符合條件的新工作。",
+      "deleteMessage": "這會從 GitLab 執行個體永久刪除此 Runner，並影響使用它的所有專案。"
+    },
     "offlineHelp": "離線 Runner 無法接收新工作。",
     "pausedHelp": "已暫停接收新工作。",
     "eligibilityHelp": "工作能否指派給這台 Runner，取決於儲存庫權限、標籤和平台規則。",
