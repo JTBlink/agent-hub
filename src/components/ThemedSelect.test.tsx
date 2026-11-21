@@ -218,9 +218,8 @@ it("reaches a separated footer action with Tab and returns with Shift+Tab", asyn
   trigger.focus();
   await key(trigger, "ArrowDown");
   await key(trigger, "Tab");
-  const footer = document.querySelector<HTMLButtonElement>(
-    "[data-menu-footer]",
-  )!;
+  const footer =
+    document.querySelector<HTMLButtonElement>("[data-menu-footer]")!;
   expect(document.activeElement).toBe(footer);
   await key(footer, "Tab", true);
   expect(document.activeElement).toBe(trigger);

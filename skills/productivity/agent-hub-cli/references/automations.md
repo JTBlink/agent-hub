@@ -392,7 +392,6 @@ other locations, and measured reclaimed space remains separate from file sizes. 
 supported. Upgrade existing tasks by adding the entire bundle to their `files`,
 retain customized configuration, then edit with the current revision.
 
-
 ### 关闭任务面板后的恢复
 
 Agent 任务被手动关闭 Tab 不等于业务取消。持续跟进任务先核实原 Worker、Agent、送达回执及业务租约，再使用 `agents launch recover`；不要在任务包复制启动器或模型切换器。

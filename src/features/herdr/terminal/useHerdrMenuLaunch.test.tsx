@@ -45,7 +45,10 @@ it("opens the default session through a verified attachment and discards a late 
     const location = useLocation();
     return (
       <>
-        <button onClick={() => void launch.open("codex")} disabled={launch.busy}>
+        <button
+          onClick={() => void launch.open("codex")}
+          disabled={launch.busy}
+        >
           Herdr
         </button>
         <output>{JSON.stringify(location.state)}</output>

@@ -69,14 +69,12 @@ beforeEach(() => {
   document.body.append(container);
   root = createRoot(container);
   execute.mockReset().mockResolvedValue(true);
-  preview
-    .mockReset()
-    .mockResolvedValue({
-      summary: "将重置一项",
-      items: [{ label: "次数", current: "3", after: "0" }],
-      preserved: ["历史保留"],
-      token: "state-v1",
-    });
+  preview.mockReset().mockResolvedValue({
+    summary: "将重置一项",
+    items: [{ label: "次数", current: "3", after: "0" }],
+    preserved: ["历史保留"],
+    token: "state-v1",
+  });
 });
 afterEach(async () => {
   await act(async () => root.unmount());

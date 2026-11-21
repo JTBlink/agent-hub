@@ -100,7 +100,6 @@ Single-context layout; read `CONTEXT.md`, `GLOSSARY.md` (if present), and releva
 
 自动化任务的 Agent 能力可选；普通任务直接执行命令。需要 Agent 时，复用独立通用启动模块，优先 Herdr，未安装时自动降级原生终端；已发起或结果不明时不切换后端重跑。终端、任务面板与定时任务共享模块边界，规范见 [Agent 启动架构](docs/architecture/agent-launch.md)和[自动化编写规范](docs/product/automation-authoring.md)。
 
-
 ### Agent 启动职责与复用
 
 - 所有需要 Agent 的入口（终端、项目任务、自动化模板、已安装任务适配器）复用共享启动配置与执行模块，禁止复制另一套 Agent 启动器、模型切换器、回执或状态存储。

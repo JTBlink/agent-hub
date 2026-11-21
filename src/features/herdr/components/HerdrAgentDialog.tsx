@@ -29,10 +29,7 @@ export function HerdrAgentDialog({
   const { tools } = useApp();
   const options = automationAgentOptions(tools);
   const [selectedKind, setKind] = useState("");
-  const kind =
-    selectedKind ||
-    options[0]?.kind ||
-    "";
+  const kind = selectedKind || options[0]?.kind || "";
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [direction, setDirection] = useState<"right" | "down">("right");
