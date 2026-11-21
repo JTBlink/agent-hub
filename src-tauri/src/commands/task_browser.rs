@@ -160,6 +160,27 @@ pub async fn task_manage_runner(
 }
 
 #[tauri::command]
+pub async fn task_edit_runner(
+    store: State<'_, Arc<SkillStore>>,
+    binding_id: String,
+    runner_id: u64,
+    edit: task_browser::RunnerEdit,
+) -> Result<(), TaskFailure> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (binding, client) = client(&store, &binding_id)?;
+        client.edit_runner(
+            &binding,
+            runner_id,
+            &edit,
+            &std::sync::atomic::AtomicBool::new(false),
+        )
+    })
+    .await
+    .map_err(|error| TaskFailure::new("internal", error.to_string()))?
+}
+
+#[tauri::command]
 pub async fn task_create_project_runner(
     store: State<'_, Arc<SkillStore>>,
     binding_id: String,

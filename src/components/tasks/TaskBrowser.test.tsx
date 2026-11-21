@@ -773,14 +773,25 @@ it("updates the account picker and unlocks switching while repository refresh is
 
 it("filters real runner inventories by platform and retains task search when returning", async () => {
   let paused = false;
+  let holdRefresh = false;
+  let finishRefresh: (
+    result: "success" | "network" | "permission",
+  ) => void = () => {};
+  let githubRunnerName = "github machine";
+  let runnerDescription = "initializing machine";
   const bindings = [
     ...scopedBindings,
     { ...scopedBindings[1], id: "restricted", repository: "team/restricted" },
   ];
   vi.mocked(invoke).mockImplementation(async (command, args) => {
-    if (command === "task_bindings") return bindings;
+    if (command === "task_bindings")
+      return bindings.map((binding) => ({ ...binding }));
     if (command === "task_list")
       return { items: [], identity: "demo", has_more: false, limited: false };
+    if (command === "task_edit_runner") {
+      runnerDescription = "Renamed runner";
+      return undefined;
+    }
     if (command === "task_manage_runner") {
       if (args && "action" in args && args.action === "pause") paused = true;
       return undefined;
@@ -793,7 +804,8 @@ it("filters real runner inventories by platform and retains task search when ret
         throw { kind: "permission", message: "HTTP 403" };
       const runner = {
         id: 128,
-        name: binding.provider + " machine",
+        name:
+          binding.provider === "github" ? githubRunnerName : "gitlab machine",
         state: binding.provider === "github" ? "online" : "stale",
         paused: false,
         busy: true,
@@ -806,7 +818,10 @@ it("filters real runner inventories by platform and retains task search when ret
         ...runner,
         id: 129,
         short_id: "demo1234",
-        name: "initializing machine",
+        name: runnerDescription,
+        description: runnerDescription,
+        can_update: true,
+        paused,
         state: "initializing",
         created_by: "Demo Creator",
         created_at: "2026-11-01T08:00:00Z",
@@ -821,7 +836,7 @@ it("filters real runner inventories by platform and retains task search when ret
           can_update: args.runnerId === 129,
           can_delete: false,
         };
-      return {
+      const inventory = {
         items: binding.provider === "github" ? [runner] : [runner, extraRunner],
         identity: "demo",
         limited: false,
@@ -831,6 +846,26 @@ it("filters real runner inventories by platform and retains task search when ret
             : null,
         can_create_runner: binding.provider === "gitlab",
       };
+      if (binding.provider === "github" && holdRefresh) {
+        return new Promise((resolve, reject) => {
+          finishRefresh = (result) => {
+            if (result === "success") {
+              githubRunnerName = "Refreshed runner";
+              resolve({
+                ...inventory,
+                items: [{ ...runner, name: githubRunnerName }],
+              });
+            } else {
+              reject({
+                kind: result,
+                message:
+                  result === "network" ? "Connection interrupted" : "HTTP 403",
+              });
+            }
+          };
+        });
+      }
+      return inventory;
     }
     return undefined;
   });
@@ -868,25 +903,26 @@ it("filters real runner inventories by platform and retains task search when ret
         .click(),
     );
   await chooseView("runners.title");
-  expect(
-    host.querySelector(
-      '[role="radio"][aria-checked="true"][aria-label="runners.categories.assigned (2)"]',
-    ),
-  ).not.toBeNull();
+  const categoryControl = () =>
+    host.querySelector<HTMLButtonElement>(
+      '[role="combobox"][aria-label="runners.categories.label"]',
+    )!;
+  expect(categoryControl().textContent).toContain(
+    "runners.categories.assigned (2)",
+  );
   expect(host.querySelectorAll("tbody tr")).toHaveLength(2);
   expect(
     [...host.querySelectorAll("button")].some(
       (button) => button.textContent === "runners.create.title",
     ),
   ).toBe(true);
-  const chooseCategory = (label: string) =>
-    act(async () =>
-      host
-        .querySelector<HTMLButtonElement>(
-          `[role="radio"][aria-label="${label}"]`,
-        )!
-        .click(),
-    );
+  const chooseCategory = async (label: string) => {
+    await act(async () => categoryControl().click());
+    const option = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+    ].find((button) => button.textContent?.trim() === label)!;
+    await act(async () => option.click());
+  };
   await chooseCategory("runners.categories.assignable (1)");
   expect(host.querySelector("tbody")?.textContent).toContain(
     "Assignable machine",
@@ -895,7 +931,13 @@ it("filters real runner inventories by platform and retains task search when ret
   expect(host.querySelectorAll("tbody tr")).toHaveLength(3);
   expect(
     [...host.querySelectorAll("thead th")].map((cell) => cell.textContent),
-  ).toEqual(expect.arrayContaining(["runners.work", "runners.labels"]));
+  ).toEqual(
+    expect.arrayContaining([
+      "runners.status",
+      "runners.configuration",
+      "runners.owner",
+    ]),
+  );
   expect(host.querySelector("thead")?.textContent).not.toContain(
     "runners.contacted",
   );
@@ -905,7 +947,7 @@ it("filters real runner inventories by platform and retains task search when ret
     "HTTP 403",
   );
   const runnerButtons = [
-    ...host.querySelectorAll<HTMLButtonElement>("tbody button"),
+    ...host.querySelectorAll<HTMLButtonElement>("tbody button[aria-expanded]"),
   ];
   await act(async () => runnerButtons[0].click());
   const details = host.querySelector("aside[aria-labelledby]");
@@ -965,13 +1007,23 @@ it("filters real runner inventories by platform and retains task search when ret
   expect(host.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(tagBadge.getAttribute("aria-pressed")).toBe("true");
   await act(async () => tagBadge.click());
-  const rawStateFilter = [
-    ...host.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
-  ].find((button) => button.textContent?.trim() === "initializing 1")!;
-  await act(async () => rawStateFilter.click());
+  const chooseStatus = async (label: string) => {
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[role="combobox"][aria-label="runners.status"]',
+        )!
+        .click(),
+    );
+    const option = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+    ].find((button) => button.textContent?.trim() === label)!;
+    await act(async () => option.click());
+  };
+  await chooseStatus("initializing (1)");
   expect(host.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(host.querySelector("tbody")?.textContent).toContain("#129 (demo1234)");
-  expect(host.querySelector("tbody")?.textContent).not.toContain("18.0.0");
+  expect(host.querySelector("tbody")?.textContent).toContain("18.0.0");
   await act(async () =>
     host.querySelector<HTMLButtonElement>("tbody button")!.click(),
   );
@@ -1004,14 +1056,88 @@ it("filters real runner inventories by platform and retains task search when ret
     action: "pause",
   });
   expect(actionButton("runners.actions.resume")).toBeDefined();
-  const allStatesFilter = [
-    ...host.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
-  ].find((button) => button.textContent?.trim() === "runners.all 3")!;
-  await act(async () => allStatesFilter.click());
+  const rowEditButton = host.querySelector<HTMLButtonElement>(
+    'tbody button[aria-label="runners.actions.edit"]',
+  )!;
+  expect(rowEditButton).toBeDefined();
+  expect(
+    host.querySelector('tbody button[aria-label="runners.actions.delete"]'),
+  ).toBeNull();
+  const show = HTMLDialogElement.prototype.showModal;
+  const closeModal = HTMLDialogElement.prototype.close;
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute("open");
+  };
+  try {
+    await act(async () => rowEditButton.click());
+    const form = host.querySelector<HTMLFormElement>("dialog form")!;
+    const description = form.querySelector("input")!;
+    expect(description.value).toBe("initializing machine");
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!.call(description, "Renamed runner");
+      description.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () =>
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      ),
+    );
+    expect(vi.mocked(invoke)).toHaveBeenCalledWith("task_edit_runner", {
+      bindingId: scopedBindings[1].id,
+      runnerId: 129,
+      edit: { description: "Renamed runner" },
+    });
+    expect(host.querySelector("tbody")?.textContent).toContain(
+      "Renamed runner",
+    );
+  } finally {
+    HTMLDialogElement.prototype.showModal = show;
+    HTMLDialogElement.prototype.close = closeModal;
+  }
+  await chooseStatus("runners.all (3)");
   await chooseProvider(host, "GitHub");
   expect(host.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(host.textContent).toContain("github machine");
   expect(host.textContent).not.toContain("gitlab machine");
+  holdRefresh = true;
+  const refresh = () =>
+    act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="settings.refresh"]',
+        )!
+        .click(),
+    );
+  await refresh();
+  expect(host.querySelector("tbody")?.textContent).toContain("github machine");
+  expect(host.textContent).not.toContain("common.loading");
+  expect(host.querySelector('[aria-busy="true"] table')).not.toBeNull();
+  await act(async () => finishRefresh("success"));
+  expect(host.querySelector("tbody")?.textContent).toContain(
+    "Refreshed runner",
+  );
+  await refresh();
+  expect(host.querySelector("tbody")?.textContent).toContain(
+    "Refreshed runner",
+  );
+  await act(async () => finishRefresh("network"));
+  expect(host.querySelector("tbody")?.textContent).toContain(
+    "Refreshed runner",
+  );
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+    "Connection interrupted",
+  );
+  await refresh();
+  await act(async () => finishRefresh("permission"));
+  expect(host.querySelector("tbody")?.textContent).not.toContain(
+    "Refreshed runner",
+  );
   await chooseView("tasks.issues");
   expect(input().value).toBe("assignee:@me");
   await act(async () => root.unmount());

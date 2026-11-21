@@ -213,6 +213,12 @@ export function taskTerminalFixture(
       busy: github ? true : false,
       os: github ? "macOS" : null,
       scope: github ? null : "project",
+      can_update: !github,
+      can_delete: !github,
+      description: github ? null : "linux-build",
+      owner_project: github ? null : "demo/platform/demo-api",
+      run_untagged: github ? null : true,
+      protected: github ? null : false,
       labels: github ? ["self-hosted", "ARM64"] : null,
       contacted_at: null,
     };

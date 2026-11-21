@@ -56,6 +56,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const [connections, setConnections] = useState(false);
   const [accountsOpen, setAccountsOpen] = useState(false);
   const [accountRefresh, setAccountRefresh] = useState(0);
+  const [runnerAccountRevision, setRunnerAccountRevision] = useState(0);
   const [settingsError, setSettingsError] = useState("");
   const [discovering, setDiscovering] = useState(true);
   const [initial] = useState(() => {
@@ -394,6 +395,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
                   activeProvider === "all" ? undefined : activeProvider
                 }
                 onChanged={async () => {
+                  setRunnerAccountRevision((value) => value + 1);
                   void refreshBindings(true).catch((error) =>
                     setSettingsError(api.taskFailure(error).message),
                   );
@@ -420,6 +422,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
                 workspaceKey,
                 activeProjectIds,
                 runnerProvider,
+                runnerAccountRevision,
               ])}
               refreshKey={accountRefresh}
               toolbar={{

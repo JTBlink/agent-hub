@@ -12,7 +12,7 @@ mod query;
 mod runner_projects;
 mod runners;
 pub use runner_projects::CreatedProjectRunner;
-pub use runners::{RunnerAction, RunnerInventory, RunnerSummary};
+pub use runners::{RunnerAction, RunnerEdit, RunnerInventory, RunnerSummary};
 mod types;
 use anyhow::{bail, Context, Result};
 pub use cli::SystemCli;

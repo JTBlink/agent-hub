@@ -2450,6 +2450,17 @@
     "schemeCount": "{{count}} schemes"
   },
   "runners": {
+    "status": "Status",
+    "configuration": "Runner configuration",
+    "edit": {
+      "description": "Description",
+      "tagsPlaceholder": "Separate labels with commas",
+      "run_untagged": "Accept untagged jobs",
+      "locked": "Lock to current projects",
+      "protected": "Only run jobs on protected branches or tags",
+      "keep": "Keep current setting",
+      "permission": "The current account cannot edit this runner."
+    },
     "categories": {
       "label": "Runner categories",
       "assigned": "Assigned project runners",
@@ -2466,6 +2477,8 @@
       "copied": "Copied"
     },
     "actions": {
+      "label": "Actions",
+      "edit": "Edit runner",
       "pause": "Pause",
       "resume": "Resume",
       "delete": "Delete",
@@ -2479,7 +2492,6 @@
 
     "title": "Runner",
     "all": "All",
-    "visible": "Visible runners",
     "online": "Online",
     "offline": "Offline",
     "stale": "Stale",
@@ -2520,8 +2532,6 @@
     "project": "Project",
     "details": "{{name}} · {{reference}}",
     "detailUnavailable": "Additional runner details are unavailable.",
-    "githubScope": "GitHub self-hosted only",
-    "githubScopeDescription": "GitHub lists the self-hosted runners visible to the selected repositories. GitHub-hosted runners are allocated per job.",
     "limited": "The runner list reached the query limit. Some runners may be missing.",
     "platformEmpty": "The selected projects have no connection to this platform.",
     "noMatch": "No runners match the current filters.",

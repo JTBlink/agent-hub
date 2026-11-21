@@ -2447,6 +2447,17 @@
     "schemeCount": "{{count}} 套"
   },
   "runners": {
+    "status": "状态",
+    "configuration": "Runner 配置",
+    "edit": {
+      "description": "描述",
+      "tagsPlaceholder": "用逗号分隔标签",
+      "run_untagged": "接收无标签任务",
+      "locked": "锁定到当前项目",
+      "protected": "仅接收受保护分支或标签的任务",
+      "keep": "保持当前设置",
+      "permission": "当前账号没有权限编辑此 Runner。"
+    },
     "categories": {
       "label": "Runner 分类",
       "assigned": "已分配的项目 Runner",
@@ -2463,6 +2474,8 @@
       "copied": "已复制"
     },
     "actions": {
+      "label": "操作",
+      "edit": "编辑 Runner",
       "pause": "暂停",
       "resume": "恢复",
       "delete": "删除",
@@ -2476,7 +2489,6 @@
 
     "title": "Runner",
     "all": "全部",
-    "visible": "可见 Runner",
     "online": "在线",
     "offline": "离线",
     "stale": "长时间未联系",
@@ -2517,8 +2529,6 @@
     "project": "项目",
     "details": "{{name}} · {{reference}}",
     "detailUnavailable": "无法加载 Runner 的附加详情。",
-    "githubScope": "GitHub 仅自托管",
-    "githubScopeDescription": "GitHub 展示所选仓库可见的自托管 Runner。GitHub 托管的 Runner 按任务分配。",
     "limited": "Runner 列表已达到查询上限，部分 Runner 可能未显示。",
     "platformEmpty": "所选项目未连接此平台。",
     "noMatch": "没有符合筛选条件的 Runner。",

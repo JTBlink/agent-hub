@@ -234,6 +234,9 @@ export interface RepositoryRunner {
   project_count?: number | null;
   job_count?: number | null;
   locked?: boolean | null;
+  description?: string | null;
+  run_untagged?: boolean | null;
+  protected?: boolean | null;
   can_update?: boolean;
   can_delete?: boolean;
 }
@@ -272,3 +275,17 @@ export const createRepositoryRunner = (
     bindingId,
     description,
   });
+
+export interface RepositoryRunnerEdit {
+  description?: string;
+  labels?: string[];
+  run_untagged?: boolean;
+  locked?: boolean;
+  protected?: boolean;
+}
+
+export const editRepositoryRunner = (
+  bindingId: string,
+  runnerId: number,
+  edit: RepositoryRunnerEdit,
+) => invoke<void>("task_edit_runner", { bindingId, runnerId, edit });

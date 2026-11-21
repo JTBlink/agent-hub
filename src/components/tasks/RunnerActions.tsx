@@ -1,5 +1,7 @@
+import { Pause, Pencil, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { EditRunnerDialog } from "./EditRunnerDialog";
 import { ConfirmDialog } from "../ConfirmDialog";
 import {
   manageRepositoryRunner,
@@ -7,6 +9,7 @@ import {
   type RepositoryRunner,
   type RepositoryRunnerAction,
 } from "../../lib/taskBrowserApi";
+import { cn } from "../../utils";
 import { runnerReference } from "./runnerStatus";
 
 export function RunnerActions({
@@ -14,42 +17,92 @@ export function RunnerActions({
   host,
   runner,
   onChanged,
+  compact = false,
 }: {
   bindingId: string;
   host: string;
   runner: RepositoryRunner;
-  onChanged: (action: RepositoryRunnerAction) => void;
+  onChanged: (action: RepositoryRunnerAction | "edit") => void;
+  compact?: boolean;
 }) {
   const { t } = useTranslation();
   const [action, setAction] = useState<RepositoryRunnerAction | null>(null);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const pauseAction = runner.paused ? "resume" : "pause";
+  const PauseIcon = runner.paused ? Play : Pause;
+  const buttonClass = compact
+    ? "app-button-ghost h-7 w-7 p-0"
+    : "app-button-secondary text-xs";
   const open = (next: RepositoryRunnerAction) => {
     setError("");
     setAction(next);
   };
   return (
     <>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div
+        className={cn(
+          "flex items-center",
+          compact ? "justify-end gap-0.5" : "mb-4 flex-wrap gap-2",
+        )}
+      >
+        {runner.can_update === true && (
+          <button
+            type="button"
+            className={buttonClass}
+            aria-label={t("runners.actions.edit")}
+            title={t("runners.actions.edit")}
+            onClick={() => setEditing(true)}
+          >
+            {compact ? (
+              <Pencil size={15} aria-hidden="true" />
+            ) : (
+              t("runners.actions.edit")
+            )}
+          </button>
+        )}
         {runner.can_update === true && runner.paused != null && (
           <button
             type="button"
-            className="app-button-secondary text-xs"
+            className={buttonClass}
+            aria-label={t(`runners.actions.${pauseAction}`)}
+            title={t(`runners.actions.${pauseAction}`)}
             onClick={() => open(pauseAction)}
           >
-            {t(`runners.actions.${pauseAction}`)}
+            {compact ? (
+              <PauseIcon size={15} aria-hidden="true" />
+            ) : (
+              t(`runners.actions.${pauseAction}`)
+            )}
           </button>
         )}
         {runner.can_delete === true && (
           <button
             type="button"
-            className="app-button-ghost text-xs text-danger"
+            className={cn(buttonClass, "text-danger")}
+            aria-label={t("runners.actions.delete")}
+            title={t("runners.actions.delete")}
             onClick={() => open("delete")}
           >
-            {t("runners.actions.delete")}
+            {compact ? (
+              <Trash2 size={15} aria-hidden="true" />
+            ) : (
+              t("runners.actions.delete")
+            )}
           </button>
         )}
       </div>
+      {editing && (
+        <EditRunnerDialog
+          bindingId={bindingId}
+          runner={runner}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            onChanged("edit");
+          }}
+        />
+      )}
       {action && (
         <ConfirmDialog
           open

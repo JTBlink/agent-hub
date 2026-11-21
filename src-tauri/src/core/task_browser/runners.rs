@@ -28,6 +28,9 @@ pub struct RunnerSummary {
     pub project_count: Option<u64>,
     pub job_count: Option<u64>,
     pub locked: Option<bool>,
+    pub description: Option<String>,
+    pub run_untagged: Option<bool>,
+    pub protected: Option<bool>,
     pub can_update: bool,
     pub can_delete: bool,
 }
@@ -38,6 +41,54 @@ pub enum RunnerAction {
     Pause,
     Resume,
     Delete,
+}
+
+#[derive(Deserialize)]
+pub struct RunnerEdit {
+    pub description: Option<String>,
+    pub labels: Option<Vec<String>>,
+    pub run_untagged: Option<bool>,
+    pub locked: Option<bool>,
+    pub protected: Option<bool>,
+}
+
+impl RunnerEdit {
+    fn fields(&self) -> Result<Vec<String>, TaskFailure> {
+        let mut fields = Vec::new();
+        if let Some(description) = &self.description {
+            if description.chars().count() > 255 || description.chars().any(char::is_control) {
+                return Err(TaskFailure::new(
+                    "invalid_input",
+                    "Invalid runner description",
+                ));
+            }
+            fields.push(format!("description: {}", serde_json::json!(description)));
+        }
+        if let Some(labels) = &self.labels {
+            if labels
+                .iter()
+                .any(|label| label.trim().is_empty() || label.chars().any(char::is_control))
+            {
+                return Err(TaskFailure::new("invalid_input", "Invalid runner label"));
+            }
+            fields.push(format!("tagList: {}", serde_json::json!(labels)));
+        }
+        if let Some(run_untagged) = self.run_untagged {
+            fields.push(format!("runUntagged: {run_untagged}"));
+        }
+        if let Some(locked) = self.locked {
+            fields.push(format!("locked: {locked}"));
+        }
+        if let Some(protected) = self.protected {
+            let level = if protected {
+                "REF_PROTECTED"
+            } else {
+                "NOT_PROTECTED"
+            };
+            fields.push(format!("accessLevel: {level}"));
+        }
+        Ok(fields)
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -69,6 +120,8 @@ struct GitLabRunnerFields {
     owner_project: Option<String>,
     project_count: Option<u64>,
     locked: Option<bool>,
+    can_update: bool,
+    can_delete: bool,
 }
 
 pub(super) fn runner_os(value: String) -> String {
@@ -157,6 +210,13 @@ pub(super) fn summary(provider: Provider, item: &Value) -> Result<RunnerSummary,
         project_count: None,
         job_count: None,
         locked: item["locked"].as_bool(),
+        description: item["description"].as_str().map(str::to_owned),
+        run_untagged: item["run_untagged"].as_bool(),
+        protected: match item["access_level"].as_str() {
+            Some("ref_protected") => Some(true),
+            Some("not_protected") => Some(false),
+            _ => None,
+        },
         can_update: false,
         can_delete: false,
     })
@@ -197,6 +257,8 @@ impl<R: CliReader> TaskClient<R> {
                     runner.owner_project = fields.owner_project;
                     runner.project_count = fields.project_count;
                     runner.locked = fields.locked.or(runner.locked);
+                    runner.can_update = fields.can_update;
+                    runner.can_delete = fields.can_delete;
                 }
             }
         }
@@ -229,7 +291,7 @@ impl<R: CliReader> TaskClient<R> {
         let repository = Value::String(binding.repository.clone());
         for _ in 0..MAX_PAGES {
             let query = format!(
-                "{{ project(fullPath: {repository}) {{ runners(first: {PAGE_SIZE}, after: {after}) {{ nodes {{ id shortSha tagList contactedAt createdAt createdBy {{ name }} locked ownerProject {{ fullPath }} projectCount managers(first: 2) {{ nodes {{ platformName version ipAddress }} }} }} pageInfo {{ hasNextPage endCursor }} }} }} }}"
+                "{{ project(fullPath: {repository}) {{ runners(first: {PAGE_SIZE}, after: {after}) {{ nodes {{ id shortSha tagList contactedAt createdAt createdBy {{ name }} locked ownerProject {{ fullPath }} projectCount {RUNNER_PERMISSIONS} managers(first: 2) {{ nodes {{ platformName version ipAddress }} }} }} pageInfo {{ hasNextPage endCursor }} }} }} }}"
             );
             let Ok(response) = self.request(
                 binding,
@@ -280,6 +342,10 @@ impl<R: CliReader> TaskClient<R> {
                             owner_project: optional_string(&node["ownerProject"], "fullPath"),
                             project_count: node["projectCount"].as_u64(),
                             locked: node["locked"].as_bool(),
+                            can_update: node["userPermissions"]["updateRunner"].as_bool()
+                                == Some(true),
+                            can_delete: node["userPermissions"]["deleteRunner"].as_bool()
+                                == Some(true),
                         },
                     );
                 }
@@ -368,10 +434,8 @@ impl<R: CliReader> TaskClient<R> {
         action: RunnerAction,
         cancel: &AtomicBool,
     ) -> Result<(), TaskFailure> {
-        self.require_project_runner(binding, id, cancel)?;
-        let runner = self.gitlab_runner_info(binding, id, RUNNER_PERMISSIONS, cancel)?;
+        let permissions = self.runner_permissions(binding, id, cancel)?;
         let endpoint = format!("runners/{id}");
-        let permissions = &runner["userPermissions"];
         match action {
             RunnerAction::Delete if permissions["deleteRunner"].as_bool() == Some(true) => {
                 self.request(binding, "DELETE", endpoint, &[], cancel)?;
@@ -403,6 +467,67 @@ impl<R: CliReader> TaskClient<R> {
                 "The authenticated account cannot perform this runner action",
             )),
         }
+    }
+
+    /// Edit only the supplied fields through GitLab's official runner mutation.
+    pub fn edit_runner(
+        &self,
+        binding: &Binding,
+        id: u64,
+        edit: &RunnerEdit,
+        cancel: &AtomicBool,
+    ) -> Result<(), TaskFailure> {
+        let fields = edit.fields()?;
+        if fields.is_empty() {
+            return Err(TaskFailure::new(
+                "invalid_input",
+                "No runner changes supplied",
+            ));
+        }
+        if self.runner_permissions(binding, id, cancel)?["updateRunner"].as_bool() != Some(true) {
+            return Err(TaskFailure::new(
+                "permission",
+                "The authenticated account cannot edit this runner",
+            ));
+        }
+        let runner_id = format!("gid://gitlab/Ci::Runner/{id}");
+        let fields = fields.join(", ");
+        let query = format!(
+            r#"mutation {{ runnerUpdate(input: {{ id: "{runner_id}", {fields} }}) {{ errors runner {{ id }} }} }}"#
+        );
+        let data = self.request(
+            binding,
+            "POST",
+            "graphql".into(),
+            &[("query", query)],
+            cancel,
+        )?;
+        let result = &data["data"]["runnerUpdate"];
+        if let Some(error) = result["errors"]
+            .as_array()
+            .and_then(|errors| errors.first())
+            .and_then(Value::as_str)
+        {
+            return Err(TaskFailure::new("invalid_input", error));
+        }
+        if result["runner"]["id"].as_str() != Some(runner_id.as_str()) {
+            return Err(TaskFailure::new(
+                "invalid_response",
+                "Could not verify the edited runner",
+            ));
+        }
+        Ok(())
+    }
+
+    fn runner_permissions(
+        &self,
+        binding: &Binding,
+        id: u64,
+        cancel: &AtomicBool,
+    ) -> Result<Value, TaskFailure> {
+        self.require_project_runner(binding, id, cancel)?;
+        self.gitlab_runner_info(binding, id, RUNNER_PERMISSIONS, cancel)
+            .map(|mut runner| runner["userPermissions"].take())
     }
 
     fn gitlab_runner_info(

@@ -1,6 +1,8 @@
 #![cfg(all(feature = "github", feature = "gitlab"))]
 
-use app_lib::core::task_browser::{Binding, Provider, RunnerAction, TaskClient, TaskFailure};
+use app_lib::core::task_browser::{
+    Binding, Provider, RunnerAction, RunnerEdit, TaskClient, TaskFailure,
+};
 use serde_json::json;
 use std::sync::atomic::AtomicBool;
 
@@ -118,6 +120,8 @@ fn reads_repository_runners_and_keeps_platform_specific_states() {
 
 #[test]
 fn runner_mutations_require_current_project_membership_and_action_permission() {
+    let allow_update = std::cell::Cell::new(true);
+    let edits = std::cell::Cell::new(0);
     let allow_delete = std::cell::Cell::new(false);
     let requests = std::cell::RefCell::new(Vec::new());
     let client = TaskClient::new(|_: &Binding, args: &[String], _: &AtomicBool| {
@@ -128,10 +132,18 @@ fn runner_mutations_require_current_project_membership_and_action_permission() {
             "GET" => json!([{"id": 128}]),
             "POST" => {
                 assert_eq!(args[5], "graphql");
-                json!({"data": {"runner": {"userPermissions": {
-                    "updateRunner": true,
-                    "deleteRunner": allow_delete.get()
-                }}}})
+                if let Some(query) = args.iter().find(|arg| arg.starts_with("query=mutation")) {
+                    assert!(query.contains(r#"description: "Name with \"quotes\"""#));
+                    assert!(query.contains(r#"tagList: ["linux","test"]"#));
+                    assert!(!query.contains("paused:"));
+                    edits.set(edits.get() + 1);
+                    json!({"data": {"runnerUpdate": {"errors": [], "runner": {"id": "gid://gitlab/Ci::Runner/128"}}}})
+                } else {
+                    json!({"data": {"runner": {"userPermissions": {
+                        "updateRunner": allow_update.get(),
+                        "deleteRunner": allow_delete.get()
+                    }}}})
+                }
             }
             "PUT" => {
                 assert_eq!(args[5], "runners/128");
@@ -175,6 +187,25 @@ fn runner_mutations_require_current_project_membership_and_action_permission() {
     client
         .manage_runner(&binding, 128, RunnerAction::Pause, &cancel)
         .unwrap();
+    let edit = RunnerEdit {
+        description: Some(r#"Name with "quotes""#.into()),
+        labels: Some(vec!["linux".into(), "test".into()]),
+        run_untagged: None,
+        locked: None,
+        protected: None,
+    };
+    allow_update.set(false);
+    assert_eq!(
+        client
+            .edit_runner(&binding, 128, &edit, &cancel)
+            .unwrap_err()
+            .kind,
+        "permission"
+    );
+    assert_eq!(edits.get(), 0);
+    allow_update.set(true);
+    client.edit_runner(&binding, 128, &edit, &cancel).unwrap();
+    assert_eq!(edits.get(), 1);
     allow_delete.set(true);
     client
         .manage_runner(&binding, 128, RunnerAction::Delete, &cancel)

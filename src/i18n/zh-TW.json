@@ -2407,6 +2407,17 @@
     "schemeCount": "{{count}} 套"
   },
   "runners": {
+    "status": "狀態",
+    "configuration": "Runner 設定",
+    "edit": {
+      "description": "描述",
+      "tagsPlaceholder": "以逗號分隔標籤",
+      "run_untagged": "接收無標籤工作",
+      "locked": "鎖定至目前專案",
+      "protected": "僅接收受保護分支或標籤的工作",
+      "keep": "保留目前設定",
+      "permission": "目前帳號沒有權限編輯此 Runner。"
+    },
     "categories": {
       "label": "Runner 分類",
       "assigned": "已指派的專案 Runner",
@@ -2423,6 +2434,8 @@
       "copied": "已複製"
     },
     "actions": {
+      "label": "操作",
+      "edit": "編輯 Runner",
       "pause": "暫停",
       "resume": "恢復",
       "delete": "刪除",
@@ -2436,7 +2449,6 @@
 
     "title": "Runner",
     "all": "全部",
-    "visible": "可見 Runner",
     "online": "線上",
     "offline": "離線",
     "stale": "長時間未聯繫",
@@ -2477,8 +2489,6 @@
     "project": "專案",
     "details": "{{name}} · {{reference}}",
     "detailUnavailable": "無法載入 Runner 的附加詳細資料。",
-    "githubScope": "GitHub 僅自託管",
-    "githubScopeDescription": "GitHub 顯示所選儲存庫可見的自託管 Runner。GitHub 託管的 Runner 依工作分配。",
     "limited": "Runner 清單已達查詢上限，部分 Runner 可能未顯示。",
     "platformEmpty": "所選專案未連線至這個平台。",
     "noMatch": "沒有符合篩選條件的 Runner。",

@@ -1,7 +1,9 @@
+import { LockKeyhole } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { RepositoryPlatformIcon } from "../RepositoryPlatformIcon";
 import { taskTime } from "../../lib/taskTime";
 import { cn } from "../../utils";
+import { RunnerActions } from "./RunnerActions";
 import {
   runnerReference,
   runnerStateLabel,
@@ -9,6 +11,14 @@ import {
   runnerWork,
 } from "./runnerStatus";
 import type { VisibleRunner } from "./useRepositoryRunners";
+
+function canManage({ runner, bindings: [source], assignable }: VisibleRunner) {
+  return (
+    source.provider === "gitlab" &&
+    !assignable &&
+    (runner.can_update === true || runner.can_delete === true)
+  );
+}
 
 export function RunnerTable({
   items,
@@ -19,6 +29,7 @@ export function RunnerTable({
   relativeTime,
   projectNames,
   onTag,
+  onManaged,
   onSelect,
 }: {
   items: VisibleRunner[];
@@ -29,37 +40,32 @@ export function RunnerTable({
   relativeTime: Intl.RelativeTimeFormat;
   projectNames: (item: VisibleRunner) => string[];
   onTag: (tag: string | null) => void;
+  onManaged: (item: VisibleRunner, deleted: boolean) => void;
   onSelect: (item: VisibleRunner, trigger: HTMLButtonElement) => void;
 }) {
   const { t } = useTranslation();
-  const hasWork = items.some(
-    ({ runner }) => runner.busy != null || runner.job_status,
-  );
-  const hasSystem = items.some(({ runner }) => runner.os);
-  const hasTags = items.some(({ runner }) => Boolean(runner.labels?.length));
-  const hasContact = items.some(({ runner }) => runner.contacted_at);
-  const columns = [
-    "machine",
-    "connection",
-    ...(hasWork ? ["work"] : []),
-    hasSystem ? "systemScope" : "scope",
-    "projects",
-    ...(hasTags ? ["labels"] : []),
-    ...(hasContact ? ["contacted"] : []),
-  ];
+  const hasActions = items.some(canManage);
   return (
-    <table className="w-full min-w-[650px] text-left text-xs">
-      <thead className="sticky top-0 z-10 bg-bg-secondary text-muted">
+    <table className="w-full min-w-[680px] table-fixed text-left text-xs">
+      <thead className="sticky top-0 z-10 border-b border-border-subtle bg-bg-secondary text-muted">
         <tr>
-          {columns.map((column) => (
+          <th scope="col" className="w-32 px-3 py-2 font-medium">
+            {t("runners.status")}
+          </th>
+          <th scope="col" className="px-3 py-2 font-medium">
+            {t("runners.configuration")}
+          </th>
+          <th scope="col" className="w-[20%] px-3 py-2 font-medium">
+            {t("runners.owner")}
+          </th>
+          {hasActions && (
             <th
-              key={column}
               scope="col"
-              className="whitespace-nowrap px-3 py-2 font-medium"
+              className="sticky right-0 w-[108px] bg-bg-secondary px-3 py-2 text-right font-medium"
             >
-              {t(`runners.${column}`)}
+              {t("runners.actions.label")}
             </th>
-          ))}
+          )}
         </tr>
       </thead>
       <tbody>
@@ -69,14 +75,14 @@ export function RunnerTable({
             bindings: [source],
           } = item;
           const selected = item.key === selectedKey;
-          const title = runnerReference(runner);
+          const work = runnerWork(runner, t);
+          const owner = runner.owner_project?.split("/").at(-1);
+          const projects = item.assignable ? [] : projectNames(item);
           const created = runnerTimeAgo(runner.created_at, relativeTime);
-          const identity = [
-            title,
-            source.host,
-            runner.created_by &&
-              t("runners.createdBy", { name: runner.created_by }),
-            created,
+          const contacted = runnerTimeAgo(runner.contacted_at, relativeTime);
+          const detail = [
+            runner.version && `${t("runners.version")} ${runner.version}`,
+            runner.os,
           ]
             .filter(Boolean)
             .join(" · ");
@@ -88,100 +94,155 @@ export function RunnerTable({
                 selected && "bg-surface-active",
               )}
             >
-              <td className="w-[32%] min-w-52 px-3 py-2">
-                <button
-                  type="button"
-                  aria-expanded={selected}
-                  aria-controls={selected ? detailsId : undefined}
-                  onClick={(event) => onSelect(item, event.currentTarget)}
-                  className="flex w-full items-start gap-2 rounded text-left hover:text-accent focus-visible:outline focus-visible:outline-accent"
-                >
+              <td className="px-3 py-3 align-top">
+                <div className="flex flex-wrap items-center gap-1">
+                  <span
+                    className={cn(
+                      "rounded-md bg-surface-active px-1.5 py-0.5 font-medium",
+                      runner.state === "online" && "text-success",
+                      runner.state === "offline" && "text-danger",
+                      runner.state === "stale" && "text-warning",
+                    )}
+                    title={t("runners.connection")}
+                  >
+                    {runnerStateLabel(runner.state, t)}
+                  </span>
+                  {work !== "—" && (
+                    <span
+                      className="rounded-md border border-border-subtle px-1.5 py-0.5 text-secondary"
+                      title={t("runners.work")}
+                    >
+                      {work}
+                    </span>
+                  )}
+                  {runner.paused && (
+                    <span className="rounded-md px-1.5 py-0.5 text-warning">
+                      {t("runners.paused")}
+                    </span>
+                  )}
+                </div>
+              </td>
+              <td className="min-w-0 space-y-1 px-3 py-2.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <RepositoryPlatformIcon
                     providers={[source.provider]}
                     fallbackLabel={t("tasks.provider")}
                   />
-                  <span className="block min-w-0 flex-1">
+                  <button
+                    type="button"
+                    aria-expanded={selected}
+                    aria-controls={selected ? detailsId : undefined}
+                    onClick={(event) => onSelect(item, event.currentTarget)}
+                    className="rounded text-left text-sm font-semibold text-accent hover:underline focus-visible:outline focus-visible:outline-accent"
+                  >
+                    {runnerReference(runner)}
+                  </button>
+                  {runner.locked && (
                     <span
-                      title={runner.name}
-                      className="block max-w-80 truncate text-sm font-medium"
+                      title={t("runners.locked")}
+                      role="img"
+                      aria-label={t("runners.locked")}
                     >
-                      {runner.name}
+                      <LockKeyhole size={12} aria-hidden="true" />
                     </span>
-                    <span
-                      title={identity}
-                      className="block max-w-80 truncate text-xs text-muted"
-                    >
-                      {identity}
-                    </span>
-                  </span>
-                </button>
-              </td>
-              <td className="whitespace-nowrap px-3 py-2">
-                <span
-                  className={cn(
-                    runner.state === "online" && "text-success",
-                    runner.state === "offline" && "text-danger",
-                    runner.state === "stale" && "text-warning",
                   )}
-                >
-                  {runnerStateLabel(runner.state, t)}
-                </span>
-                {runner.paused && (
-                  <span className="block text-xs text-warning">
-                    {t("runners.paused")}
+                  {runner.scope && (
+                    <span className="rounded bg-surface-active px-1.5 text-muted">
+                      {t(`runners.${runner.scope}`)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex min-w-0 items-baseline gap-2">
+                  <span
+                    title={runner.name}
+                    className="min-w-0 truncate text-sm font-medium"
+                  >
+                    {runner.name}
                   </span>
+                  {detail && (
+                    <span className="shrink-0 text-muted">{detail}</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-muted">
+                  <span className="max-w-full truncate" title={source.host}>
+                    {source.host}
+                  </span>
+                  {contacted && (
+                    <time
+                      dateTime={runner.contacted_at ?? undefined}
+                      title={taskTime(runner.contacted_at)}
+                    >
+                      {t("runners.contacted")} {contacted}
+                    </time>
+                  )}
+                  {(runner.created_by || created) && (
+                    <span
+                      title={
+                        runner.created_at
+                          ? taskTime(runner.created_at)
+                          : undefined
+                      }
+                    >
+                      {runner.created_by
+                        ? t("runners.createdBy", { name: runner.created_by })
+                        : t("runners.createdAt")}
+                      {created && ` · ${created}`}
+                    </span>
+                  )}
+                </div>
+                {Boolean(runner.labels?.length) && (
+                  <div className="flex flex-wrap gap-1">
+                    {[...new Set(runner.labels)].map((label) => (
+                      <button
+                        key={label}
+                        type="button"
+                        aria-pressed={tag === label}
+                        className={cn(
+                          "max-w-full break-words rounded bg-surface-hover px-1.5 py-px text-xs text-secondary hover:text-accent focus-visible:outline focus-visible:outline-accent",
+                          tag === label && "text-accent",
+                        )}
+                        onClick={() => onTag(tag === label ? null : label)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </td>
-              {hasWork && (
-                <td className="whitespace-nowrap px-3 py-2">
-                  {runnerWork(runner, t)}
-                </td>
-              )}
-              <td className="whitespace-nowrap px-3 py-2">
-                {hasSystem && (runner.os ?? "—")}
-                <span
-                  className={hasSystem ? "block text-xs text-muted" : undefined}
+              <td className="px-3 py-3 align-top">
+                <div
+                  className="truncate text-sm"
+                  title={runner.owner_project ?? undefined}
                 >
-                  {runner.scope ? t(`runners.${runner.scope}`) : "—"}
-                </span>
+                  {owner ?? "—"}
+                </div>
+                {projects.some((project) => project !== owner) && (
+                  <div
+                    className="truncate text-muted"
+                    title={projects.join(", ")}
+                  >
+                    {projects.join(", ")}
+                  </div>
+                )}
               </td>
-              <td className="px-3 py-2">
-                {item.assignable ? "—" : projectNames(item).join(", ")}
-              </td>
-              {hasTags && (
-                <td className="min-w-32 px-3 py-2">
-                  {runner.labels?.length ? (
-                    <div className="flex flex-wrap gap-1">
-                      {[...new Set(runner.labels)].map((label) => (
-                        <button
-                          key={label}
-                          type="button"
-                          aria-pressed={tag === label}
-                          className={cn(
-                            "max-w-full break-words rounded bg-surface-hover px-1.5 py-px text-xs text-secondary hover:text-accent focus-visible:outline focus-visible:outline-accent",
-                            tag === label && "text-accent",
-                          )}
-                          onClick={() => onTag(tag === label ? null : label)}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-              )}
-              {hasContact && (
+              {hasActions && (
                 <td
-                  className="whitespace-nowrap px-3 py-2"
-                  title={
-                    runner.contacted_at
-                      ? taskTime(runner.contacted_at)
-                      : undefined
-                  }
+                  className={cn(
+                    "sticky right-0 z-[1] bg-surface px-2 py-2.5 align-top",
+                    selected && "bg-surface-active",
+                  )}
                 >
-                  {runnerTimeAgo(runner.contacted_at, relativeTime) || "—"}
+                  {canManage(item) && (
+                    <RunnerActions
+                      compact
+                      bindingId={source.id}
+                      host={source.host}
+                      runner={runner}
+                      onChanged={(action) =>
+                        onManaged(item, action === "delete")
+                      }
+                    />
+                  )}
                 </td>
               )}
             </tr>

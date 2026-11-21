@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Server } from "lucide-react";
 import type { Project, TaskBinding } from "../../lib/tauri";
-import { HelpTooltip } from "../HelpTooltip";
 import { ThemedSelect } from "../ThemedSelect";
 import { ToggleSwitch } from "../ToggleSwitch";
 import { RunnerDetails } from "./RunnerDetails";
@@ -23,7 +22,6 @@ import {
   useRepositoryRunners,
   type VisibleRunner,
 } from "./useRepositoryRunners";
-import { cn } from "../../utils";
 
 export function RunnerWorkspace({
   bindings,
@@ -64,8 +62,7 @@ export function RunnerWorkspace({
   const [tag, setTag] = useState<string | null>(null);
   const [selection, setSelection] = useState<{
     scopeKey: string;
-    item: VisibleRunner;
-    bindings: TaskBinding[];
+    itemKey: string;
   } | null>(null);
   const [auto, setAuto] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(0);
@@ -74,7 +71,12 @@ export function RunnerWorkspace({
     sources,
     loading,
     updatedAt,
-  } = useRepositoryRunners(bindings, refreshKey + autoRefresh);
+  } = useRepositoryRunners(
+    bindings,
+    refreshKey + autoRefresh,
+    scopeKey,
+    discovering,
+  );
   useEffect(() => {
     if (!auto || loading || discovering || !bindings.length) return;
     const timer = window.setTimeout(
@@ -84,8 +86,8 @@ export function RunnerWorkspace({
     return () => window.clearTimeout(timer);
   }, [auto, loading, discovering, bindings.length, autoRefresh, refreshKey]);
   const selected =
-    selection?.scopeKey === scopeKey && selection.bindings === bindings
-      ? selection.item
+    selection?.scopeKey === scopeKey
+      ? inventory.find((item) => item.key === selection.itemKey)
       : null;
   if (selection && !selected) setSelection(null);
   const hasGitLab = bindings.some(({ provider }) => provider === "gitlab");
@@ -183,41 +185,7 @@ export function RunnerWorkspace({
           ),
         ]}
       />
-      {hasGitLab && (
-        <RunnerCategories
-          value={activeCategory}
-          showAssignable={showAssignable}
-          count={(value) =>
-            inventory.filter((item) => inCategory(item, value)).length
-          }
-          projects={sources
-            .filter(({ inventory }) => inventory?.can_create_runner)
-            .map(({ binding }) => binding)}
-          onChange={(value) => {
-            setCategory(value);
-            setSelection(null);
-            setStatus("all");
-            setOs("all");
-            setTag(null);
-          }}
-          onCreated={() => setAutoRefresh((value) => value + 1)}
-        />
-      )}
       {notice}
-      {bindings.some((binding) => binding.provider === "github") && (
-        <div className="mb-2 text-muted">
-          <HelpTooltip
-            label={t("runners.githubScope")}
-            triggerContent={
-              <span className="whitespace-nowrap text-xs">
-                {t("runners.githubScope")}
-              </span>
-            }
-          >
-            {t("runners.githubScopeDescription")}
-          </HelpTooltip>
-        </div>
-      )}
       {failures.map(({ binding, error }) => (
         <p key={binding.id} role="alert" className="mb-2 text-xs text-warning">
           {binding.host}/{binding.repository} ·{" "}
@@ -230,11 +198,6 @@ export function RunnerWorkspace({
       {sources.some((source) => source.inventory?.limited) && (
         <p role="status" className="mb-2 text-xs text-warning">
           {t("runners.limited")}
-        </p>
-      )}
-      {(discovering || loading) && (
-        <p role="status" className="mb-2 text-xs text-muted">
-          {t("common.loading")}
         </p>
       )}
       {!discovering && !bindings.length ? (
@@ -265,65 +228,52 @@ export function RunnerWorkspace({
         </div>
       ) : (
         <>
-          <div className="app-panel mb-3 grid grid-cols-2 gap-3 p-3 sm:grid-cols-4">
-            {(["all", "state:online", "state:offline", "paused"] as const).map(
-              (state) => (
-                <div key={state}>
-                  <div className="text-xs text-muted">
-                    {t(
-                      state === "all"
-                        ? "runners.visible"
-                        : `runners.${state.replace("state:", "")}`,
-                    )}
-                  </div>
-                  <strong className="text-lg tabular-nums">
-                    {sources.some((source) => source.inventory)
-                      ? items.filter((item) =>
-                          matchesRunnerFilter(item.runner, state),
-                        ).length
-                      : "—"}
-                  </strong>
-                </div>
-              ),
-            )}
-          </div>
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <div
-              role="group"
-              aria-label={t("runners.connection")}
-              className="flex flex-wrap gap-1"
+          <RunnerCategories
+            showCategories={hasGitLab}
+            value={activeCategory}
+            showAssignable={showAssignable}
+            count={(value) =>
+              inventory.filter((item) => inCategory(item, value)).length
+            }
+            projects={sources
+              .filter(({ inventory }) => inventory?.can_create_runner)
+              .map(({ binding }) => binding)}
+            onChange={(value) => {
+              setCategory(value);
+              setSelection(null);
+              setStatus("all");
+              setOs("all");
+              setTag(null);
+            }}
+            onCreated={() => setAutoRefresh((value) => value + 1)}
+          >
+            <ThemedSelect
+              className="h-7 w-36 gap-2 py-0 text-xs"
+              aria-label={t("runners.status")}
+              value={status}
+              onChange={(event) => {
+                const next = filters.find(
+                  (filter) => filter === event.target.value,
+                );
+                if (next) setStatus(next);
+              }}
             >
-              {filters.map((state) => (
-                <button
-                  type="button"
-                  key={state}
-                  aria-pressed={status === state}
-                  onClick={() => setStatus(state)}
-                  className={cn(
-                    "app-button-ghost gap-1 text-xs",
-                    status === state && "bg-surface-active text-accent",
-                  )}
-                >
-                  {state === "all" || state === "paused"
+              {filters.map((state) => {
+                const label =
+                  state === "all" || state === "paused"
                     ? t(`runners.${state}`)
-                    : runnerStateLabel(state.slice("state:".length), t)}{" "}
-                  <span className="tabular-nums text-muted">
-                    {
-                      items.filter((item) =>
-                        matchesRunnerFilter(item.runner, state),
-                      ).length
-                    }
-                  </span>
-                </button>
-              ))}
-            </div>
-            <input
-              className="app-input h-7 min-w-32 flex-1 text-xs"
-              aria-label={t("runners.search")}
-              placeholder={t("runners.search")}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
+                    : runnerStateLabel(state.slice("state:".length), t);
+                const count = items.filter((item) =>
+                  matchesRunnerFilter(item.runner, state),
+                ).length;
+                return (
+                  <option
+                    key={state}
+                    value={state}
+                  >{`${label} (${count})`}</option>
+                );
+              })}
+            </ThemedSelect>
             {tagChoices.length > 0 && (
               <ThemedSelect
                 className="h-7 max-w-48 gap-2 py-0 text-xs"
@@ -354,18 +304,35 @@ export function RunnerWorkspace({
               ))}
               <option value="unknown">{unknown}</option>
             </ThemedSelect>
-          </div>
+            <input
+              className="app-input h-7 min-w-36 flex-1 text-xs"
+              aria-label={t("runners.search")}
+              placeholder={t("runners.search")}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </RunnerCategories>
           <div
             className="flex min-h-0 flex-1 gap-3"
             onKeyDown={(event) => {
-              if (selected && event.key === "Escape") {
+              if (
+                selected &&
+                event.key === "Escape" &&
+                !(
+                  event.target instanceof Element &&
+                  event.target.closest("dialog[open]")
+                )
+              ) {
                 event.preventDefault();
                 closeDetails();
               }
             }}
           >
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="app-panel min-h-0 overflow-auto">
+              <div
+                className="app-panel min-h-0 overflow-auto"
+                aria-busy={discovering || loading}
+              >
                 <RunnerTable
                   items={items}
                   visible={visible}
@@ -375,9 +342,13 @@ export function RunnerWorkspace({
                   relativeTime={relativeTime}
                   projectNames={names}
                   onTag={setTag}
+                  onManaged={(item, deleted) => {
+                    if (deleted && selected?.key === item.key) closeDetails();
+                    setAutoRefresh((value) => value + 1);
+                  }}
                   onSelect={(item, trigger) => {
                     detailsTrigger.current = trigger;
-                    setSelection({ scopeKey, item, bindings });
+                    setSelection({ scopeKey, itemKey: item.key });
                   }}
                 />
                 {!visible.length &&
