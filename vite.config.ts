@@ -6,13 +6,33 @@ import { productViteConfig } from "./scripts/app/product/vite-plugin.mjs";
 import { helpContentPlugin } from "./scripts/docs/vite-plugin.mjs";
 
 const product = productViteConfig(import.meta.dirname);
+// Keep the editor registry authoritative while prebundling its literal lazy imports.
+// Otherwise the first file open can invalidate dependency URLs in a live WebView.
+const editorDependencies = [
+  ...new Set(
+    [
+      ...readFileSync(
+        new URL(
+          "./src/components/file-reader/codeLanguages.ts",
+          import.meta.url,
+        ),
+        "utf8",
+      ).matchAll(/\bimport\(\s*["']([^"']+)["']\s*\)/g),
+    ].map((match) => match[1]),
+  ),
+];
 
 export default defineConfig({
   ...product,
   optimizeDeps: {
     ...product.optimizeDeps,
-    // Discover Markdown's lazy preview dependencies before a live session starts.
-    include: ["github-slugger", "unified", "remark-parse"],
+    // Discover lazy Markdown and editor dependencies before a live session starts.
+    include: [
+      "github-slugger",
+      "unified",
+      "remark-parse",
+      ...editorDependencies,
+    ],
   },
   plugins: [
     ...(product.plugins ?? []),
