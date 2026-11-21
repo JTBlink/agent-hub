@@ -22,15 +22,21 @@ import {
   type TerminalTab,
 } from "../../lib/terminalLayout";
 import { previewAgentCommand } from "../../lib/previewAgentCommand";
-import type { AgentDeliveryPlan } from "../../lib/agentDelivery";
+import {
+  agentDeliveryTabTitle,
+  type AgentDeliveryPlan,
+} from "../../lib/agentDelivery";
 import type { PreviewAgentRequest } from "../../lib/previewAgentDelivery";
 import type { PaneControl } from "./TerminalPane";
+import type { PreviewAgentBindingStore } from "./previewAgentBindings";
+import { previewFileAgentName } from "./previewAgentFile";
 
 interface Options {
   tabs: () => TerminalTab[];
   update: (change: (tabs: TerminalTab[]) => TerminalTab[]) => void;
   controls: () => Map<string, PaneControl>;
   tools: () => readonly ToolInfo[];
+  bindings?: PreviewAgentBindingStore;
 }
 const sameTarget = (a: HerdrTarget, b: HerdrTarget) =>
   a.session === b.session &&
@@ -64,7 +70,7 @@ function refreshed(
   };
 }
 
-/** One page owns one Pane for the lifetime of this workbench. No prompts are replayed. */
+/** One page owns one Pane; restored ownership is revalidated and prompts are never replayed. */
 export class PreviewAgentRuntime {
   private pending = false;
   // Closing a client or switching checkouts does not close its background Agent.
@@ -73,9 +79,11 @@ export class PreviewAgentRuntime {
   private options: Options;
   constructor(options: Options) {
     this.options = options;
+    for (const tab of options.bindings?.read() ?? []) this.remember(tab);
+    for (const tab of options.tabs()) this.remember(tab);
   }
   private remember(tab: TerminalTab) {
-    if (tab.herdrTarget && tab.previewPageId)
+    if (tab.herdrTarget && tab.previewPageId) {
       this.bindings.set(
         JSON.stringify([
           tab.projectId,
@@ -85,6 +93,8 @@ export class PreviewAgentRuntime {
         ]),
         tab,
       );
+      this.options.bindings?.write([...this.bindings.values()]);
+    }
   }
   async deliver(request: PreviewAgentRequest, projectId: string) {
     if (this.pending) throw Error("PREVIEW_AGENT_BUSY");
@@ -120,6 +130,49 @@ export class PreviewAgentRuntime {
       if (bound.previewUncertain || bound.previewPending)
         throw Error("PREVIEW_AGENT_UNCERTAIN");
       return bound;
+    }
+    if (page.path) {
+      const inventory = await getHerdrInventory();
+      if (
+        inventory.installed &&
+        inventory.sessions.some(
+          (session) =>
+            session.name === DEFAULT_HERDR_SESSION && session.running,
+        )
+      ) {
+        const name = await previewFileAgentName(projectId, path, page.path);
+        const snapshot = await getHerdrSnapshot(DEFAULT_HERDR_SESSION);
+        const pane = snapshot.agents.find((pane) => pane.name === name);
+        if (pane) {
+          const workspace = snapshot.workspaces.find(
+            (space) => space.workspace_id === pane.workspace_id,
+          );
+          const choice = installedTerminalAgents(this.options.tools()).find(
+            (choice) =>
+              choice.id === pane.agent || choice.toolKey === pane.agent,
+          );
+          if (
+            !choice ||
+            (pane.cwd ?? workspace?.directory) !== path ||
+            (request.agentId && request.agentId !== choice.id)
+          )
+            throw Error("PREVIEW_AGENT_PANE_CHANGED");
+          return {
+            ...createTerminalTab(projectId, undefined, path),
+            title: agentDeliveryTabTitle(page),
+            agent: choice.id,
+            previewPageId: pageKey,
+            herdrTarget: {
+              session: DEFAULT_HERDR_SESSION,
+              workspace_id: pane.workspace_id,
+              pane_id: pane.pane_id,
+              terminal_id: pane.terminal_id,
+              revision: pane.revision,
+              agent_session: pane.agent_session,
+            },
+          };
+        }
+      }
     }
     // Reuse a live embedded Agent only when it is unambiguously available and unbound.
     // Shells, development services and scripts are deliberately ineligible.
@@ -210,7 +263,7 @@ export class PreviewAgentRuntime {
         session: target?.session ?? DEFAULT_HERDR_SESSION,
         pane: target?.pane_id,
         path: request.workspacePath,
-        title: request.page.path?.split(/[\\/]/).at(-1) ?? request.page.title,
+        title: agentDeliveryTabTitle(request.page),
         prompt: request.prompt,
         launch,
         native,
@@ -223,6 +276,7 @@ export class PreviewAgentRuntime {
     const existing = await this.existing(request, projectId);
     if (existing) {
       await verify();
+      this.remember({ ...existing, previewPageId: pageKey });
       if (
         existing.herdrTarget &&
         !this.options.tabs().some((tab) => tab.id === existing.id)
@@ -277,9 +331,7 @@ export class PreviewAgentRuntime {
       throw Error("PREVIEW_AGENT_LIMIT");
     const tab = {
       ...createTerminalTab(projectId, undefined, path),
-      title: page.path
-        ? page.path.split(/[\\/]/).at(-1)!
-        : page.title.slice(0, 80),
+      title: agentDeliveryTabTitle(page),
       previewPageId: pageKey,
       agent: choice.id,
       previewPending: true,
@@ -306,7 +358,9 @@ export class PreviewAgentRuntime {
         const started = await startHerdrAgent(space.target, {
           kind: choice.id === "claude_teams" ? "claude" : choice.id,
           ...(choice.id === "claude_teams" ? { teams: true } : {}),
-          name: `page-${tab.id.replaceAll("-", "").slice(0, 16)}`,
+          name: page.path
+            ? await previewFileAgentName(projectId, path, page.path)
+            : `page-${tab.id.replaceAll("-", "").slice(0, 16)}`,
           direction: "right",
           pane_label: `${choice.label} · ${tab.title}`
             .replace(/\p{Cc}/gu, " ")

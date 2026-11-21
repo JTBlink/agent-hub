@@ -166,6 +166,7 @@ it.each(["success", "failure", "copy", "new context"])(
           id: "doc",
           kind: "markdown",
           title: "Example",
+          path: "/workspace/site/index.md",
           revision: "one",
           content: "# Example",
         },
@@ -203,6 +204,15 @@ it.each(["success", "failure", "copy", "new context"])(
       await act(async () =>
         host.querySelector<HTMLButtonElement>('button[type="submit"]')!.click(),
       );
+      if (outcome !== "copy") {
+        expect(adapter.resolveCurrent).toHaveBeenCalledWith(
+          undefined,
+          expect.objectContaining({
+            title: "Example",
+            path: "/workspace/site/index.md",
+          }),
+        );
+      }
       if (outcome === "new context") {
         await act(async () => {
           model.capture(model.active!.id, {

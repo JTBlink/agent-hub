@@ -2,7 +2,10 @@ import { Send, Copy, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import type { AgentDeliveryAdapter } from "../../../lib/agentDelivery";
+import {
+  agentDeliveryTabTitle,
+  type AgentDeliveryAdapter,
+} from "../../../lib/agentDelivery";
 import { DeliveryCommandPreview } from "./DeliveryCommandPreview";
 import { DeliveryAgentSelect } from "./DeliveryAgentSelect";
 import { previewApi } from "../api";
@@ -138,7 +141,11 @@ export function AgentDelivery({
         <div className="preview-delivery-content">
           {page?.path && <p>{page.path}</p>}
           {adapter && page?.path && (
-            <p>{t("preview.fileAgentHint", { name: page.title })}</p>
+            <p>
+              {t("preview.fileAgentHint", {
+                name: agentDeliveryTabTitle(page),
+              })}
+            </p>
           )}
           {expanded && adapter?.preview && workspacePath && page && (
             <DeliveryCommandPreview
@@ -185,7 +192,7 @@ export function AgentDelivery({
           title={page?.path ?? workspacePath}
         >
           {adapter && page?.path
-            ? t("preview.fileAgentTab", { name: page.title })
+            ? t("preview.fileAgentTab", { name: agentDeliveryTabTitle(page) })
             : t(adapter ? "preview.currentWorkspace" : "preview.copyNotes")}
         </span>
         {adapter?.listAgents && (

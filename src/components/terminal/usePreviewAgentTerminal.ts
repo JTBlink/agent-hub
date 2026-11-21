@@ -8,6 +8,7 @@ import {
 } from "react";
 import { listenPreviewAgent } from "../../lib/previewAgentDelivery";
 import { PreviewAgentRuntime } from "./previewAgentRuntime";
+import { previewAgentBindingStore } from "./previewAgentBindings";
 import type { TerminalTab } from "../../lib/terminalLayout";
 import type { Project, ToolInfo } from "../../lib/tauri";
 import type { PaneControl } from "./TerminalPane";
@@ -30,6 +31,7 @@ export function usePreviewAgentTerminal(options: {
   useEffect(() => {
     mounted.current = true;
     const runtime = new PreviewAgentRuntime({
+      bindings: previewAgentBindingStore,
       tabs: () => live.current.tabs.current,
       controls: () => live.current.controls.current,
       tools: () => live.current.tools,

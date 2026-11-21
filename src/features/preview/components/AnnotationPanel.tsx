@@ -208,9 +208,7 @@ export function AnnotationPanel({
           model.active
             ? {
                 id: model.active.id,
-                title:
-                  model.document?.path?.split(/[\\/]/).at(-1) ??
-                  model.active.title,
+                title: model.active.title,
                 path: model.document?.path,
                 projectId,
               }

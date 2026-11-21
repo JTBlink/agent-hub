@@ -348,7 +348,7 @@ it("blocks concurrent submissions during target preparation", async () => {
   await pending;
   expect(startHerdrAgent).toHaveBeenCalledOnce();
 });
-it("creates a dedicated file-named tab and reuses it across preview identities", async () => {
+it("names file panes after the filename and reuses them by the complete file path", async () => {
   tabs = [
     {
       ...createTerminalTab("site", undefined, "/workspace/site"),
@@ -370,7 +370,10 @@ it("creates a dedicated file-named tab and reuses it across preview identities",
   );
   expect(tabs[1].previewPageId).toBe("file:/workspace/site/design.html");
   await runtime.deliver(
-    { ...first, page: { ...first.page, id: "preview-two" } },
+    {
+      ...first,
+      page: { ...first.page, id: "preview-two", title: "Changed page title" },
+    },
     "site",
   );
   expect(startHerdrAgent).toHaveBeenCalledOnce();
@@ -382,11 +385,16 @@ it("creates a dedicated file-named tab and reuses it across preview identities",
   await runtime.deliver(
     {
       ...first,
-      page: { ...first.page, path: "/workspace/site/other/design.html" },
+      page: {
+        ...first.page,
+        title: " ",
+        path: "/workspace/site/other/design.html",
+      },
     },
     "site",
   );
   expect(tabs).toHaveLength(3);
+  expect(tabs[2].title).toBe("design.html");
   expect(startHerdrAgent).toHaveBeenCalledTimes(2);
 });
 it("keeps selected Agent kinds in separate tabs and returns to the original context", async () => {

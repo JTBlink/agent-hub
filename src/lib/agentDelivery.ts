@@ -11,6 +11,17 @@ export interface AgentDeliveryPage {
   /** Authorized local source path, independent of the browser preview URL. */
   path?: string;
 }
+export function agentDeliveryTabTitle(page: AgentDeliveryPage): string {
+  return (
+    page.path
+      ?.split(/[\\/]/)
+      .at(-1)
+      ?.replace(/\p{Cc}/gu, " ")
+      .trim() ||
+    page.title.replace(/\p{Cc}/gu, " ").trim() ||
+    "Preview"
+  ).slice(0, 80);
+}
 export interface AgentDeliveryPlan {
   backend: "herdr" | "native";
   agent: string;
