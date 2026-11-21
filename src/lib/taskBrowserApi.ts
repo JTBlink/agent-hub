@@ -240,6 +240,8 @@ export interface RepositoryRunner {
 
 export interface RepositoryRunnerInventory {
   items: RepositoryRunner[];
+  assignable?: RepositoryRunner[] | null;
+  can_create_runner?: boolean;
   identity: string;
   limited: boolean;
 }
@@ -261,3 +263,12 @@ export const manageRepositoryRunner = (
   runnerId: number,
   action: RepositoryRunnerAction,
 ) => invoke<void>("task_manage_runner", { bindingId, runnerId, action });
+
+export const createRepositoryRunner = (
+  bindingId: string,
+  description: string,
+) =>
+  invoke<{ id: number; token: string }>("task_create_project_runner", {
+    bindingId,
+    description,
+  });

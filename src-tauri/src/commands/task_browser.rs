@@ -159,6 +159,25 @@ pub async fn task_manage_runner(
     .map_err(|error| TaskFailure::new("internal", error.to_string()))?
 }
 
+#[tauri::command]
+pub async fn task_create_project_runner(
+    store: State<'_, Arc<SkillStore>>,
+    binding_id: String,
+    description: String,
+) -> Result<task_browser::CreatedProjectRunner, TaskFailure> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (binding, client) = client(&store, &binding_id)?;
+        client.create_project_runner(
+            &binding,
+            &description,
+            &std::sync::atomic::AtomicBool::new(false),
+        )
+    })
+    .await
+    .map_err(|error| TaskFailure::new("internal", error.to_string()))?
+}
+
 #[derive(serde::Deserialize)]
 pub struct DetailQuery {
     binding_id: String,

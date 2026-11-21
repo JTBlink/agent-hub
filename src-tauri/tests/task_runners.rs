@@ -16,6 +16,15 @@ fn reads_repository_runners_and_keeps_platform_specific_states() {
                     json!({"data": {"runner": {"jobs": {"count": 11}, "userPermissions": {"updateRunner": true, "deleteRunner": false}}}}),
                 );
             }
+            if args
+                .iter()
+                .any(|arg| arg.contains("assignableToProjectPath"))
+            {
+                return Ok(json!({"data": {"currentUser": {"runners": {
+                    "nodes": [{"id": "gid://gitlab/Ci::Runner/135", "description": "spare", "status": "ONLINE"}],
+                    "pageInfo": {"hasNextPage": false}
+                }}}}));
+            }
             assert!(args.iter().any(|arg| arg.contains("nodes { id shortSha")));
             return Ok(json!({"data": {"project": {"runners": {
                 "nodes": [
@@ -30,6 +39,9 @@ fn reads_repository_runners_and_keeps_platform_specific_states() {
             }}}}));
         }
         assert_eq!(&args[..3], ["api", "--method", "GET"]);
+        if args[5] == "projects/team%2Frepo" {
+            return Ok(json!({"id": 42, "permissions": {"project_access": {"access_level": 50}}}));
+        }
         if args[5] == "runners/128" {
             return Ok(json!({"id": 128, "status": "stale"}));
         }
@@ -96,6 +108,8 @@ fn reads_repository_runners_and_keeps_platform_specific_states() {
     assert_eq!(runner.locked, Some(true));
     assert_eq!(gitlab.items[2].busy, Some(true));
     assert_eq!(gitlab.items[3].job_status.as_deref(), Some("draining"));
+    assert_eq!(gitlab.assignable.as_ref().unwrap()[0].id, 135);
+    assert!(gitlab.can_create_runner);
     let details = client.runner_details(&binding, 128, &cancel).unwrap();
     assert_eq!(details.job_count, Some(11));
     assert!(details.can_update);
@@ -173,4 +187,40 @@ fn runner_mutations_require_current_project_membership_and_action_permission() {
             .count(),
         1
     );
+}
+
+#[test]
+fn creates_a_runner_in_the_resolved_project_and_returns_its_one_time_token() {
+    let client =
+        TaskClient::new(
+            |_: &Binding, args: &[String], _: &AtomicBool| match args[2].as_str() {
+                "GET" => {
+                    assert_eq!(args[5], "projects/team%2Frepo");
+                    Ok::<_, TaskFailure>(
+                        json!({"id": 42, "permissions": {"group_access": {"access_level": 50}}}),
+                    )
+                }
+                "POST" => {
+                    assert_eq!(args[5], "user/runners");
+                    assert!(args.contains(&"project_id=42".to_owned()));
+                    assert!(args.contains(&"runner_type=project_type".to_owned()));
+                    assert!(args.contains(&"description=Demo Runner".to_owned()));
+                    Ok(json!({"id": 501, "token": "synthetic-example-value"}))
+                }
+                _ => panic!("unexpected provider request"),
+            },
+        );
+    let binding = Binding {
+        id: "00000000-0000-0000-0000-000000000001".into(),
+        project_id: "demo".into(),
+        provider: Provider::Gitlab,
+        host: "gitlab.example.invalid".into(),
+        repository: "team/repo".into(),
+        launcher: None,
+    };
+    let created = client
+        .create_project_runner(&binding, " Demo Runner ", &AtomicBool::new(false))
+        .unwrap();
+    assert_eq!(created.id, 501);
+    assert!(created.token == "synthetic-example-value");
 }

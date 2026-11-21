@@ -2,20 +2,18 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Server } from "lucide-react";
 import type { Project, TaskBinding } from "../../lib/tauri";
-import { taskTime } from "../../lib/taskTime";
 import { HelpTooltip } from "../HelpTooltip";
-import { RepositoryPlatformIcon } from "../RepositoryPlatformIcon";
 import { ThemedSelect } from "../ThemedSelect";
 import { ToggleSwitch } from "../ToggleSwitch";
 import { RunnerDetails } from "./RunnerDetails";
+import { RunnerTable } from "./RunnerTable";
+import { RunnerCategories, type RunnerCategory } from "./RunnerCategories";
 import {
   getRunnerConnectionStates,
   matchesRunnerFilter,
   type RunnerFilter,
-  runnerTimeAgo,
   runnerReference,
   runnerStateLabel,
-  runnerWork,
 } from "./runnerStatus";
 import {
   TaskScopeToolbar,
@@ -59,6 +57,7 @@ export function RunnerWorkspace({
     setSelection(null);
     if (detailsTrigger.current?.isConnected) detailsTrigger.current.focus();
   };
+  const [category, setCategory] = useState<RunnerCategory | null>(null);
   const [status, setStatus] = useState<RunnerFilter>("all");
   const [query, setQuery] = useState("");
   const [os, setOs] = useState("all");
@@ -70,10 +69,12 @@ export function RunnerWorkspace({
   } | null>(null);
   const [auto, setAuto] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(0);
-  const { items, sources, loading, updatedAt } = useRepositoryRunners(
-    bindings,
-    refreshKey + autoRefresh,
-  );
+  const {
+    items: inventory,
+    sources,
+    loading,
+    updatedAt,
+  } = useRepositoryRunners(bindings, refreshKey + autoRefresh);
   useEffect(() => {
     if (!auto || loading || discovering || !bindings.length) return;
     const timer = window.setTimeout(
@@ -87,6 +88,25 @@ export function RunnerWorkspace({
       ? selection.item
       : null;
   if (selection && !selected) setSelection(null);
+  const hasGitLab = bindings.some(({ provider }) => provider === "gitlab");
+  const showAssignable = sources.some(({ inventory }) =>
+    Array.isArray(inventory?.assignable),
+  );
+  const defaultCategory = hasGitLab ? "assigned" : "all";
+  const activeCategory =
+    (hasGitLab && (category !== "assignable" || showAssignable)
+      ? category
+      : null) ?? defaultCategory;
+  const inCategory = (item: VisibleRunner, value: RunnerCategory) => {
+    if (value === "assignable") return item.assignable;
+    if (item.assignable) return false;
+    if (value === "all") return true;
+    return (
+      item.bindings[0].provider === "gitlab" &&
+      item.runner.scope === (value === "assigned" ? "project" : value)
+    );
+  };
+  const items = inventory.filter((item) => inCategory(item, activeCategory));
   const osChoices = [
     ...new Set(items.flatMap(({ runner }) => (runner.os ? [runner.os] : []))),
     ...(os !== "all" && os !== "unknown" ? [os] : []),
@@ -103,30 +123,12 @@ export function RunnerWorkspace({
     "paused",
   ];
   const normalized = query.trim().toLowerCase();
-  const hasSystem = items.some(({ runner }) => runner.os);
-  const hasWork = items.some(
-    ({ runner }) => runner.busy != null || runner.job_status,
-  );
-  const hasPause = items.some(({ runner }) => runner.paused != null);
   const availableTags = new Set(
     items.flatMap(({ runner }) => runner.labels ?? []),
   );
-  const hasTags = availableTags.size > 0;
   const tagChoices = [
     ...new Set([...availableTags, ...(tag === null ? [] : [tag])]),
   ].sort((left, right) => left.localeCompare(right));
-  const hasOwner = items.some(({ runner }) => runner.owner_project);
-  const hasContact = items.some(({ runner }) => runner.contacted_at);
-  const hasCreation = items.some(({ runner }) => runner.created_at);
-  const columns = [
-    "machine",
-    "connection",
-    hasWork ? "work" : hasPause ? "pauseStatus" : null,
-    hasSystem ? "systemScope" : "scope",
-    "projects",
-    hasTags ? "labels" : hasOwner ? "owner" : null,
-    hasContact ? "contacted" : hasCreation ? "createdAt" : null,
-  ].filter(Boolean);
   const visible = items
     .filter((item) => {
       const {
@@ -181,6 +183,26 @@ export function RunnerWorkspace({
           ),
         ]}
       />
+      {hasGitLab && (
+        <RunnerCategories
+          value={activeCategory}
+          showAssignable={showAssignable}
+          count={(value) =>
+            inventory.filter((item) => inCategory(item, value)).length
+          }
+          projects={sources
+            .filter(({ inventory }) => inventory?.can_create_runner)
+            .map(({ binding }) => binding)}
+          onChange={(value) => {
+            setCategory(value);
+            setSelection(null);
+            setStatus("all");
+            setOs("all");
+            setTag(null);
+          }}
+          onCreated={() => setAutoRefresh((value) => value + 1)}
+        />
+      )}
       {notice}
       {bindings.some((binding) => binding.provider === "github") && (
         <div className="mb-2 text-muted">
@@ -344,192 +366,20 @@ export function RunnerWorkspace({
           >
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="app-panel min-h-0 overflow-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-bg-secondary text-muted">
-                    <tr>
-                      {columns.map((field) => (
-                        <th
-                          key={field}
-                          scope="col"
-                          className="whitespace-nowrap px-3 py-2 font-medium"
-                        >
-                          {t(`runners.${field}`)}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visible.map((item) => {
-                      const {
-                        runner,
-                        bindings: [source],
-                      } = item;
-                      const createdAgo = runnerTimeAgo(
-                        runner.created_at,
-                        relativeTime,
-                      );
-                      const configuration = [
-                        runner.version &&
-                          `${t("runners.version")} ${runner.version}`,
-                        runner.locked && t("runners.locked"),
-                        runner.project_count != null &&
-                          `${t("runners.projectCount")} ${runner.project_count}`,
-                        runner.manager_address,
-                        hasTags &&
-                          runner.owner_project &&
-                          `${t("runners.owner")} ${runner.owner_project}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ");
-                      const lastContact = hasContact
-                        ? runner.contacted_at
-                        : runner.created_at;
-                      return (
-                        <tr
-                          key={item.key}
-                          className={cn(
-                            "border-t border-border-subtle hover:bg-surface-hover",
-                            selected?.key === item.key && "bg-surface-active",
-                          )}
-                        >
-                          <td className="min-w-40 px-3 py-2">
-                            <button
-                              type="button"
-                              aria-expanded={selected?.key === item.key}
-                              aria-controls={
-                                selected?.key === item.key
-                                  ? detailsId
-                                  : undefined
-                              }
-                              onClick={(event) => {
-                                detailsTrigger.current = event.currentTarget;
-                                setSelection({ scopeKey, item, bindings });
-                              }}
-                              className="flex max-w-full items-center gap-2 rounded text-left hover:text-accent focus-visible:outline focus-visible:outline-accent"
-                            >
-                              <RepositoryPlatformIcon
-                                providers={[source.provider]}
-                                fallbackLabel={t("tasks.provider")}
-                              />
-                              <span className="min-w-0 break-words">
-                                <span className="block text-sm font-medium">
-                                  {runner.name}
-                                </span>
-                                <small className="block text-xs text-muted">
-                                  {source.host} · {runnerReference(runner)}
-                                </small>
-                                {configuration && (
-                                  <small className="block text-xs text-muted">
-                                    {configuration}
-                                  </small>
-                                )}
-                                {(runner.created_by || createdAgo) && (
-                                  <small
-                                    className="block text-xs text-muted"
-                                    title={
-                                      runner.created_at
-                                        ? taskTime(runner.created_at)
-                                        : undefined
-                                    }
-                                  >
-                                    {runner.created_by
-                                      ? t("runners.createdBy", {
-                                          name: runner.created_by,
-                                        })
-                                      : t("runners.createdAt")}
-                                    {createdAgo && ` · ${createdAgo}`}
-                                  </small>
-                                )}
-                              </span>
-                            </button>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2">
-                            <span
-                              className={cn(
-                                runner.state === "online" && "text-success",
-                                runner.state === "offline" && "text-danger",
-                                runner.state === "stale" && "text-warning",
-                              )}
-                            >
-                              {runnerStateLabel(runner.state, t)}
-                            </span>
-                            {runner.paused && (
-                              <small className="block text-xs text-warning">
-                                {t("runners.paused")}
-                              </small>
-                            )}
-                          </td>
-                          {(hasWork || hasPause) && (
-                            <td className="whitespace-nowrap px-3 py-2">
-                              {hasWork
-                                ? runnerWork(runner, t)
-                                : runner.paused == null
-                                  ? "—"
-                                  : t(
-                                      runner.paused
-                                        ? "runners.yes"
-                                        : "runners.no",
-                                    )}
-                            </td>
-                          )}
-                          <td className="whitespace-nowrap px-3 py-2">
-                            {hasSystem && (runner.os ?? "—")}
-                            <span
-                              className={
-                                hasSystem
-                                  ? "block text-xs text-muted"
-                                  : undefined
-                              }
-                            >
-                              {runner.scope
-                                ? t(`runners.${runner.scope}`)
-                                : "—"}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2">
-                            {names(item).join(", ")}
-                          </td>
-                          {(hasTags || hasOwner) && (
-                            <td className="px-3 py-2">
-                              {hasTags && runner.labels?.length ? (
-                                <div className="flex flex-wrap gap-1">
-                                  {runner.labels.map((label) => (
-                                    <button
-                                      key={label}
-                                      type="button"
-                                      aria-pressed={tag === label}
-                                      className={cn(
-                                        "max-w-full break-words rounded bg-surface-hover px-1.5 py-px text-xs text-secondary hover:text-accent focus-visible:outline focus-visible:outline-accent",
-                                        tag === label && "text-accent",
-                                      )}
-                                      onClick={() =>
-                                        setTag(tag === label ? null : label)
-                                      }
-                                    >
-                                      {label}
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                ((hasTags ? null : runner.owner_project) ?? "—")
-                              )}
-                            </td>
-                          )}
-                          {(hasContact || hasCreation) && (
-                            <td
-                              className="whitespace-nowrap px-3 py-2"
-                              title={
-                                lastContact ? taskTime(lastContact) : undefined
-                              }
-                            >
-                              {runnerTimeAgo(lastContact, relativeTime) || "—"}
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <RunnerTable
+                  items={items}
+                  visible={visible}
+                  selectedKey={selected?.key}
+                  detailsId={detailsId}
+                  tag={tag}
+                  relativeTime={relativeTime}
+                  projectNames={names}
+                  onTag={setTag}
+                  onSelect={(item, trigger) => {
+                    detailsTrigger.current = trigger;
+                    setSelection({ scopeKey, item, bindings });
+                  }}
+                />
                 {!visible.length &&
                   !loading &&
                   !discovering &&
@@ -586,7 +436,7 @@ export function RunnerWorkspace({
                 key={selected.key}
                 id={detailsId}
                 item={selected}
-                projects={names(selected)}
+                projects={selected.assignable ? [] : names(selected)}
                 onClose={closeDetails}
                 onInventoryChanged={() => setAutoRefresh((value) => value + 1)}
               />

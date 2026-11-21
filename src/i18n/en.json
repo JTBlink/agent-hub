@@ -2450,6 +2450,21 @@
     "schemeCount": "{{count}} schemes"
   },
   "runners": {
+    "categories": {
+      "label": "Runner categories",
+      "assigned": "Assigned project runners",
+      "assignable": "Other assignable project runners",
+      "group": "Group runners",
+      "instance": "Instance runners",
+      "all": "All runners"
+    },
+    "create": {
+      "title": "Create project runner",
+      "name": "Runner name",
+      "created": "Runner #{{id}} was created. Copy the token shown once and use it to register GitLab Runner on the execution host.",
+      "copyToken": "Copy token",
+      "copied": "Copied"
+    },
     "actions": {
       "pause": "Pause",
       "resume": "Resume",

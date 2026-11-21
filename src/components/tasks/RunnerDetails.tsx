@@ -35,7 +35,7 @@ export function RunnerDetails({
   const [attempt, setAttempt] = useState(0);
   const { runner, bindings } = item;
   const { host, provider } = bindings[0];
-  const gitlab = provider === "gitlab";
+  const gitlab = provider === "gitlab" && !item.assignable;
   useEffect(() => {
     if (!gitlab) return;
     let disposed = false;

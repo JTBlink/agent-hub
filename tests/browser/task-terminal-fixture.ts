@@ -212,7 +212,7 @@ export function taskTerminalFixture(
       paused: github ? null : true,
       busy: github ? true : false,
       os: github ? "macOS" : null,
-      scope: github ? null : "group",
+      scope: github ? null : "project",
       labels: github ? ["self-hosted", "ARM64"] : null,
       contacted_at: null,
     };
@@ -227,7 +227,21 @@ export function taskTerminalFixture(
               contacted_at: "2026-11-21T08:30:00Z",
             }
           : {
-              items: [runner],
+              items: github
+                ? [runner]
+                : [
+                    runner,
+                    {
+                      ...runner,
+                      id: 129,
+                      name: "shared-instance",
+                      scope: "instance",
+                    },
+                  ],
+              assignable: github
+                ? null
+                : [{ ...runner, id: 130, name: "Available project runner" }],
+              can_create_runner: !github,
               identity: github ? activeGithub : "demo",
               limited: false,
             },

@@ -798,7 +798,7 @@ it("filters real runner inventories by platform and retains task search when ret
         paused: false,
         busy: true,
         os: "Linux",
-        scope: null,
+        scope: binding.provider === "gitlab" ? "project" : null,
         labels: null,
         contacted_at: null,
       };
@@ -825,6 +825,11 @@ it("filters real runner inventories by platform and retains task search when ret
         items: binding.provider === "github" ? [runner] : [runner, extraRunner],
         identity: "demo",
         limited: false,
+        assignable:
+          binding.provider === "gitlab"
+            ? [{ ...extraRunner, id: 130, name: "Assignable machine" }]
+            : null,
+        can_create_runner: binding.provider === "gitlab",
       };
     }
     return undefined;
@@ -863,16 +868,34 @@ it("filters real runner inventories by platform and retains task search when ret
         .click(),
     );
   await chooseView("runners.title");
+  expect(
+    host.querySelector(
+      '[role="radio"][aria-checked="true"][aria-label="runners.categories.assigned (2)"]',
+    ),
+  ).not.toBeNull();
+  expect(host.querySelectorAll("tbody tr")).toHaveLength(2);
+  expect(
+    [...host.querySelectorAll("button")].some(
+      (button) => button.textContent === "runners.create.title",
+    ),
+  ).toBe(true);
+  const chooseCategory = (label: string) =>
+    act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          `[role="radio"][aria-label="${label}"]`,
+        )!
+        .click(),
+    );
+  await chooseCategory("runners.categories.assignable (1)");
+  expect(host.querySelector("tbody")?.textContent).toContain(
+    "Assignable machine",
+  );
+  await chooseCategory("runners.categories.all (3)");
   expect(host.querySelectorAll("tbody tr")).toHaveLength(3);
   expect(
     [...host.querySelectorAll("thead th")].map((cell) => cell.textContent),
-  ).toEqual(
-    expect.arrayContaining([
-      "runners.work",
-      "runners.labels",
-      "runners.createdAt",
-    ]),
-  );
+  ).toEqual(expect.arrayContaining(["runners.work", "runners.labels"]));
   expect(host.querySelector("thead")?.textContent).not.toContain(
     "runners.contacted",
   );
@@ -948,7 +971,7 @@ it("filters real runner inventories by platform and retains task search when ret
   await act(async () => rawStateFilter.click());
   expect(host.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(host.querySelector("tbody")?.textContent).toContain("#129 (demo1234)");
-  expect(host.querySelector("tbody")?.textContent).toContain("18.0.0");
+  expect(host.querySelector("tbody")?.textContent).not.toContain("18.0.0");
   await act(async () =>
     host.querySelector<HTMLButtonElement>("tbody button")!.click(),
   );

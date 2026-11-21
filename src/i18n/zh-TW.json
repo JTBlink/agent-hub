@@ -2407,6 +2407,21 @@
     "schemeCount": "{{count}} 套"
   },
   "runners": {
+    "categories": {
+      "label": "Runner 分類",
+      "assigned": "已指派的專案 Runner",
+      "assignable": "其他可指派的專案 Runner",
+      "group": "群組 Runner",
+      "instance": "執行個體 Runner",
+      "all": "全部 Runner"
+    },
+    "create": {
+      "title": "新增專案 Runner",
+      "name": "Runner 名稱",
+      "created": "已建立 #{{id}}。請複製只顯示一次的權杖，在執行機上完成 GitLab Runner 註冊。",
+      "copyToken": "複製權杖",
+      "copied": "已複製"
+    },
     "actions": {
       "pause": "暫停",
       "resume": "恢復",

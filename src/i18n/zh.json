@@ -2447,6 +2447,21 @@
     "schemeCount": "{{count}} 套"
   },
   "runners": {
+    "categories": {
+      "label": "Runner 分类",
+      "assigned": "已分配的项目 Runner",
+      "assignable": "其他可分配的项目 Runner",
+      "group": "群组 Runner",
+      "instance": "实例 Runner",
+      "all": "全部 Runner"
+    },
+    "create": {
+      "title": "新建项目 Runner",
+      "name": "Runner 名称",
+      "created": "已创建 #{{id}}。请复制一次性显示的令牌，在执行机上完成 GitLab Runner 注册。",
+      "copyToken": "复制令牌",
+      "copied": "已复制"
+    },
     "actions": {
       "pause": "暂停",
       "resume": "恢复",

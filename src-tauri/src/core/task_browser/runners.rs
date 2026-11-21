@@ -45,9 +45,11 @@ pub struct RunnerInventory {
     pub items: Vec<RunnerSummary>,
     pub identity: String,
     pub limited: bool,
+    pub assignable: Option<Vec<RunnerSummary>>,
+    pub can_create_runner: bool,
 }
 
-fn optional_string(item: &Value, field: &str) -> Option<String> {
+pub(super) fn optional_string(item: &Value, field: &str) -> Option<String> {
     item[field]
         .as_str()
         .filter(|value| !value.is_empty())
@@ -69,7 +71,7 @@ struct GitLabRunnerFields {
     locked: Option<bool>,
 }
 
-fn runner_os(value: String) -> String {
+pub(super) fn runner_os(value: String) -> String {
     match value.to_ascii_lowercase().as_str() {
         "linux" => "Linux".into(),
         "darwin" | "macos" | "osx" => "macOS".into(),
@@ -78,7 +80,7 @@ fn runner_os(value: String) -> String {
     }
 }
 
-fn summary(provider: Provider, item: &Value) -> Result<RunnerSummary, TaskFailure> {
+pub(super) fn summary(provider: Provider, item: &Value) -> Result<RunnerSummary, TaskFailure> {
     let id = item["id"]
         .as_u64()
         .filter(|number| *number > 0)
@@ -198,10 +200,20 @@ impl<R: CliReader> TaskClient<R> {
                 }
             }
         }
+        let (assignable, can_create_runner) = if binding.provider == Provider::Gitlab {
+            (
+                self.assignable_runners(binding, cancel).ok(),
+                self.runner_creation_project(binding, cancel).is_ok(),
+            )
+        } else {
+            (None, false)
+        };
         Ok(RunnerInventory {
             items,
             identity: String::new(),
             limited,
+            assignable,
+            can_create_runner,
         })
     }
 
