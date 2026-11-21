@@ -220,3 +220,40 @@ fn shared_agent_transport_navigates_fills_and_captures_the_same_page() {
     browsers.clear();
     drop(server);
 }
+
+#[test]
+fn reads_a_delayed_request_body_on_an_accepted_nonblocking_connection() {
+    let root = tempfile::tempdir().unwrap();
+    let browsers = Arc::new(Browsers::new(root.path().into()));
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let mut client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+    client
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .unwrap();
+    let body = br#"{"kind":"list"}"#;
+    write!(
+        client,
+        "POST / HTTP/1.1\r\nAuthorization: Bearer fixture\r\nContent-Length: {}\r\n\r\n",
+        body.len()
+    )
+    .unwrap();
+    let (stream, _) = listener.accept().unwrap();
+    stream.set_nonblocking(true).unwrap();
+    let server = std::thread::spawn(move || serve(stream, "fixture", &browsers, &Weak::new()));
+    std::thread::sleep(Duration::from_millis(100));
+    let _ = client.write_all(body);
+    let mut bytes = Vec::new();
+    client.read_to_end(&mut bytes).unwrap();
+    let result = server.join().unwrap();
+    let response = String::from_utf8(bytes).unwrap();
+    assert!(
+        response.starts_with("HTTP/1.1 200 OK"),
+        "response: {response}"
+    );
+    let (_, body) = response.split_once("\r\n\r\n").unwrap();
+    assert_eq!(
+        serde_json::from_str::<Value>(body).unwrap(),
+        json!({"ok": true, "value": []})
+    );
+    result.unwrap();
+}

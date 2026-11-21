@@ -72,6 +72,9 @@ impl Drop for Assets {
     }
 }
 fn serve(mut stream: TcpStream, documents: &Documents) -> std::io::Result<()> {
+    // Accepted sockets can inherit the listener's nonblocking flag on macOS.
+    // Responses must wait for backpressure, bounded by the timeouts below.
+    stream.set_nonblocking(false)?;
     stream.set_read_timeout(Some(Duration::from_secs(2)))?;
     stream.set_write_timeout(Some(Duration::from_secs(3)))?;
     let mut request = Vec::new();
@@ -153,3 +156,6 @@ fn respond(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

@@ -137,6 +137,7 @@ fn serve(
     browsers: &Arc<Browsers>,
     preview: &Weak<super::Preview>,
 ) -> std::io::Result<()> {
+    stream.set_nonblocking(false)?;
     stream.set_read_timeout(Some(Duration::from_secs(3)))?;
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
     let mut bytes = Vec::new();
