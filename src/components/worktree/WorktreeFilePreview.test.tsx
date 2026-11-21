@@ -3,10 +3,19 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { WorktreeFilePreview } from "./WorktreeFilePreview";
+import { WorktreePreviewsContext } from "../../hooks/worktreePreviewsContext";
+import {
+  developmentPlan,
+  startDevelopment,
+} from "../../lib/developmentPreview";
 import { readWorktreeFile, writeWorktreeFile } from "../../lib/worktreeApi";
 import { codeEditor, installCodeEditorGeometry } from "../../test/codeEditor";
 import { hasPendingWorktreeDocument } from "../../hooks/useWorktreeDocument";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+vi.mock("../../lib/developmentPreview", () => ({
+  developmentPlan: vi.fn(),
+  startDevelopment: vi.fn(),
+}));
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
   writeText: vi.fn().mockResolvedValue(undefined),
 }));
@@ -300,4 +309,65 @@ it("moves file controls into the shared toolbar and offers previews for supporte
   host.remove();
   toolbar.remove();
   vi.unstubAllGlobals();
+});
+
+it("previews the edited HTML file directly even when its project has a development server", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  installCodeEditorGeometry();
+  vi.mocked(readWorktreeFile).mockResolvedValue("<h1>File preview</h1>");
+  vi.mocked(developmentPlan).mockResolvedValue({
+    directory: "/workspace/demo",
+    url: "http://127.0.0.1:5173/docs/report.html",
+    running: false,
+    launch: { relative_path: "docs/report.html", port: 5173 },
+  });
+  vi.mocked(startDevelopment).mockResolvedValue("http://127.0.0.1:5173");
+  vi.mocked(developmentPlan).mockClear();
+  vi.mocked(startDevelopment).mockClear();
+  const open = vi.fn(async () => {});
+  const host = document.createElement("div");
+  const toolbar = document.createElement("div");
+  document.body.append(host, toolbar);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <WorktreePreviewsContext.Provider
+          value={{
+            tabs: [],
+            selected: null,
+            select: () => {},
+            open,
+            close: () => {},
+            registerClose: () => () => {},
+          }}
+        >
+          <WorktreeFilePreview
+            projectId="direct-preview"
+            worktreePath="/workspace/demo"
+            path="docs/report.html"
+            toolbarContainer={toolbar}
+          />
+        </WorktreePreviewsContext.Provider>,
+      ),
+    );
+    await act(async () =>
+      toolbar
+        .querySelector<HTMLButtonElement>('[aria-label="fileReader.preview"]')!
+        .click(),
+    );
+    expect(developmentPlan).not.toHaveBeenCalled();
+    expect(startDevelopment).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledExactlyOnceWith(
+      "direct-preview",
+      "/workspace/demo",
+      "docs/report.html",
+      undefined,
+    );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    toolbar.remove();
+    vi.unstubAllGlobals();
+  }
 });

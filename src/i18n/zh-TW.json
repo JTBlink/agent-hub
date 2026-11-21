@@ -89,8 +89,8 @@
   },
   "fileTree": {
     "paste": "貼上",
-    "previewInBrowser": "瀏覽器預覽",
-    "previewFileDirectly": "直接預覽檔案",
+    "previewWithDevServer": "啟動本機服務預覽",
+    "previewFileDirectly": "預覽",
     "actions": "檔案操作",
     "open": "開啟檔案",
     "newFile": "新增檔案…",

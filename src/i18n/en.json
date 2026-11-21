@@ -89,8 +89,8 @@
   },
   "fileTree": {
     "paste": "Paste",
-    "previewInBrowser": "Preview in browser",
-    "previewFileDirectly": "Preview file directly",
+    "previewWithDevServer": "Preview with local server",
+    "previewFileDirectly": "Preview",
     "actions": "File actions",
     "open": "Open file",
     "newFile": "New file…",

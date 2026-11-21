@@ -242,15 +242,19 @@ export function WorktreeEntryMenu({
             label: t("fileTree.previewFileDirectly"),
             icon: <FileCode2 size={14} />,
             disabled: symlink,
-            onSelect: () => void report(browserPreview.openFile),
-          },
-          {
-            key: "browser_preview",
-            label: t("fileTree.previewInBrowser"),
-            icon: <Globe size={14} />,
-            disabled: symlink,
             onSelect: () => void report(browserPreview.open),
           },
+          ...(/\.html?$/i.test(path)
+            ? [
+                {
+                  key: "browser_preview",
+                  label: t("fileTree.previewWithDevServer"),
+                  icon: <Globe size={14} />,
+                  disabled: symlink,
+                  onSelect: () => void report(browserPreview.openDevelopment),
+                },
+              ]
+            : []),
         ]
       : []),
     ...(!directory && isRunnableScript(path)

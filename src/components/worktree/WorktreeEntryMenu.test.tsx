@@ -353,7 +353,7 @@ it("opens supported files in browser preview and blocks unsaved changes", async 
   };
   vi.mocked(previewApi.openProject).mockResolvedValue(document);
   await open();
-  await choose("fileTree.previewInBrowser");
+  await choose("fileTree.previewWithDevServer");
   expect(previewApi.openProject).toHaveBeenCalledWith(
     "demo",
     "/workspace/demo",
@@ -363,7 +363,7 @@ it("opens supported files in browser preview and blocks unsaved changes", async 
   vi.mocked(previewApi.openProject).mockClear();
   vi.mocked(hasPendingWorktreeDocument).mockReturnValue(true);
   await open();
-  await choose("fileTree.previewInBrowser");
+  await choose("fileTree.previewWithDevServer");
   expect(previewApi.openProject).not.toHaveBeenCalled();
   expect(toast.error).toHaveBeenCalledWith("fileTree.saveFirst");
 });
@@ -377,28 +377,42 @@ it("omits browser preview for directories and other files and disables links", a
     await open();
     expect(
       menuItems().some((item) =>
-        ["fileTree.previewInBrowser", "fileTree.previewFileDirectly"].includes(
-          item.textContent ?? "",
-        ),
+        [
+          "fileTree.previewWithDevServer",
+          "fileTree.previewFileDirectly",
+        ].includes(item.textContent ?? ""),
       ),
     ).toBe(false);
     await choose("worktree.refreshFiles");
   }
-  await render("link.md", false, true);
+  await render("link.HTML", false, true);
   await open();
   const labels = menuItems().map((item) => item.textContent);
   expect(labels.indexOf("fileTree.previewFileDirectly")).toBeLessThan(
-    labels.indexOf("fileTree.previewInBrowser"),
+    labels.indexOf("fileTree.previewWithDevServer"),
   );
   expect(
-    menuItems().find((item) => item.textContent === "fileTree.previewInBrowser")
-      ?.disabled,
+    menuItems().find(
+      (item) => item.textContent === "fileTree.previewWithDevServer",
+    )?.disabled,
   ).toBe(true);
   expect(
     menuItems().find(
       (item) => item.textContent === "fileTree.previewFileDirectly",
     )?.disabled,
   ).toBe(true);
+  await render("notes.md");
+  await open();
+  expect(
+    menuItems().some(
+      (item) => item.textContent === "fileTree.previewFileDirectly",
+    ),
+  ).toBe(true);
+  expect(
+    menuItems().some(
+      (item) => item.textContent === "fileTree.previewWithDevServer",
+    ),
+  ).toBe(false);
 });
 
 it("runs saved scripts in a new internal terminal and blocks unsaved scripts", async () => {
@@ -463,7 +477,7 @@ it.each([true, false])(
       url: "http://static.invalid/index.html",
     });
     await open();
-    await choose("fileTree.previewInBrowser");
+    await choose("fileTree.previewWithDevServer");
     expect(startDevelopment).toHaveBeenCalledTimes(running ? 0 : 1);
     expect(queuePreviewDocument).toHaveBeenCalledWith(
       expect.objectContaining({ url: "http://127.0.0.1:5173/index.html" }),
@@ -483,7 +497,7 @@ it("reports development startup errors without opening a blank static preview", 
     new Error("Development server failed"),
   );
   await open();
-  await choose("fileTree.previewInBrowser");
+  await choose("fileTree.previewWithDevServer");
   expect(previewApi.openProject).not.toHaveBeenCalled();
   expect(toast.error).toHaveBeenCalledWith("Development server failed");
 });
@@ -529,7 +543,7 @@ it("keeps direct file preview separate from an existing development preview", as
     url: "http://static.invalid/index.html",
   }));
   await open();
-  await choose("fileTree.previewInBrowser");
+  await choose("fileTree.previewWithDevServer");
   await open();
   await choose("fileTree.previewFileDirectly");
   expect(previewApi.openProject).toHaveBeenCalledTimes(2);
@@ -537,7 +551,7 @@ it("keeps direct file preview separate from an existing development preview", as
   await open();
   await choose("fileTree.previewFileDirectly");
   await open();
-  await choose("fileTree.previewInBrowser");
+  await choose("fileTree.previewWithDevServer");
   expect(previewApi.openProject).toHaveBeenCalledTimes(2);
   expect(startDevelopment).not.toHaveBeenCalled();
 });

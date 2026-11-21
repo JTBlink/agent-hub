@@ -89,8 +89,8 @@
   },
   "fileTree": {
     "paste": "粘贴",
-    "previewInBrowser": "浏览器预览",
-    "previewFileDirectly": "直接预览文件",
+    "previewWithDevServer": "启动本地服务预览",
+    "previewFileDirectly": "预览",
     "actions": "文件操作",
     "open": "打开文件",
     "newFile": "新建文件…",
