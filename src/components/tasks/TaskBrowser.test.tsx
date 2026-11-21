@@ -784,6 +784,7 @@ it("filters real runner inventories by platform and retains task search when ret
     { ...scopedBindings[1], id: "restricted", repository: "team/restricted" },
   ];
   vi.mocked(invoke).mockImplementation(async (command, args) => {
+    if (command === "task_project_remotes") return [];
     if (command === "task_bindings")
       return bindings.map((binding) => ({ ...binding }));
     if (command === "task_list")
@@ -911,6 +912,30 @@ it("filters real runner inventories by platform and retains task search when ret
     "runners.categories.assigned (2)",
   );
   expect(host.querySelectorAll("tbody tr")).toHaveLength(2);
+  await chooseView("tasks.platformConnections");
+  expect(
+    host
+      .querySelector('[role="radio"][aria-label="tasks.platformConnections"]')
+      ?.getAttribute("aria-checked"),
+  ).toBe("true");
+  expect(host.querySelector("h1")?.textContent).toBe(
+    "tasks.platformConnections",
+  );
+  expect(
+    host.querySelector('section[aria-label="tasks.connections"] form'),
+  ).not.toBeNull();
+  expect(host.querySelector("tbody")).toBeNull();
+  expect(
+    host.querySelector(
+      '[role="combobox"][aria-label="runners.categories.label"]',
+    ),
+  ).toBeNull();
+  await chooseView("runners.title");
+  expect(
+    host.querySelector('section[aria-label="tasks.connections"]'),
+  ).toBeNull();
+  expect(host.querySelectorAll("tbody tr")).toHaveLength(2);
+
   expect(
     [...host.querySelectorAll("button")].some(
       (button) => button.textContent === "runners.create.title",

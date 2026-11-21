@@ -5,7 +5,7 @@ import type { Project, TaskBinding } from "../../lib/tauri";
 import { TaskProjectSelect } from "./TaskProjectSelect";
 import { SingleChoiceGroup } from "../SingleChoiceGroup";
 
-export type TaskWorkspaceView = "issue" | "review" | "runner";
+export type TaskWorkspaceView = "issue" | "review" | "runner" | "connections";
 
 export function TaskWorkspaceSidebar({
   view,
@@ -15,7 +15,6 @@ export function TaskWorkspaceSidebar({
   projectIds,
   onProjects,
   onView,
-  onConnections,
 }: {
   view: TaskWorkspaceView;
   reviewLabel: string;
@@ -24,13 +23,17 @@ export function TaskWorkspaceSidebar({
   projectIds: string[];
   onProjects: (ids: string[]) => void;
   onView: (view: TaskWorkspaceView) => void;
-  onConnections: () => void;
 }) {
   const { t } = useTranslation();
   const entries = [
     { key: "issue", label: t("tasks.issues"), icon: CircleDot },
     { key: "review", label: reviewLabel, icon: GitPullRequest },
     { key: "runner", label: t("runners.title"), icon: Server },
+    {
+      key: "connections",
+      label: t("tasks.platformConnections"),
+      icon: Settings2,
+    },
   ] as const;
   return (
     <ResizableSidebar
@@ -58,14 +61,6 @@ export function TaskWorkspaceSidebar({
             icon: <Icon size={16} aria-hidden="true" />,
           }))}
         />
-        <button
-          type="button"
-          className="app-button-ghost w-full justify-start gap-2 px-2 text-xs"
-          onClick={onConnections}
-        >
-          <Settings2 size={16} aria-hidden="true" />
-          {t("tasks.platformConnections")}
-        </button>
       </div>
     </ResizableSidebar>
   );

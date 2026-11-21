@@ -13,6 +13,7 @@ import { Inbox } from "lucide-react";
 import * as api from "../../lib/tauri";
 import type { Project, RepositoryTask, TaskFilters } from "../../lib/tauri";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { WorkspaceToolbar } from "../WorkspaceToolbar";
 import { TaskToolbar } from "./TaskToolbar";
 import { TaskProjectIcon } from "./TaskProjectSelect";
 import { TaskSelectedProjects } from "./TaskSelectedProjects";
@@ -309,14 +310,21 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     <PlatformAccountsProvider refreshKey={accountRefresh}>
       <div className="flex min-h-0 min-w-0 flex-1 gap-3">
         <TaskWorkspaceSidebar
-          view={showRunners ? "runner" : appliedFilters.kind}
+          view={
+            connections
+              ? "connections"
+              : showRunners
+                ? "runner"
+                : appliedFilters.kind
+          }
           reviewLabel={reviewLabel}
           projects={projects}
           bindings={bindings}
           projectIds={activeProjectIds}
           onProjects={changeProjects}
-          onConnections={() => setConnections(true)}
           onView={(view) => {
+            setConnections(view === "connections");
+            if (view === "connections") return;
             setShowRunners(view === "runner");
             setSelection(null);
             if (view !== "runner" && view !== appliedFilters.kind)
@@ -324,70 +332,238 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           }}
         />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {showRunners ? null : (
-            <TaskToolbar
-              scopeInSidebar
-              leading={projectTitle(
-                appliedFilters.kind === "review"
-                  ? reviewLabel
-                  : t("tasks.issues"),
-                items,
-              )}
-              {...sharedToolbar}
-              provider={provider}
-              projectIds={activeProjectIds}
-              projects={projects}
-              bindings={bindings}
-              identities={[
-                ...new Set(
-                  sources
-                    .filter((source) => source.identity)
-                    .map(
-                      (source) => `${source.binding.host} · ${source.identity}`,
+          {connections ? (
+            <>
+              <WorkspaceToolbar>
+                <h1 className="text-lg font-semibold">
+                  {t("tasks.platformConnections")}
+                </h1>
+              </WorkspaceToolbar>
+              {settingsNotice}
+              <div className="min-h-0 flex-1 overflow-auto">
+                {connectionsPanel}
+              </div>
+            </>
+          ) : (
+            <>
+              {showRunners ? null : (
+                <TaskToolbar
+                  scopeInSidebar
+                  leading={projectTitle(
+                    appliedFilters.kind === "review"
+                      ? reviewLabel
+                      : t("tasks.issues"),
+                    items,
+                  )}
+                  {...sharedToolbar}
+                  provider={provider}
+                  projectIds={activeProjectIds}
+                  projects={projects}
+                  bindings={bindings}
+                  identities={[
+                    ...new Set(
+                      sources
+                        .filter((source) => source.identity)
+                        .map(
+                          (source) =>
+                            `${source.binding.host} · ${source.identity}`,
+                        ),
                     ),
-                ),
-              ]}
-              filters={appliedFilters}
-              items={items}
-              search={search}
-              loading={loading}
-              notice={
-                !discovering &&
-                !settingsError &&
-                selectedBindings.length === 0 &&
-                mismatchedProjects.length > 0 && (
-                  <p role="alert" className="mb-2 text-xs text-warning">
-                    {t(
-                      activeProjectIds.length > 1
-                        ? "tasks.providerMismatchSelection"
-                        : "tasks.providerMismatch",
-                      {
-                        projects: mismatchedProjects
-                          .map((project) => project.name)
-                          .join(", "),
-                        current: taskPlatforms.find(
-                          (platform) => platform.id !== provider,
-                        )?.label,
-                        selected: taskPlatforms.find(
-                          (platform) => platform.id === provider,
-                        )?.label,
-                      },
+                  ]}
+                  filters={appliedFilters}
+                  items={items}
+                  search={search}
+                  loading={loading}
+                  notice={
+                    !discovering &&
+                    !settingsError &&
+                    selectedBindings.length === 0 &&
+                    mismatchedProjects.length > 0 && (
+                      <p role="alert" className="mb-2 text-xs text-warning">
+                        {t(
+                          activeProjectIds.length > 1
+                            ? "tasks.providerMismatchSelection"
+                            : "tasks.providerMismatch",
+                          {
+                            projects: mismatchedProjects
+                              .map((project) => project.name)
+                              .join(", "),
+                            current: taskPlatforms.find(
+                              (platform) => platform.id !== provider,
+                            )?.label,
+                            selected: taskPlatforms.find(
+                              (platform) => platform.id === provider,
+                            )?.label,
+                          },
+                        )}
+                      </p>
+                    )
+                  }
+                  onProvider={(value) => {
+                    setProvider(value);
+                    setSelection(null);
+                  }}
+                  onProjects={changeProjects}
+                  onFilters={changeFilters}
+                  onSearch={setSearch}
+                  onRefresh={refresh}
+                  onOpenRepository={openRepository}
+                />
+              )}
+              {!showRunners && settingsNotice}
+
+              {showRunners ? (
+                <RunnerWorkspace
+                  bindings={runnerBindings}
+                  projects={projects}
+                  title={projectTitle(t("runners.title"))}
+                  discovering={discovering}
+                  notice={settingsNotice}
+                  scopeKey={JSON.stringify([
+                    workspaceKey,
+                    activeProjectIds,
+                    runnerProvider,
+                    runnerAccountRevision,
+                  ])}
+                  refreshKey={accountRefresh}
+                  toolbar={{
+                    ...sharedToolbar,
+                    provider: runnerProvider,
+                    onProvider: setRunnerProvider,
+                    onRefresh: refresh,
+                  }}
+                />
+              ) : (
+                <>
+                  {sources
+                    .filter((source) => source.error)
+                    .map((source) => (
+                      <div
+                        role="alert"
+                        key={source.binding.id}
+                        className="my-2 flex flex-wrap items-center gap-2 text-xs text-danger"
+                      >
+                        <span>
+                          {source.binding.repository} ·{" "}
+                          {t(`tasks.errors.${source.error?.kind}`, {
+                            defaultValue: t("common.error"),
+                          })}
+                          : {source.error?.message}
+                        </span>
+                        <button
+                          type="button"
+                          className="app-button-ghost"
+                          disabled={source.loading}
+                          onClick={() =>
+                            void load(source.binding, source.nextPage)
+                          }
+                        >
+                          {t("common.retry")}
+                        </button>
+                      </div>
+                    ))}
+                  {sources.some((source) => source.limited) && (
+                    <p className="text-xs text-muted">{t("tasks.limited")}</p>
+                  )}
+                  <div className="flex min-h-0 flex-1 gap-3">
+                    <div
+                      hidden={selection?.full}
+                      className={cn(
+                        "min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-border-subtle [color-scheme:var(--color-scheme)]",
+                        selection?.full && "hidden",
+                      )}
+                    >
+                      <TaskListTable
+                        items={items}
+                        projects={projects}
+                        selectedKey={selection?.task.key}
+                        onOpen={open}
+                        onOpenRepository={openRepository}
+                        onUpdated={taskUpdated}
+                        onStart={startTask}
+                        empty={
+                          loading ? (
+                            <p role="status">{t("common.loading")}</p>
+                          ) : settingsError ||
+                            sources.some(
+                              (source) => source.error,
+                            ) ? null : selectedBindings.length ? (
+                            <div className="flex flex-col items-center gap-3">
+                              <Inbox
+                                size={32}
+                                strokeWidth={1.5}
+                                aria-hidden="true"
+                                className="text-muted opacity-60"
+                              />
+                              <p>{t("tasks.empty")}</p>
+                            </div>
+                          ) : mismatchedProjects.length ? null : (
+                            <div className="mx-auto max-w-md space-y-3">
+                              <p>{t("tasks.notConnected")}</p>
+                              <button
+                                type="button"
+                                className="app-button-secondary"
+                                onClick={() => setConnections(true)}
+                              >
+                                {t("tasks.connections")}
+                              </button>
+                            </div>
+                          )
+                        }
+                      />
+                      {sources.some((source) => source.hasMore) && (
+                        <button
+                          type="button"
+                          disabled={loading}
+                          className="app-button-secondary m-2"
+                          onClick={() =>
+                            sources
+                              .filter((source) => source.hasMore)
+                              .forEach(
+                                (source) =>
+                                  void load(source.binding, source.nextPage),
+                              )
+                          }
+                        >
+                          {t("tasks.loadMore")}
+                        </button>
+                      )}
+                    </div>
+                    {selection && (
+                      <TaskDetails
+                        key={`${selection.task.binding_id}/${selection.task.key}`}
+                        task={selection.task}
+                        full={selection.full}
+                        onClose={close}
+                        onExpand={() =>
+                          setSelection({ ...selection, full: true })
+                        }
+                        onUpdated={taskUpdated}
+                        onStart={startTask}
+                      />
                     )}
-                  </p>
-                )
-              }
-              onProvider={(value) => {
-                setProvider(value);
-                setSelection(null);
-              }}
-              onProjects={changeProjects}
-              onFilters={changeFilters}
-              onSearch={setSearch}
-              onRefresh={refresh}
-              onOpenRepository={openRepository}
-            />
+                  </div>
+                  {startingTask && (
+                    <Suspense
+                      fallback={
+                        <p role="status" className="text-xs text-muted">
+                          {t("common.loading")}
+                        </p>
+                      }
+                    >
+                      <TaskStartDialog
+                        key={`${startingTask.task.key}/${startingTask.action ?? "start"}`}
+                        task={startingTask.task}
+                        action={startingTask.action}
+                        projects={projects}
+                        onClose={() => setStartingTask(null)}
+                      />
+                    </Suspense>
+                  )}
+                </>
+              )}
+            </>
           )}
-          {!showRunners && settingsNotice}
           {accountsOpen && (
             <Suspense fallback={null}>
               <PlatformAccountsDialog
@@ -403,159 +579,6 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
                 onClose={() => setAccountsOpen(false)}
               />
             </Suspense>
-          )}
-          {!showRunners && connectionsPanel}
-
-          {showRunners ? (
-            <RunnerWorkspace
-              bindings={runnerBindings}
-              projects={projects}
-              title={projectTitle(t("runners.title"))}
-              discovering={discovering}
-              notice={
-                <>
-                  {settingsNotice}
-                  {connectionsPanel}
-                </>
-              }
-              scopeKey={JSON.stringify([
-                workspaceKey,
-                activeProjectIds,
-                runnerProvider,
-                runnerAccountRevision,
-              ])}
-              refreshKey={accountRefresh}
-              toolbar={{
-                ...sharedToolbar,
-                provider: runnerProvider,
-                onProvider: setRunnerProvider,
-                onRefresh: refresh,
-              }}
-            />
-          ) : (
-            <>
-              {sources
-                .filter((source) => source.error)
-                .map((source) => (
-                  <div
-                    role="alert"
-                    key={source.binding.id}
-                    className="my-2 flex flex-wrap items-center gap-2 text-xs text-danger"
-                  >
-                    <span>
-                      {source.binding.repository} ·{" "}
-                      {t(`tasks.errors.${source.error?.kind}`, {
-                        defaultValue: t("common.error"),
-                      })}
-                      : {source.error?.message}
-                    </span>
-                    <button
-                      type="button"
-                      className="app-button-ghost"
-                      disabled={source.loading}
-                      onClick={() => void load(source.binding, source.nextPage)}
-                    >
-                      {t("common.retry")}
-                    </button>
-                  </div>
-                ))}
-              {sources.some((source) => source.limited) && (
-                <p className="text-xs text-muted">{t("tasks.limited")}</p>
-              )}
-              <div className="flex min-h-0 flex-1 gap-3">
-                <div
-                  hidden={selection?.full}
-                  className={cn(
-                    "min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-border-subtle [color-scheme:var(--color-scheme)]",
-                    selection?.full && "hidden",
-                  )}
-                >
-                  <TaskListTable
-                    items={items}
-                    projects={projects}
-                    selectedKey={selection?.task.key}
-                    onOpen={open}
-                    onOpenRepository={openRepository}
-                    onUpdated={taskUpdated}
-                    onStart={startTask}
-                    empty={
-                      loading ? (
-                        <p role="status">{t("common.loading")}</p>
-                      ) : settingsError ||
-                        sources.some(
-                          (source) => source.error,
-                        ) ? null : selectedBindings.length ? (
-                        <div className="flex flex-col items-center gap-3">
-                          <Inbox
-                            size={32}
-                            strokeWidth={1.5}
-                            aria-hidden="true"
-                            className="text-muted opacity-60"
-                          />
-                          <p>{t("tasks.empty")}</p>
-                        </div>
-                      ) : mismatchedProjects.length ? null : (
-                        <div className="mx-auto max-w-md space-y-3">
-                          <p>{t("tasks.notConnected")}</p>
-                          <button
-                            type="button"
-                            className="app-button-secondary"
-                            onClick={() => setConnections(true)}
-                          >
-                            {t("tasks.connections")}
-                          </button>
-                        </div>
-                      )
-                    }
-                  />
-                  {sources.some((source) => source.hasMore) && (
-                    <button
-                      type="button"
-                      disabled={loading}
-                      className="app-button-secondary m-2"
-                      onClick={() =>
-                        sources
-                          .filter((source) => source.hasMore)
-                          .forEach(
-                            (source) =>
-                              void load(source.binding, source.nextPage),
-                          )
-                      }
-                    >
-                      {t("tasks.loadMore")}
-                    </button>
-                  )}
-                </div>
-                {selection && (
-                  <TaskDetails
-                    key={`${selection.task.binding_id}/${selection.task.key}`}
-                    task={selection.task}
-                    full={selection.full}
-                    onClose={close}
-                    onExpand={() => setSelection({ ...selection, full: true })}
-                    onUpdated={taskUpdated}
-                    onStart={startTask}
-                  />
-                )}
-              </div>
-              {startingTask && (
-                <Suspense
-                  fallback={
-                    <p role="status" className="text-xs text-muted">
-                      {t("common.loading")}
-                    </p>
-                  }
-                >
-                  <TaskStartDialog
-                    key={`${startingTask.task.key}/${startingTask.action ?? "start"}`}
-                    task={startingTask.task}
-                    action={startingTask.action}
-                    projects={projects}
-                    onClose={() => setStartingTask(null)}
-                  />
-                </Suspense>
-              )}
-            </>
           )}
         </div>
       </div>

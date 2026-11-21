@@ -39,7 +39,7 @@ export function RunnerCategories({
     <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
       {showCategories && (
         <ThemedSelect
-          className="h-7 w-56 max-w-full gap-2 py-0 text-xs"
+          className="h-7 w-56 gap-2 py-0 text-xs"
           aria-label={t("runners.categories.label")}
           value={value}
           onChange={(event) => {

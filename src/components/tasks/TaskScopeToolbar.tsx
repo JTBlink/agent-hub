@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 import type { TaskBinding } from "../../lib/tauri";
 import type { TaskViewPreferences } from "../../lib/taskViewPreferences";
+import { WorkspaceToolbar } from "../WorkspaceToolbar";
 import { ThemedSelect } from "../ThemedSelect";
 import { RepositoryPlatformIcon } from "../RepositoryPlatformIcon";
 import { PlatformAccountButton } from "../accounts/PlatformAccountButton";
@@ -54,7 +55,55 @@ export function TaskScopeToolbar({
       />
     );
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2 pb-2">
+    <WorkspaceToolbar
+      context={
+        context ? (
+          <span
+            title={context}
+            className="min-w-0 flex-1 basis-24 truncate text-xs text-faint"
+          >
+            {context}
+          </span>
+        ) : undefined
+      }
+      actions={
+        <>
+          <button
+            type="button"
+            className="app-button-ghost h-7 w-7 p-0"
+            title={t("settings.refresh")}
+            aria-label={t("settings.refresh")}
+            disabled={loading}
+            onClick={onRefresh}
+          >
+            <RefreshCw
+              size={15}
+              className={cn(
+                loading && "animate-spin motion-reduce:animate-none",
+              )}
+            />
+          </button>
+          <PlatformAccountButton
+            provider={provider}
+            refreshKey={accountRefresh}
+            onClick={onAccounts}
+          />
+          <button
+            type="button"
+            className={cn(
+              "app-button-ghost h-7 w-7 p-0",
+              connections && "bg-surface-active text-primary",
+            )}
+            title={t("tasks.connections")}
+            aria-label={t("tasks.connections")}
+            aria-expanded={connections}
+            onClick={onConnections}
+          >
+            <Settings2 size={15} aria-hidden="true" />
+          </button>
+        </>
+      }
+    >
       {leading}
       <ThemedSelect
         aria-label={t("tasks.provider")}
@@ -92,47 +141,6 @@ export function TaskScopeToolbar({
           <ExternalLink size={15} />
         </button>
       )}
-      {context && (
-        <span
-          title={context}
-          className="min-w-0 flex-1 truncate text-xs text-faint"
-        >
-          {context}
-        </span>
-      )}
-      <div className="ml-auto flex shrink-0 items-center gap-1">
-        <button
-          type="button"
-          className="app-button-ghost h-7 w-7 p-0"
-          title={t("settings.refresh")}
-          aria-label={t("settings.refresh")}
-          disabled={loading}
-          onClick={onRefresh}
-        >
-          <RefreshCw
-            size={15}
-            className={cn(loading && "animate-spin motion-reduce:animate-none")}
-          />
-        </button>
-        <PlatformAccountButton
-          provider={provider}
-          refreshKey={accountRefresh}
-          onClick={onAccounts}
-        />
-        <button
-          type="button"
-          className={cn(
-            "app-button-ghost h-7 w-7 p-0",
-            connections && "bg-surface-active text-primary",
-          )}
-          title={t("tasks.connections")}
-          aria-label={t("tasks.connections")}
-          aria-expanded={connections}
-          onClick={onConnections}
-        >
-          <Settings2 size={15} aria-hidden="true" />
-        </button>
-      </div>
-    </div>
+    </WorkspaceToolbar>
   );
 }
