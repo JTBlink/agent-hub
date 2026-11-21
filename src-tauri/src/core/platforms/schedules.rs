@@ -23,6 +23,7 @@ pub struct RepositorySchedule {
     pub target: Option<String>,
     pub active: Option<bool>,
     pub last_status: Option<String>,
+    pub last_run_id: Option<u64>,
     pub last_run_url: Option<String>,
     pub next_run_at: Option<String>,
     pub owner: Option<String>,
@@ -33,6 +34,37 @@ pub struct RepositorySchedule {
 pub struct RepositorySchedules {
     pub items: Vec<RepositorySchedule>,
     pub limited: bool,
+}
+
+#[derive(Debug, Default, Serialize)]
+pub struct ScheduleProgress {
+    pub total: usize,
+    pub finished: usize,
+    pub running: usize,
+    pub waiting: usize,
+    pub status: Option<String>,
+    pub limited: bool,
+}
+
+#[cfg(any(feature = "github", feature = "gitlab"))]
+pub(super) enum JobState {
+    Finished,
+    Running,
+    Waiting,
+    Unknown,
+}
+
+#[cfg(any(feature = "github", feature = "gitlab"))]
+impl ScheduleProgress {
+    pub(super) fn record(&mut self, state: JobState) {
+        self.total += 1;
+        match state {
+            JobState::Finished => self.finished += 1,
+            JobState::Running => self.running += 1,
+            JobState::Waiting => self.waiting += 1,
+            JobState::Unknown => (),
+        }
+    }
 }
 
 #[cfg(any(feature = "github", feature = "gitlab"))]
@@ -57,6 +89,31 @@ impl<R: CliReader> TaskClient<R> {
             Provider::Gitlab => super::gitlab::schedules::list(self, binding, cancel),
             #[cfg(feature = "github")]
             Provider::Github => super::github::schedules::list(self, binding, cancel),
+            #[allow(unreachable_patterns)]
+            _ => Err(TaskFailure::new(
+                "feature_unavailable",
+                "The hosting platform is unavailable",
+            )),
+        }
+    }
+
+    /// Read job activity for a run scoped to the selected repository.
+    pub fn schedule_progress(
+        &self,
+        binding: &Binding,
+        run_id: u64,
+        cancel: &AtomicBool,
+    ) -> Result<ScheduleProgress, TaskFailure> {
+        binding.validate()?;
+        if run_id == 0 {
+            return Err(TaskFailure::new("invalid_input", "Invalid pipeline run ID"));
+        }
+        let _ = cancel;
+        match binding.provider {
+            #[cfg(feature = "gitlab")]
+            Provider::Gitlab => super::gitlab::schedules::progress(self, binding, run_id, cancel),
+            #[cfg(feature = "github")]
+            Provider::Github => super::github::schedules::progress(self, binding, run_id, cancel),
             #[allow(unreachable_patterns)]
             _ => Err(TaskFailure::new(
                 "feature_unavailable",

@@ -1,5 +1,7 @@
 import { LockKeyhole } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { PlatformOpenButton } from "../PlatformOpenButton";
+import { runnerPlatformUrl } from "../../lib/platformLinks";
 import { RepositoryPlatformIcon } from "../RepositoryPlatformIcon";
 import { taskTime } from "../../lib/taskTime";
 import { cn } from "../../utils";
@@ -44,7 +46,7 @@ export function RunnerTable({
   onSelect: (item: VisibleRunner, trigger: HTMLButtonElement) => void;
 }) {
   const { t } = useTranslation();
-  const hasActions = items.some(canManage);
+  const hasActions = items.length > 0;
   return (
     <table className="w-full min-w-[680px] table-fixed text-left text-xs">
       <thead className="sticky top-0 z-10 border-b border-border-subtle bg-bg-secondary text-muted">
@@ -61,7 +63,7 @@ export function RunnerTable({
           {hasActions && (
             <th
               scope="col"
-              className="sticky right-0 w-[108px] bg-bg-secondary px-3 py-2 text-right font-medium"
+              className="sticky right-0 w-[134px] bg-bg-secondary px-3 py-2 text-right font-medium"
             >
               {t("runners.actions.label")}
             </th>
@@ -232,17 +234,24 @@ export function RunnerTable({
                     selected && "bg-surface-active",
                   )}
                 >
-                  {canManage(item) && (
-                    <RunnerActions
-                      compact
-                      bindingId={source.id}
+                  <div className="flex items-center justify-end gap-0.5">
+                    <PlatformOpenButton
+                      url={runnerPlatformUrl(source, runner.web_url)}
                       host={source.host}
-                      runner={runner}
-                      onChanged={(action) =>
-                        onManaged(item, action === "delete")
-                      }
+                      label={t("tasks.openRemote")}
                     />
-                  )}
+                    {canManage(item) && (
+                      <RunnerActions
+                        compact
+                        bindingId={source.id}
+                        host={source.host}
+                        runner={runner}
+                        onChanged={(action) =>
+                          onManaged(item, action === "delete")
+                        }
+                      />
+                    )}
+                  </div>
                 </td>
               )}
             </tr>

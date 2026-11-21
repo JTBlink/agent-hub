@@ -1,6 +1,7 @@
 use crate::core::{
     platforms::schedules::{
-        field, RepositorySchedule, RepositorySchedules, ScheduleRule, MAX_PAGES,
+        field, JobState, RepositorySchedule, RepositorySchedules, ScheduleProgress, ScheduleRule,
+        MAX_PAGES,
     },
     task_browser::{Binding, CliReader, TaskClient, TaskFailure},
 };
@@ -117,6 +118,7 @@ pub(crate) fn list<R: CliReader>(
                 target: branch.clone(),
                 active: workflow["state"].as_str().map(|state| state == "active"),
                 last_status: field(&run, "conclusion").or_else(|| field(&run, "status")),
+                last_run_id: run["id"].as_u64(),
                 last_run_url: run["id"].as_u64().map(|id| format!("{base}/runs/{id}")),
                 next_run_at: None,
                 owner: None,
@@ -151,4 +153,49 @@ fn cron_rules(text: &str) -> Result<Vec<ScheduleRule>, serde_yaml::Error> {
         }
     }
     Ok(rules)
+}
+
+pub(crate) fn progress<R: CliReader>(
+    cli: &TaskClient<R>,
+    binding: &Binding,
+    run_id: u64,
+    cancel: &AtomicBool,
+) -> Result<ScheduleProgress, TaskFailure> {
+    let root = format!("repos/{}/actions/runs/{run_id}", binding.repository);
+    let run = cli.api(binding, root.clone(), cancel)?;
+    let mut result = ScheduleProgress {
+        status: field(&run, "conclusion").or_else(|| field(&run, "status")),
+        ..ScheduleProgress::default()
+    };
+    let mut seen = std::collections::HashSet::new();
+    for page in 1..=MAX_PAGES {
+        let response = cli.api(
+            binding,
+            format!("{root}/jobs?filter=latest&per_page=100&page={page}"),
+            cancel,
+        )?;
+        let jobs = response["jobs"].as_array().ok_or_else(|| {
+            TaskFailure::new("invalid_response", "GitHub workflow jobs are unavailable")
+        })?;
+        for job in jobs {
+            if job["id"].as_u64().is_some_and(|id| !seen.insert(id)) {
+                continue;
+            }
+            result.record(match job["status"].as_str() {
+                Some("completed") => JobState::Finished,
+                Some("in_progress") => JobState::Running,
+                Some("queued" | "pending" | "requested" | "waiting") => JobState::Waiting,
+                _ => JobState::Unknown,
+            });
+        }
+        if jobs.len() < 100
+            || response["total_count"]
+                .as_u64()
+                .is_some_and(|total| result.total as u64 >= total)
+        {
+            return Ok(result);
+        }
+    }
+    result.limited = true;
+    Ok(result)
 }

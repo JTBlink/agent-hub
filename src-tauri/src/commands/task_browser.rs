@@ -120,6 +120,28 @@ pub async fn task_schedules(
     result.map_err(|error| TaskFailure::new("internal", error.to_string()))?
 }
 
+#[tauri::command]
+pub async fn task_schedule_progress(
+    window: Webview,
+    store: State<'_, Arc<SkillStore>>,
+    registry: State<'_, Arc<InstallCancelRegistry>>,
+    binding_id: String,
+    run_id: u64,
+    request_id: String,
+) -> Result<crate::core::platforms::schedules::ScheduleProgress, TaskFailure> {
+    let key = request_key(&window, &request_id)?;
+    let registry = registry.inner().clone();
+    let cancel = registry.register(&key);
+    let store = store.inner().clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let (binding, client) = client(&store, &binding_id)?;
+        client.schedule_progress(&binding, run_id, &cancel)
+    })
+    .await;
+    registry.remove(&key);
+    result.map_err(|error| TaskFailure::new("internal", error.to_string()))?
+}
+
 #[derive(serde::Serialize)]
 #[serde(untagged)]
 pub enum RunnerResponse {

@@ -1,6 +1,7 @@
 use crate::core::{
     platforms::schedules::{
-        field, RepositorySchedule, RepositorySchedules, ScheduleRule, MAX_PAGES,
+        field, JobState, RepositorySchedule, RepositorySchedules, ScheduleProgress, ScheduleRule,
+        MAX_PAGES,
     },
     task_browser::{Binding, CliReader, TaskClient, TaskFailure},
 };
@@ -79,6 +80,7 @@ fn list_rest<R: CliReader>(
                 target,
                 active: item["active"].as_bool(),
                 last_status: field(&run, "status"),
+                last_run_id: run["id"].as_u64(),
                 last_run_url: run["id"]
                     .as_u64()
                     .map(|id| format!("{root}/-/pipelines/{id}")),
@@ -167,10 +169,63 @@ fn schedule(binding: &Binding, item: &Value) -> Result<RepositorySchedule, TaskF
         target: field(item, "refForDisplay"),
         active: item["active"].as_bool(),
         last_status: field(last_run, "status").map(|status| status.to_ascii_lowercase()),
+        last_run_id: numeric_id(&last_run["id"], "gid://gitlab/Ci::Pipeline/"),
         last_run_url: numeric_id(&last_run["id"], "gid://gitlab/Ci::Pipeline/")
             .map(|number| format!("{root}/-/pipelines/{number}")),
         next_run_at: field(item, "nextRunAt"),
         owner: field(&item["owner"], "name"),
         url: format!("{root}/-/pipeline_schedules"),
     })
+}
+
+pub(crate) fn progress<R: CliReader>(
+    cli: &TaskClient<R>,
+    binding: &Binding,
+    run_id: u64,
+    cancel: &AtomicBool,
+) -> Result<ScheduleProgress, TaskFailure> {
+    let root = format!(
+        "projects/{}/pipelines/{run_id}",
+        urlencoding::encode(&binding.repository)
+    );
+    let run = cli.api(binding, root.clone(), cancel)?;
+    let mut result = ScheduleProgress {
+        status: field(&run, "status"),
+        ..ScheduleProgress::default()
+    };
+    let mut seen = std::collections::HashSet::new();
+    for page in 1..=MAX_PAGES {
+        let response = cli.api(
+            binding,
+            format!("{root}/jobs?include_retried=false&per_page=100&page={page}"),
+            cancel,
+        )?;
+        let jobs = response.as_array().ok_or_else(|| {
+            TaskFailure::new("invalid_response", "GitLab pipeline jobs are unavailable")
+        })?;
+        for job in jobs {
+            if job["id"].as_u64().is_some_and(|id| !seen.insert(id)) {
+                continue;
+            }
+            result.record(match job["status"].as_str() {
+                Some("success" | "failed" | "canceled" | "skipped") => JobState::Finished,
+                Some("running" | "canceling") => JobState::Running,
+                Some(
+                    "created"
+                    | "pending"
+                    | "preparing"
+                    | "scheduled"
+                    | "manual"
+                    | "waiting_for_callback"
+                    | "waiting_for_resource",
+                ) => JobState::Waiting,
+                _ => JobState::Unknown,
+            });
+        }
+        if jobs.len() < 100 {
+            return Ok(result);
+        }
+    }
+    result.limited = true;
+    Ok(result)
 }

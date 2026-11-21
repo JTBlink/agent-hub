@@ -11,6 +11,7 @@ const RUNNER_PERMISSIONS: &str = "userPermissions { updateRunner deleteRunner }"
 pub struct RunnerSummary {
     pub id: u64,
     pub short_id: Option<String>,
+    pub web_url: Option<String>,
     pub name: String,
     pub state: String,
     pub paused: Option<bool>,
@@ -110,6 +111,7 @@ pub(super) fn optional_string(item: &Value, field: &str) -> Option<String> {
 #[derive(Default)]
 struct GitLabRunnerFields {
     short_id: Option<String>,
+    web_url: Option<String>,
     os: Option<String>,
     labels: Option<Vec<String>>,
     contacted_at: Option<String>,
@@ -168,6 +170,7 @@ pub(super) fn summary(provider: Provider, item: &Value) -> Result<RunnerSummary,
     Ok(RunnerSummary {
         id,
         short_id: None,
+        web_url: None,
         name: optional_string(item, if gitlab { "description" } else { "name" })
             .or_else(|| optional_string(item, "name"))
             .unwrap_or_else(|| format!("#{id}")),
@@ -247,6 +250,7 @@ impl<R: CliReader> TaskClient<R> {
             for runner in &mut items {
                 if let Some(fields) = fields.remove(&runner.id) {
                     runner.short_id = fields.short_id;
+                    runner.web_url = fields.web_url;
                     runner.os = runner.os.take().or(fields.os);
                     runner.labels = runner.labels.take().or(fields.labels);
                     runner.contacted_at = runner.contacted_at.take().or(fields.contacted_at);
@@ -289,24 +293,45 @@ impl<R: CliReader> TaskClient<R> {
         let mut fields = HashMap::new();
         let mut after = Value::Null;
         let repository = Value::String(binding.repository.clone());
+        let runner_fields = format!("id shortSha tagList contactedAt createdAt createdBy {{ name }} locked ownerProject {{ fullPath }} projectCount {RUNNER_PERMISSIONS} managers(first: 2) {{ nodes {{ platformName version ipAddress }} }}");
+        let mut edges = true;
         for _ in 0..MAX_PAGES {
-            let query = format!(
-                "{{ project(fullPath: {repository}) {{ runners(first: {PAGE_SIZE}, after: {after}) {{ nodes {{ id shortSha tagList contactedAt createdAt createdBy {{ name }} locked ownerProject {{ fullPath }} projectCount {RUNNER_PERMISSIONS} managers(first: 2) {{ nodes {{ platformName version ipAddress }} }} }} pageInfo {{ hasNextPage endCursor }} }} }} }}"
-            );
-            let Ok(response) = self.request(
-                binding,
-                "POST",
-                "graphql".into(),
-                &[("query", query)],
-                cancel,
-            ) else {
-                break;
+            let read = |edges: bool| {
+                let selection = if edges {
+                    format!("edges {{ webUrl node {{ {runner_fields} }} }}")
+                } else {
+                    format!("nodes {{ {runner_fields} }}")
+                };
+                let query = format!("{{ project(fullPath: {repository}) {{ runners(first: {PAGE_SIZE}, after: {after}) {{ {selection} pageInfo {{ hasNextPage endCursor }} }} }} }}");
+                self.request(
+                    binding,
+                    "POST",
+                    "graphql".into(),
+                    &[("query", query)],
+                    cancel,
+                )
             };
+            let response = read(edges).or_else(|error| {
+                if edges
+                    && after.is_null()
+                    && (error.kind == "network" || error.kind == "invalid_response")
+                {
+                    edges = false;
+                    read(false)
+                } else {
+                    Err(error)
+                }
+            });
+            let Ok(response) = response else { break };
             let connection = &response["data"]["project"]["runners"];
-            let Some(nodes) = connection["nodes"].as_array() else {
+            let Some(nodes) = connection["edges"]
+                .as_array()
+                .or_else(|| connection["nodes"].as_array())
+            else {
                 break;
             };
-            for node in nodes {
+            for entry in nodes {
+                let node = entry.get("node").unwrap_or(entry);
                 let id = node["id"].as_str().and_then(|id| {
                     id.strip_prefix("gid://gitlab/Ci::Runner/")?
                         .parse::<u64>()
@@ -327,6 +352,7 @@ impl<R: CliReader> TaskClient<R> {
                         id,
                         GitLabRunnerFields {
                             short_id: short_id.map(str::to_owned),
+                            web_url: optional_string(entry, "webUrl"),
                             os: optional_string(manager, "platformName").map(runner_os),
                             labels: node["tagList"].as_array().map(|labels| {
                                 labels

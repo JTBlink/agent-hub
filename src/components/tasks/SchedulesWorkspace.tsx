@@ -1,13 +1,14 @@
-import { useState, type ReactNode } from "react";
-import { ExternalLink } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   getRepositorySchedules,
   type RepositorySchedule,
   type TaskBinding,
 } from "../../lib/tauri";
 import { taskTime } from "../../lib/taskTime";
+import { PlatformOpenButton } from "../PlatformOpenButton";
+import { isLiveScheduleRun, useScheduleProgress } from "./useScheduleProgress";
+import { ScheduleProgressIndicator } from "./ScheduleProgressIndicator";
 import { RepositoryPlatformIcon } from "../RepositoryPlatformIcon";
 import { SingleChoiceGroup } from "../SingleChoiceGroup";
 import {
@@ -58,7 +59,6 @@ export function SchedulesWorkspace({
 }) {
   const { t } = useTranslation();
   const [state, setState] = useState<ScheduleFilter>("all");
-  const [linkError, setLinkError] = useState("");
   const { sources, loading } = useRepositoryInventory(
     bindings,
     refreshKey,
@@ -66,31 +66,49 @@ export function SchedulesWorkspace({
     discovering,
     getRepositorySchedules,
   );
-  const rows = new Map<
-    string,
-    { binding: TaskBinding; item: RepositorySchedule }
-  >();
-  for (const { binding, inventory } of sources) {
-    for (const item of inventory?.items ?? []) {
-      rows.set(
-        JSON.stringify([
-          binding.provider,
-          binding.host,
-          binding.repository,
-          item.id,
-        ]),
-        { binding, item },
-      );
+  const rows = useMemo(() => {
+    const entries = new Map<
+      string,
+      { binding: TaskBinding; item: RepositorySchedule }
+    >();
+    for (const { binding, inventory } of sources) {
+      for (const item of inventory?.items ?? []) {
+        entries.set(
+          JSON.stringify([
+            binding.provider,
+            binding.host,
+            binding.repository,
+            item.id,
+          ]),
+          { binding, item },
+        );
+      }
     }
-  }
+    return entries;
+  }, [sources]);
   const all = [...rows.values()];
-  const visible = [...rows].filter(([, { item }]) => matches(item, state));
+  const visible = useMemo(
+    () => [...rows].filter(([, { item }]) => matches(item, state)),
+    [rows, state],
+  );
+  const targets = useMemo(
+    () =>
+      visible.flatMap(([key, { binding, item }]) =>
+        item.last_run_id && isLiveScheduleRun(item.last_status)
+          ? [
+              {
+                key: `${key}/${item.last_run_id}`,
+                bindingId: binding.id,
+                runId: item.last_run_id,
+              },
+            ]
+          : [],
+      ),
+    [visible],
+  );
+  const progress = useScheduleProgress(targets, scopeKey);
   const busy = loading || discovering;
   const failures = sources.filter((source) => source.error);
-  const jump = (value: string) => {
-    setLinkError("");
-    void openUrl(value).catch(() => setLinkError(t("common.error")));
-  };
   return (
     <>
       <TaskScopeToolbar
@@ -100,11 +118,6 @@ export function SchedulesWorkspace({
         loading={busy}
       />
       {notice}
-      {linkError && (
-        <p role="alert" className="mb-2 text-xs text-danger">
-          {linkError}
-        </p>
-      )}
       {failures.map(({ binding, error }) => (
         <p role="alert" key={binding.id} className="mb-2 text-xs text-warning">
           {binding.host}/{binding.repository} ·{" "}
@@ -157,7 +170,11 @@ export function SchedulesWorkspace({
           </thead>
           <tbody>
             {visible.map(([key, { binding, item }]) => {
-              const status = item.last_status;
+              const sample = progress[`${key}/${item.last_run_id}`];
+              const status =
+                sample && "progress" in sample
+                  ? (sample.progress.status ?? item.last_status)
+                  : item.last_status;
               const normalized =
                 status && Object.prototype.hasOwnProperty.call(statuses, status)
                   ? statuses[status as keyof typeof statuses]
@@ -211,13 +228,16 @@ export function SchedulesWorkspace({
                         )}
                       >
                         {item.last_run_url ? (
-                          <button
-                            type="button"
+                          <PlatformOpenButton
+                            url={item.last_run_url}
+                            host={binding.host}
+                            label={t("schedules.openRun", {
+                              status: statusLabel,
+                            })}
                             className="rounded hover:underline focus-visible:outline focus-visible:outline-accent"
-                            onClick={() => jump(item.last_run_url!)}
                           >
                             {statusLabel}
-                          </button>
+                          </PlatformOpenButton>
                         ) : (
                           statusLabel
                         )}
@@ -225,21 +245,18 @@ export function SchedulesWorkspace({
                     ) : (
                       "—"
                     )}
+                    {sample && <ScheduleProgressIndicator result={sample} />}
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
                     {item.active === false ? "—" : taskTime(item.next_run_at)}
                   </td>
                   <td className="px-3 py-3">{item.owner ?? "—"}</td>
                   <td className="px-2 py-2.5">
-                    <button
-                      type="button"
-                      title={t("schedules.open")}
-                      aria-label={t("schedules.open")}
-                      className="app-button-ghost h-7 w-7 p-0"
-                      onClick={() => jump(item.url)}
-                    >
-                      <ExternalLink size={14} aria-hidden="true" />
-                    </button>
+                    <PlatformOpenButton
+                      url={item.url}
+                      host={binding.host}
+                      label={t("tasks.openRemote")}
+                    />
                   </td>
                 </tr>
               );

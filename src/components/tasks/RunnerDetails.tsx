@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { PlatformOpenButton } from "../PlatformOpenButton";
+import { runnerPlatformUrl } from "../../lib/platformLinks";
 import { RunnerActions } from "./RunnerActions";
 import { RepositoryPlatformIcon } from "../RepositoryPlatformIcon";
 import {
@@ -159,6 +161,11 @@ export function RunnerDetails({
             reference: runnerReference(current),
           })}
         </h2>
+        <PlatformOpenButton
+          url={runnerPlatformUrl(bindings[0], runner.web_url)}
+          host={host}
+          label={t("tasks.openRemote")}
+        />
         <button
           ref={closeButton}
           type="button"

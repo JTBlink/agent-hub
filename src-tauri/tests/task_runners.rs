@@ -27,15 +27,16 @@ fn reads_repository_runners_and_keeps_platform_specific_states() {
                     "pageInfo": {"hasNextPage": false}
                 }}}}));
             }
-            assert!(args.iter().any(|arg| arg.contains("nodes { id shortSha")));
+            assert!(args.iter().any(|arg| arg.contains("node { id shortSha")));
             return Ok(json!({"data": {"project": {"runners": {
-                "nodes": [
-                    {"id": "gid://gitlab/Ci::Runner/128", "shortSha": "demo1234",
+                "edges": [
+                    {"webUrl": "/team/repo/-/runners/128",
+                     "node": {"id": "gid://gitlab/Ci::Runner/128", "shortSha": "demo1234",
                      "tagList": ["linux-ci"], "contactedAt": "2026-11-02T08:00:00Z",
                      "createdAt": "2026-11-01T08:00:00Z", "createdBy": {"name": "Demo Creator"},
                      "locked": true, "projectCount": 3, "ownerProject": {"fullPath": "team/repo"},
-                     "managers": {"nodes": [{"platformName": "linux", "version": "18.0.0", "ipAddress": "192.0.2.1"}]}},
-                    {"id": "gid://gitlab/Ci::Runner/129", "shortSha": "invalid-length"}
+                     "managers": {"nodes": [{"platformName": "linux", "version": "18.0.0", "ipAddress": "192.0.2.1"}]}}},
+                    {"node": {"id": "gid://gitlab/Ci::Runner/129", "shortSha": "invalid-length"}}
                 ],
                 "pageInfo": {"hasNextPage": false}
             }}}}));
@@ -92,6 +93,10 @@ fn reads_repository_runners_and_keeps_platform_specific_states() {
     assert_eq!(gitlab.items[0].paused, Some(true));
     assert_eq!(gitlab.items[0].state, "stale");
     assert_eq!(gitlab.items[0].short_id.as_deref(), Some("demo1234"));
+    assert_eq!(
+        gitlab.items[0].web_url.as_deref(),
+        Some("/team/repo/-/runners/128")
+    );
     assert_eq!(gitlab.items[1].short_id, None);
     assert_eq!(gitlab.items[1].state, "never_contacted");
     assert_eq!(gitlab.items[2].state, "unknown");

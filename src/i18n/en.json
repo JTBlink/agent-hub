@@ -2450,6 +2450,15 @@
     "schemeCount": "{{count}} schemes"
   },
   "schedules": {
+    "openRun": "Open last run ({{status}})",
+    "progress": {
+      "unavailable": "Progress unavailable",
+      "empty": "No jobs yet",
+      "finished": "{{finished}}/{{total}} finished",
+      "partial": "{{total}} jobs loaded",
+      "activity": "{{running}} running · {{waiting}} waiting",
+      "unknown": "{{count}} unknown"
+    },
     "title": "Pipeline schedules",
     "status": "Schedule status",
     "all": "All",

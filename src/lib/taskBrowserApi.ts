@@ -216,6 +216,7 @@ export function taskFailure(error: unknown): TaskFailure {
 export interface RepositoryRunner {
   id: number;
   short_id?: string | null;
+  web_url?: string | null;
   name: string;
   /** Connection status as reported by the platform, with a fallback for missing data. */
   state: string;

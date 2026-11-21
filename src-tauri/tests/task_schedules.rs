@@ -86,3 +86,65 @@ fn github_reads_only_scheduled_workflows_and_keeps_each_cron_rule() {
     assert_eq!(schedule.active, Some(false));
     assert!(schedule.next_run_at.is_none() && schedule.owner.is_none());
 }
+
+#[cfg(feature = "gitlab")]
+#[test]
+fn gitlab_progress_counts_terminal_jobs_and_skips_retried_attempts() {
+    let reader = |_: &Binding, args: &[String], _: &AtomicBool| {
+        Ok::<_, TaskFailure>(match args[5].as_str() {
+            "projects/team%2Fdemo/pipelines/450" => json!({"status":"running"}),
+            "projects/team%2Fdemo/pipelines/450/jobs?include_retried=false&per_page=100&page=1" => {
+                json!([
+                    {"id":1,"status":"success"},{"id":2,"status":"failed"},
+                    {"id":3,"status":"skipped"},{"id":4,"status":"running"},
+                    {"id":5,"status":"pending"},{"id":5,"status":"pending"},
+                    {"id":6,"status":"manual"},{"id":7,"status":"unrecognized"}
+                ])
+            }
+            _ => panic!("unexpected request"),
+        })
+    };
+    let progress = TaskClient::new(reader)
+        .schedule_progress(&binding(Provider::Gitlab), 450, &AtomicBool::new(false))
+        .unwrap();
+    assert_eq!(progress.status.as_deref(), Some("running"));
+    assert_eq!(
+        (
+            progress.total,
+            progress.finished,
+            progress.running,
+            progress.waiting
+        ),
+        (7, 3, 1, 2)
+    );
+    assert!(!progress.limited);
+}
+
+#[cfg(feature = "github")]
+#[test]
+fn github_progress_counts_jobs_from_the_latest_run_attempt() {
+    let reader = |_: &Binding, args: &[String], _: &AtomicBool| {
+        Ok::<_, TaskFailure>(match args[5].as_str() {
+            "repos/team/demo/actions/runs/90" => json!({"status":"in_progress","conclusion":null}),
+            "repos/team/demo/actions/runs/90/jobs?filter=latest&per_page=100&page=1" => json!({
+                "total_count":3,
+                "jobs":[{"id":1,"status":"completed","conclusion":"failure"},
+                        {"id":2,"status":"in_progress"},{"id":3,"status":"queued"}]
+            }),
+            _ => panic!("unexpected request"),
+        })
+    };
+    let progress = TaskClient::new(reader)
+        .schedule_progress(&binding(Provider::Github), 90, &AtomicBool::new(false))
+        .unwrap();
+    assert_eq!(progress.status.as_deref(), Some("in_progress"));
+    assert_eq!(
+        (
+            progress.total,
+            progress.finished,
+            progress.running,
+            progress.waiting
+        ),
+        (3, 1, 1, 1)
+    );
+}

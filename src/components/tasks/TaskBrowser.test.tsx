@@ -1130,6 +1130,16 @@ it("filters real runner inventories by platform and retains task search when ret
   expect(host.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(host.textContent).toContain("github machine");
   expect(host.textContent).not.toContain("gitlab machine");
+  await act(async () =>
+    host
+      .querySelector<HTMLButtonElement>(
+        'tbody button[aria-label="tasks.openRemote"]',
+      )!
+      .click(),
+  );
+  expect(openUrl).toHaveBeenCalledWith(
+    "https://github.example.invalid/team/project-0/settings/actions/runners",
+  );
   holdRefresh = true;
   const refresh = () =>
     act(async () =>
@@ -1174,6 +1184,16 @@ it("shows schedules within the selected platform and filters by active state", a
     if (command === "task_bindings") return scopedBindings;
     if (command === "task_list")
       return { items: [], identity: "demo", has_more: false, limited: false };
+    if (command === "task_schedule_progress") {
+      return {
+        total: 6,
+        finished: 4,
+        running: 1,
+        waiting: 1,
+        status: "running",
+        limited: false,
+      };
+    }
     if (command === "task_schedules") {
       const repo = scopedBindings.find(
         (binding) =>
@@ -1191,7 +1211,8 @@ it("shows schedules within the selected platform and filters by active state", a
             ],
             target: gitlab ? "dev" : "main",
             active: gitlab,
-            last_status: gitlab ? "success" : null,
+            last_status: gitlab ? "running" : null,
+            last_run_id: gitlab ? 50 : null,
             last_run_url: null,
             owner: gitlab ? "Demo Owner" : null,
             next_run_at: null,
@@ -1227,6 +1248,29 @@ it("shows schedules within the selected platform and filters by active state", a
   );
   expect(host.querySelector("tbody")?.textContent).toContain(
     "Scheduled GitHub workflow",
+  );
+  const meter = host.querySelector('[role="progressbar"]');
+  expect(meter?.getAttribute("aria-valuenow")).toBe("4");
+  expect(meter?.getAttribute("aria-valuemax")).toBe("6");
+  expect(vi.mocked(invoke)).toHaveBeenCalledWith(
+    "task_schedule_progress",
+    expect.objectContaining({
+      bindingId: scopedBindings[1].id,
+      runId: 50,
+    }),
+  );
+  await act(async () => {
+    const row = [...host.querySelectorAll("tbody tr")].find((row) =>
+      row.textContent?.includes("Daily GitLab checks"),
+    )!;
+    row
+      .querySelector<HTMLButtonElement>(
+        'button[aria-label="tasks.openRemote"]',
+      )!
+      .click();
+  });
+  expect(openUrl).toHaveBeenCalledWith(
+    "https://gitlab.example.invalid/team/project-1/-/pipeline_schedules",
   );
   await act(async () => radio("schedules.active (1)").click());
   expect(host.querySelector("tbody")?.textContent).toContain("Demo Owner");

@@ -2407,6 +2407,15 @@
     "schemeCount": "{{count}} 套"
   },
   "schedules": {
+    "openRun": "開啟最近執行（{{status}}）",
+    "progress": {
+      "unavailable": "進度暫不可用",
+      "empty": "暫無 Job",
+      "finished": "已結束 {{finished}}/{{total}}",
+      "partial": "已讀取 {{total}} 個 Job",
+      "activity": "執行中 {{running}} · 等待 {{waiting}}",
+      "unknown": "未知 {{count}}"
+    },
     "title": "流水線排程",
     "status": "排程狀態",
     "all": "全部",

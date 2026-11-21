@@ -2447,6 +2447,15 @@
     "schemeCount": "{{count}} 套"
   },
   "schedules": {
+    "openRun": "打开最近运行（{{status}}）",
+    "progress": {
+      "unavailable": "进度暂不可用",
+      "empty": "暂无 Job",
+      "finished": "已结束 {{finished}}/{{total}}",
+      "partial": "已读取 {{total}} 个 Job",
+      "activity": "运行中 {{running}} · 等待 {{waiting}}",
+      "unknown": "未知 {{count}}"
+    },
     "title": "流水线计划",
     "status": "计划状态",
     "all": "全部",

@@ -192,6 +192,19 @@ export function taskTerminalFixture(
   }
   if (command === "task_bindings")
     return { handled: true, value: [...bindings] };
+  if (command === "task_schedule_progress") {
+    return {
+      handled: true,
+      value: {
+        total: 6,
+        finished: 4,
+        running: 1,
+        waiting: 1,
+        status: "running",
+        limited: false,
+      },
+    };
+  }
   if (command === "task_schedules") {
     const binding = bindings.find(
       (binding) => "bindingId" in args && binding.id === args.bindingId,
@@ -212,7 +225,8 @@ export function taskTerminalFixture(
             ],
             target: gitlab ? "dev" : "main",
             active: true,
-            last_status: gitlab ? "success" : "in_progress",
+            last_status: gitlab ? "running" : "in_progress",
+            last_run_id: 450,
             last_run_url: null,
             next_run_at: gitlab ? "2026-11-23T01:00:00+08:00" : null,
             owner: gitlab ? "Demo Owner" : null,
