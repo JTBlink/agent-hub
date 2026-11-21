@@ -12,6 +12,15 @@ export function usePreviewInstructions(
   const saved = active && requests[active.id];
   return {
     instruction: saved && saved.revision === active?.revision ? saved.text : "",
+    clearInstruction: () => {
+      if (!active || !saved) return;
+      setRequests((previous) => {
+        if (previous[active.id] !== saved) return previous;
+        const next = { ...previous };
+        delete next[active.id];
+        return next;
+      });
+    },
     setInstruction: (text: string) => {
       if (!active) return;
       setRequests((previous) => ({

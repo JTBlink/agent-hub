@@ -220,9 +220,19 @@ export function AnnotationPanel({
             : Promise.reject(new Error(t("preview.pageChanged")))
         }
         onBusyChange={setSending}
-        onSent={(copied) =>
-          model.setNotice(t(copied ? "preview.copied" : "preview.delivered"))
-        }
+        onSent={(copied) => {
+          if (!copied) {
+            const sentNotes = new Set(model.notes);
+            model.setSession((previous) => ({
+              ...previous,
+              annotations: previous.annotations.filter(
+                (note) => !sentNotes.has(note),
+              ),
+            }));
+            model.clearInstruction();
+          }
+          model.setNotice(t(copied ? "preview.copied" : "preview.delivered"));
+        }}
         actions={
           <ContextAdder
             model={model}

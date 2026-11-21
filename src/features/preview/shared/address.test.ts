@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { resolveAddress } from "./address";
+import { resolveAddress, sourceLocation } from "./address";
 describe("preview address input", () => {
+  it("keeps query and encoded fragments on file paths and removes stale fragments", () => {
+    const path = "/workspace/site/presentation.html";
+    expect(
+      sourceLocation(
+        path,
+        "http://preview.localhost/presentation.html?mode=slides#%E9%A1%B502",
+      ),
+    ).toBe(`${path}?mode=slides#%E9%A1%B502`);
+    expect(
+      sourceLocation(path, "http://preview.localhost/presentation.html"),
+    ).toBe(path);
+    expect(sourceLocation(path)).toBe(path);
+  });
   it("uses HTTP for loopback development addresses and searches plain text", () => {
     expect(resolveAddress("localhost:3000/demo", "bing")).toBe(
       "http://localhost:3000/demo",

@@ -67,9 +67,24 @@ function refreshed(
 /** One page owns one Pane for the lifetime of this workbench. No prompts are replayed. */
 export class PreviewAgentRuntime {
   private pending = false;
+  // Closing a client or switching checkouts does not close its background Agent.
+  // Keep ownership independent of the currently rendered terminal layout.
+  private bindings = new Map<string, TerminalTab>();
   private options: Options;
   constructor(options: Options) {
     this.options = options;
+  }
+  private remember(tab: TerminalTab) {
+    if (tab.herdrTarget && tab.previewPageId)
+      this.bindings.set(
+        JSON.stringify([
+          tab.projectId,
+          tab.worktreePath,
+          tab.previewPageId,
+          tab.agent,
+        ]),
+        tab,
+      );
   }
   async deliver(request: PreviewAgentRequest, projectId: string) {
     if (this.pending) throw Error("PREVIEW_AGENT_BUSY");
@@ -85,25 +100,22 @@ export class PreviewAgentRuntime {
     const pageKey = page.path ? `file:${page.path}` : page.id;
     const scope = (tab: TerminalTab) =>
       tab.projectId === projectId && tab.worktreePath === path;
+    const bindings = [...this.options.tabs(), ...this.bindings.values()];
     if (
-      this.options
-        .tabs()
-        .some(
-          (tab) =>
-            scope(tab) &&
-            tab.previewPageId === pageKey &&
-            (tab.previewUncertain || tab.previewPending),
-        )
-    )
-      throw Error("PREVIEW_AGENT_UNCERTAIN");
-    const bound = this.options
-      .tabs()
-      .find(
+      bindings.some(
         (tab) =>
           scope(tab) &&
           tab.previewPageId === pageKey &&
-          (!request.agentId || tab.agent === request.agentId),
-      );
+          (tab.previewUncertain || tab.previewPending),
+      )
+    )
+      throw Error("PREVIEW_AGENT_UNCERTAIN");
+    const bound = bindings.find(
+      (tab) =>
+        scope(tab) &&
+        tab.previewPageId === pageKey &&
+        (!request.agentId || tab.agent === request.agentId),
+    );
     if (bound) {
       if (bound.previewUncertain || bound.previewPending)
         throw Error("PREVIEW_AGENT_UNCERTAIN");
@@ -211,6 +223,26 @@ export class PreviewAgentRuntime {
     const existing = await this.existing(request, projectId);
     if (existing) {
       await verify();
+      if (
+        existing.herdrTarget &&
+        !this.options.tabs().some((tab) => tab.id === existing.id)
+      ) {
+        // A fresh client reconnects only on this explicit send, never on restore.
+        if (
+          this.options
+            .tabs()
+            .reduce((count, tab) => count + tab.panes.length, 0) >=
+          TERMINAL_PANE_LIMIT
+        )
+          throw Error("PREVIEW_AGENT_LIMIT");
+        refreshed(
+          await getHerdrSnapshot(existing.herdrTarget.session),
+          existing.herdrTarget,
+          path,
+        );
+        await verify();
+        this.options.update((tabs) => [...tabs, existing]);
+      }
       this.options.update((tabs) =>
         tabs.map((tab) =>
           tab.id === existing.id
@@ -270,12 +302,22 @@ export class PreviewAgentRuntime {
         );
         // From this point failure may mean the task was accepted. Preserve the tab and block retries.
         submitted = true;
+        this.remember({ ...tab, herdrTarget: space.target });
         const started = await startHerdrAgent(space.target, {
           kind: choice.id === "claude_teams" ? "claude" : choice.id,
           ...(choice.id === "claude_teams" ? { teams: true } : {}),
           name: `page-${tab.id.replaceAll("-", "").slice(0, 16)}`,
           direction: "right",
+          pane_label: `${choice.label} · ${tab.title}`
+            .replace(/\p{Cc}/gu, " ")
+            .slice(0, 80),
           prompt,
+        });
+        this.remember({
+          ...tab,
+          previewPending: false,
+          herdrTarget: started.target,
+          previewUncertain: !!started.warning,
         });
         this.options.update((tabs) =>
           tabs.map((item) =>
@@ -329,6 +371,12 @@ export class PreviewAgentRuntime {
         });
       }
     } catch (error) {
+      if (submitted) {
+        const binding = [...this.bindings.values()].find(
+          (item) => item.id === tab.id,
+        );
+        if (binding) this.remember({ ...binding, previewUncertain: true });
+      }
       this.options.update((tabs) =>
         submitted
           ? tabs.map((item) =>
@@ -386,12 +434,14 @@ export class PreviewAgentRuntime {
       }
     } catch (error) {
       // Never silently retry a transport whose final result is unknown.
-      if (submitted)
+      if (submitted) {
+        this.remember({ ...tab, previewUncertain: true });
         this.options.update((tabs) =>
           tabs.map((item) =>
             item.id === tab.id ? { ...item, previewUncertain: true } : item,
           ),
         );
+      }
       throw error;
     }
   }

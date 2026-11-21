@@ -274,12 +274,16 @@ impl HerdrControl {
         if !["right", "down", "tab"].contains(&input.direction.as_str()) {
             bail!("Choose a new tab or split direction")
         }
-        if input.tab_label.as_deref().is_some_and(|label| {
-            label.trim().is_empty()
-                || label.chars().count() > 80
-                || label.chars().any(char::is_control)
-        }) {
-            bail!("Tab name must contain 1–80 characters without control characters")
+        if [input.tab_label.as_deref(), input.pane_label.as_deref()]
+            .into_iter()
+            .flatten()
+            .any(|label| {
+                label.trim().is_empty()
+                    || label.chars().count() > 80
+                    || label.chars().any(char::is_control)
+            })
+        {
+            bail!("Tab or pane name must contain 1–80 characters without control characters")
         }
         if input.kind.is_empty()
             || !input
@@ -318,6 +322,15 @@ impl HerdrControl {
             .target
             .context("New Shell pane is unavailable")?;
         drop(guard);
+        if let Some(label) = input.pane_label.as_deref() {
+            if let Err(error) = self.call(
+                Some(&target.session),
+                &["pane", "rename", &pane.pane_id, label],
+                5,
+            ) {
+                return Ok(StartedAgent { target: pane, warning: Some(format!("{error}; pane was created but Agent startup was not submitted. Inspect its terminal before retrying")) });
+            }
+        }
         if let Err(error) = created(&pane) {
             return Ok(StartedAgent {
                 target: pane,

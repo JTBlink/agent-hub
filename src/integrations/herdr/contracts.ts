@@ -73,6 +73,7 @@ export interface HerdrNewAgent {
   name: string;
   direction: "right" | "down" | "tab";
   tab_label?: string;
+  pane_label?: string;
   prompt: string;
 }
 

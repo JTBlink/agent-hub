@@ -18,6 +18,7 @@ import {
 import { createTerminalTab, type TerminalTab } from "../../lib/terminalLayout";
 import type { PreviewAgentRequest } from "../../lib/previewAgentDelivery";
 import type { PaneControl } from "./TerminalPane";
+import { attachHerdrClient } from "../../features/herdr/terminal/herdrClientTabs";
 vi.mock("@app/herdr", async () => ({
   embeddedWorkspaceAgent: (await import("../../features/herdr/deliveryAdapter"))
     .embeddedWorkspaceAgent,
@@ -137,6 +138,62 @@ it("creates one page task tab and reuses its exact Pane for follow-up", async ()
     "Fix this layout",
   );
 });
+it.each(["shared client merge", "checkout switch"])(
+  "retains the file binding after a %s",
+  async (change) => {
+    tabs = [
+      {
+        ...createTerminalTab("site", undefined, "/workspace/site"),
+        herdrTarget: target("shell"),
+      },
+    ];
+    const input = request();
+    input.page.path = "/workspace/site/design.html";
+    await runtime.deliver(input, "site");
+    tabs = attachHerdrClient(tabs, {
+      project_id: "site",
+      path: "/workspace/site",
+      target: target("shell"),
+    }).tabs;
+    if (change === "checkout switch") tabs = [];
+    expect(tabs.some((tab) => tab.previewPageId)).toBe(false);
+    await runtime.deliver(
+      { ...input, page: { ...input.page, id: "reopened" } },
+      "site",
+    );
+    expect(startHerdrAgent).toHaveBeenCalledOnce();
+    expect(runHerdrAction).toHaveBeenCalledWith(
+      target(),
+      "prompt",
+      input.prompt,
+    );
+  },
+);
+it.each(["uncertain", "replaced"])(
+  "never starts another Agent for a lost client with an %s binding",
+  async (state) => {
+    const input = request();
+    input.page.path = "/workspace/site/design.html";
+    if (state === "uncertain")
+      vi.mocked(startHerdrAgent).mockResolvedValue({
+        target: target(),
+        warning: "unknown",
+      });
+    await runtime.deliver(input, "site").catch(() => {});
+    tabs = [];
+    if (state === "replaced")
+      vi.mocked(getHerdrSnapshot).mockResolvedValue(
+        snapshot({ ...target(), agent_session: { id: "replacement" } }),
+      );
+    await expect(runtime.deliver(input, "site")).rejects.toThrow(
+      state === "uncertain"
+        ? "PREVIEW_AGENT_UNCERTAIN"
+        : "PREVIEW_AGENT_PANE_CHANGED",
+    );
+    expect(startHerdrAgent).toHaveBeenCalledOnce();
+    expect(runHerdrAction).not.toHaveBeenCalled();
+  },
+);
 it("keeps different pages in separate Panes and ignores focus elsewhere", async () => {
   await runtime.deliver(request("first"), "site");
   vi.mocked(startHerdrAgent).mockResolvedValue({
@@ -307,6 +364,10 @@ it("creates a dedicated file-named tab and reuses it across preview identities",
   await runtime.deliver(first, "site");
   expect(tabs).toHaveLength(2);
   expect(tabs[1].title).toBe("design.html");
+  expect(startHerdrAgent).toHaveBeenLastCalledWith(
+    target("shell"),
+    expect.objectContaining({ pane_label: "Codex · design.html" }),
+  );
   expect(tabs[1].previewPageId).toBe("file:/workspace/site/design.html");
   await runtime.deliver(
     { ...first, page: { ...first.page, id: "preview-two" } },

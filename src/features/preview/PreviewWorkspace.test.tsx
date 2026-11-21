@@ -58,10 +58,80 @@ vi.mock("./web/BrowserSurface", () => ({
         data-viewport={JSON.stringify(props.viewport)}
       >
         {props.address}
+        <button
+          data-next-page
+          onClick={() =>
+            props.onFrame({
+              version: 1,
+              image: "",
+              events: [],
+              info: {
+                url: props.address.split("#")[0] + "#p02",
+                title: "Example",
+                revision: "page-two",
+                width: 1200,
+                height: 800,
+                ready: "complete",
+                scrollX: 0,
+                scrollY: 0,
+                dpr: 1,
+              },
+            })
+          }
+        >
+          Next page
+        </button>
       </output>
     );
   },
 }));
+it("automatically retains the current fragment in the file-path address bar without switching browser mode", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <PreviewWorkspace
+          shown
+          embedded
+          initialDocument={{
+            id: "slides",
+            kind: "html",
+            title: "presentation.html",
+            path: "/workspace/site/presentation.html",
+            content: "<p>Slides</p>",
+            revision: "one",
+            url: "http://preview.localhost/presentation.html#p01",
+          }}
+        />,
+      ),
+    );
+    const field = () =>
+      host.querySelector<HTMLInputElement>("[data-preview-address]")!;
+    expect(field().value).toBe("/workspace/site/presentation.html#p01");
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>("[data-next-page]")!.click(),
+    );
+    expect(field().value).toBe("/workspace/site/presentation.html#p02");
+    expect(field().readOnly).toBe(true);
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="preview.showPreviewUrl"]',
+        )!
+        .click(),
+    );
+    expect(field().value).toBe(
+      "http://preview.localhost/presentation.html#p02",
+    );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
 it("starts with annotations hidden, toggles them from the toolbar and docks the current page inspector with F12", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal(

@@ -126,6 +126,8 @@ pub struct NewAgent {
     pub direction: String,
     #[serde(default)]
     pub tab_label: Option<String>,
+    #[serde(default)]
+    pub pane_label: Option<String>,
     pub prompt: String,
 }
 

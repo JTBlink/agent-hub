@@ -38,6 +38,7 @@ case "$3 $4" in
       printf '%s' '{}'
     fi ;;
   'pane split') printf '%s' '{}' ;;
+  'pane rename') printf '%s' "$6" > "$0.label"; printf '%s' '{{}}' ;;
   'agent start') touch "$0.started"; printf '%s' '{{}}' ;;
   'pane process-info') printf '%s' '{{"process_info":{{"shell_pid":1,"foreground_process_group_id":2,"foreground_processes":[{{"name":"codex","pid":2}}]}}}}' ;;
   'agent prompt') printf '%s\n' "$6" >> "$0.prompts"; touch "$0.prompt"; printf '%s' '{{}}' ;;
@@ -57,11 +58,16 @@ esac
                 direction: "right".into(),
                 teams: false,
                 tab_label: None,
+                pane_label: Some("Codex · design.html".into()),
                 prompt: "First feedback".into(),
             },
         )
         .unwrap();
     assert!(started.warning.is_none(), "{:?}", started.warning);
+    assert_eq!(
+        std::fs::read_to_string(executable.with_extension("label")).unwrap(),
+        "Codex · design.html"
+    );
     assert_eq!(
         started.target.agent_session,
         conversation.get("agent_session").cloned()

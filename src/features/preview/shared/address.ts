@@ -1,4 +1,13 @@
 export type SearchEngine = "bing" | "google" | "duckduckgo";
+/** Keep the authorized file path visible while following the page's current location. */
+export function sourceLocation(path: string, address?: string): string {
+  try {
+    const url = new URL(address ?? "");
+    return `${path}${url.search}${url.hash}`;
+  } catch {
+    return path;
+  }
+}
 export function resolveAddress(input: string, engine: SearchEngine): string {
   const value = input.trim();
   if (!value) throw new Error("PREVIEW_INVALID_ADDRESS");

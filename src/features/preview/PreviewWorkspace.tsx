@@ -29,6 +29,7 @@ import { usePreviewWorkspace } from "./usePreviewWorkspace";
 import { type PreviewDocument } from "./api";
 import { ProfileSelector } from "./components/ProfileSelector";
 import { openPreviewAddress } from "./shared/documentLinks";
+import { sourceLocation } from "./shared/address";
 import { AnnotationPanel } from "./components/AnnotationPanel";
 import { BrowserSettings } from "./components/BrowserSettings";
 import "./preview.css";
@@ -78,7 +79,10 @@ export function PreviewWorkspace({
   const { find, setFind, findResult, findPage } = usePageFind(model);
   const active = model.active;
   const sourcePath = model.document?.path;
-  const sourceAddress = showSourcePath ? sourcePath : undefined;
+  const sourceAddress =
+    showSourcePath && sourcePath
+      ? sourceLocation(sourcePath, active?.address)
+      : undefined;
   const showingSource = Boolean(sourceAddress);
   const visibleAddress = sourceAddress ?? address;
   if (previousAddress !== active?.address) {
