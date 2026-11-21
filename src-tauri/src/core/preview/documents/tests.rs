@@ -247,7 +247,10 @@ fn external_file_links_preserve_encoded_paths_and_page_suffixes_and_require_live
     let href = format!("/{}?mode=read#p12", resource_path(&opened.relative_path));
     let url = reqwest::Url::parse(&documents.file_link(&opened.id, &href).unwrap()).unwrap();
     assert_eq!(url.scheme(), "file");
-    assert_eq!(url.to_file_path().unwrap(), path.canonicalize().unwrap());
+    assert_eq!(
+        url.to_file_path().unwrap().canonicalize().unwrap(),
+        path.canonicalize().unwrap()
+    );
     assert_eq!(url.query(), Some("mode=read"));
     assert_eq!(url.fragment(), Some("p12"));
     for href in [
