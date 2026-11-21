@@ -232,3 +232,36 @@ fn explicit_relative_paths_need_a_cli_directory_and_home_paths_share_the_gui_res
     );
     assert!(resolve_explicit_path("guide.md", Some(Path::new("relative"))).is_err());
 }
+
+#[test]
+fn external_file_links_preserve_encoded_paths_and_page_suffixes_and_require_live_grants() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path().join("site");
+    std::fs::create_dir(&root).unwrap();
+    let path = root.join("报告 #%.html");
+    std::fs::write(&path, "<h1>Page</h1>").unwrap();
+    std::fs::write(root.join("tool.sh"), "echo no").unwrap();
+    std::fs::write(directory.path().join("outside.html"), "outside").unwrap();
+    let documents = Documents::default();
+    let opened = documents.open(&path).unwrap();
+    let href = format!("/{}?mode=read#p12", resource_path(&opened.relative_path));
+    let url = reqwest::Url::parse(&documents.file_link(&opened.id, &href).unwrap()).unwrap();
+    assert_eq!(url.scheme(), "file");
+    assert_eq!(url.to_file_path().unwrap(), path.canonicalize().unwrap());
+    assert_eq!(url.query(), Some("mode=read"));
+    assert_eq!(url.fragment(), Some("p12"));
+    for href in [
+        "../outside.html",
+        ".env",
+        "https://example.invalid/page.html",
+        "file:///outside.html",
+        "tool.sh",
+    ] {
+        assert!(
+            documents.file_link(&opened.id, href).is_err(),
+            "accepted {href}"
+        );
+    }
+    documents.close(&opened.id);
+    assert!(documents.file_link(&opened.id, &href).is_err());
+}

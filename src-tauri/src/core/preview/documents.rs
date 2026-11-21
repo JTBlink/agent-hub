@@ -216,6 +216,25 @@ impl Documents {
             suffix,
         })
     }
+    /// Resolve an authorized browser file without publishing a resource-server URL.
+    pub fn file_link(&self, id: &str, href: &str) -> Result<String, AppError> {
+        let link = self.resolve_link(id, href)?;
+        let path = self.resource(id, &link.relative)?;
+        let mime = super::file_types::mime(&path).unwrap_or_default();
+        if !matches!(kind(&path)?, "html" | "markdown")
+            && !mime.starts_with("image/")
+            && !mime.starts_with("audio/")
+            && !mime.starts_with("video/")
+            && !matches!(mime, "application/pdf" | "application/xhtml+xml")
+        {
+            return Err(AppError::invalid_input(
+                "File type cannot be opened as a browser document",
+            ));
+        }
+        let url = reqwest::Url::from_file_path(path)
+            .map_err(|_| AppError::invalid_input("Invalid local document path"))?;
+        Ok(format!("{url}{}", link.suffix))
+    }
     pub(super) fn authorize_rendered(&self, path: &Path) -> Result<String, AppError> {
         let root = path
             .parent()

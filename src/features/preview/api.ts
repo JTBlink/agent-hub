@@ -250,6 +250,8 @@ export const previewApi = {
     invoke<PreviewDocument>("preview_open_document", { path }),
   takeExternalDocuments: () =>
     invoke<PreviewDocument[]>("preview_take_external_documents"),
+  openDocumentExternal: (id: string, href: string) =>
+    request<void>({ kind: "open_document_external", id, href }),
   resourceLink: (id: string, href: string) =>
     request<string>({ kind: "resource_link", id, href }),
   openLink: (id: string, href: string) =>

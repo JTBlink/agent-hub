@@ -51,18 +51,27 @@ export async function followDocumentLink({
     );
 }
 
-/** A server-side forwarding port is not a client browser address; reissue the grant URL locally. */
-export async function openPreviewAddress(address: string) {
+/** Open granted local files directly so the system browser does not depend on the resource server. */
+export async function openPreviewAddress(
+  address: string,
+  document?: PreviewDocument,
+) {
   const url = new URL(address);
   const suffix = ".agent-hub.localhost";
   if (url.protocol === "http:" && url.hostname.endsWith(suffix)) {
     const id = url.hostname.slice(0, -suffix.length);
-    const local = await previewApi.resourceLink(
+    await previewApi.openDocumentExternal(
       id,
       url.pathname + url.search + url.hash,
     );
-    await openUrl(local);
     return;
+  }
+  if (document?.path && document.url) {
+    const source = new URL(document.url);
+    if (url.origin === source.origin && url.pathname === source.pathname) {
+      await previewApi.openDocumentExternal(document.id, url.search + url.hash);
+      return;
+    }
   }
   await openUrl(address);
 }

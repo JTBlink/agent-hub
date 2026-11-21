@@ -233,7 +233,9 @@ export function PreviewWorkspace({
           onOpenExternal={
             active && /^https?:/.test(active.address)
               ? () => {
-                  void openPreviewAddress(active.address).catch(model.report);
+                  void openPreviewAddress(active.address, model.document).catch(
+                    model.report,
+                  );
                 }
               : undefined
           }

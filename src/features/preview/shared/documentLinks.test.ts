@@ -12,6 +12,7 @@ vi.mock("../../../lib/tauri", () => ({ getSettings: vi.fn() }));
 vi.mock("../api", () => ({
   previewApi: {
     resourceLink: vi.fn(),
+    openDocumentExternal: vi.fn(),
     openLink: vi.fn(),
     closeDocument: vi.fn(),
   },
@@ -92,21 +93,20 @@ it("handles malformed fragment escapes as text without losing the new grant", ()
   expect(documentFragment("http://127.0.0.1/guide.md#bad%ZZ")).toBe("bad%ZZ");
 });
 
-it("opens forwarded document addresses through a newly validated client grant URL", async () => {
+it("opens local preview files externally without a resource server, preserving query and fragment", async () => {
   const id = "00000000-0000-4000-8000-000000000001";
-  const client = `http://${id}.agent-hub.localhost:1234/path%20name.html?mode=read#target`;
-  vi.mocked(previewApi.resourceLink).mockResolvedValue(client);
   await openPreviewAddress(
-    `http://${id}.agent-hub.localhost:4321/path%20name.html?mode=read#target`,
+    `http://${id}.agent-hub.localhost:4321/path%20name.html?mode=read#p12`,
   );
-  expect(previewApi.resourceLink).toHaveBeenCalledWith(
+  expect(previewApi.openDocumentExternal).toHaveBeenCalledExactlyOnceWith(
     id,
-    "/path%20name.html?mode=read#target",
+    "/path%20name.html?mode=read#p12",
   );
-  expect(openUrl).toHaveBeenCalledExactlyOnceWith(client);
+  expect(previewApi.resourceLink).not.toHaveBeenCalled();
+  expect(openUrl).not.toHaveBeenCalled();
 });
-it("refuses expired document grants without opening the remote port, and preserves ordinary website addresses", async () => {
-  vi.mocked(previewApi.resourceLink).mockRejectedValueOnce(
+it("refuses expired document grants without opening a server URL, and preserves ordinary website addresses", async () => {
+  vi.mocked(previewApi.openDocumentExternal).mockRejectedValueOnce(
     new Error("expired"),
   );
   await expect(
@@ -114,6 +114,28 @@ it("refuses expired document grants without opening the remote port, and preserv
   ).rejects.toThrow("expired");
   expect(openUrl).not.toHaveBeenCalled();
   await openPreviewAddress("https://example.invalid/path");
+  expect(openUrl).toHaveBeenCalledExactlyOnceWith(
+    "https://example.invalid/path",
+  );
+});
+
+it("opens a document-backed development page as the original local file and leaves unrelated websites as URLs", async () => {
+  const local: PreviewDocument = {
+    ...document,
+    kind: "html",
+    path: "/workspace/demo/report.html",
+    url: "http://127.0.0.1:5173/report.html",
+  };
+  await openPreviewAddress(
+    "http://127.0.0.1:5173/report.html?mode=read#p12",
+    local,
+  );
+  expect(previewApi.openDocumentExternal).toHaveBeenCalledExactlyOnceWith(
+    "source",
+    "?mode=read#p12",
+  );
+  expect(openUrl).not.toHaveBeenCalled();
+  await openPreviewAddress("https://example.invalid/path", local);
   expect(openUrl).toHaveBeenCalledExactlyOnceWith(
     "https://example.invalid/path",
   );

@@ -101,6 +101,10 @@ pub enum PreviewRequest {
         id: String,
         href: String,
     },
+    OpenDocumentExternal {
+        id: String,
+        href: String,
+    },
     ResourceLink {
         id: String,
         href: String,
@@ -265,6 +269,14 @@ pub async fn preview_request(
             }
             PreviewRequest::OpenLink { id, href } => {
                 serde_json::to_value(preview.open_link(&id, &href)?)
+            }
+            PreviewRequest::OpenDocumentExternal { id, href } => {
+                use tauri_plugin_opener::OpenerExt;
+                let url = preview.documents.file_link(&id, &href)?;
+                app.opener()
+                    .open_url(url, None::<&str>)
+                    .map_err(AppError::io)?;
+                return Ok(Value::Null);
             }
             PreviewRequest::ResourceLink { id, href } => {
                 serde_json::to_value(preview.resource_link(&id, &href)?)

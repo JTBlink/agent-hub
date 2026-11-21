@@ -209,7 +209,10 @@ export function PreviewToolbar({
                 disabled={!active || !/^https?:/.test(active.address)}
                 onClick={() => {
                   if (active)
-                    void openPreviewAddress(active.address).catch(model.report);
+                    void openPreviewAddress(
+                      active.address,
+                      model.document,
+                    ).catch(model.report);
                 }}
               >
                 <ExternalLink size={14} />
