@@ -70,7 +70,16 @@ export function TaskStartDialog({
   );
   const [detail, setDetail] = useState<RepositoryTaskDetail | null>(null);
   const actions = reviewActions(detail?.summary ?? task);
-  const [action, setAction] = useState<ReviewAction | undefined>(initialAction);
+  const [action, setAction] = useState<ReviewAction | undefined>(
+    initialAction ??
+      (task.provider === "gitlab" && actions.includes("repair")
+        ? "repair"
+        : undefined),
+  );
+  const [operationSkills, setOperationSkills] = useState<
+    typeof preferences.skills | null
+  >(null);
+  const mrRepair = task.provider === "gitlab" && action === "repair";
   const actionAllowed = !action || actions.includes(action);
   const [customPath, setCustomPath] = useState<string>();
   const destination =
@@ -93,9 +102,22 @@ export function TaskStartDialog({
     inventory?.installed === false ||
     !session ||
     !!inventory?.sessions.some((item) => item.name === session && item.running);
-  const selectedSkills = preferences.skills.map(
+  const savedSkills = preferences.skills.map(
     (skill) => skills.options.find((option) => option.id === skill.id) ?? skill,
   );
+  const isRepairSkill = (name: string) =>
+    /(?:^|[-_])mr[-_](?:agent|repair)$/.test(name);
+  const repairSkill =
+    skills.options.find(
+      (skill) => skill.source === "project" && isRepairSkill(skill.name),
+    ) ?? skills.options.find((skill) => isRepairSkill(skill.name));
+  const selectedSkills =
+    operationSkills ??
+    (mrRepair &&
+    repairSkill &&
+    !savedSkills.some((skill) => skill.name === repairSkill.name)
+      ? [...savedSkills, repairSkill]
+      : savedSkills);
   const missingSkills =
     !skills.loading &&
     selectedSkills.some(
@@ -113,7 +135,10 @@ export function TaskStartDialog({
       ...(action
         ? [
             t("tasks.reviewActions.instructions"),
-            t(`tasks.reviewActions.prompt.${action}`),
+            t(`tasks.reviewActions.prompt.${mrRepair ? "mrRepair" : action}`),
+            ...(mrRepair && repairSkill
+              ? [`$${repairSkill.name} ${JSON.stringify(task.url)} --repair`]
+              : []),
           ]
         : []),
     ].join("\n\n"),
@@ -197,7 +222,7 @@ export function TaskStartDialog({
       !kindAvailable ||
       !sessionAvailable ||
       missingSkills ||
-      (selectedSkills.length > 0 && skills.loading) ||
+      ((mrRepair || selectedSkills.length > 0) && skills.loading) ||
       !detail ||
       !prompt.trim() ||
       promptTooLong
@@ -266,11 +291,12 @@ export function TaskStartDialog({
                   value={action ?? ""}
                   disabled={locked}
                   className="w-full"
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setAction(
                       actions.find((item) => item === event.target.value),
-                    )
-                  }
+                    );
+                    setOperationSkills(null);
+                  }}
                 >
                   <option value="">{t("tasks.start")}</option>
                   {actions.map((item) => (
@@ -410,7 +436,11 @@ export function TaskStartDialog({
               loading={skills.loading}
               error={skills.error}
               disabled={locked}
-              onChange={(skills) => settings.update({ skills })}
+              onChange={(skills) =>
+                action
+                  ? setOperationSkills(skills)
+                  : settings.update({ skills })
+              }
               onRetry={skills.refresh}
             />
             <details>
@@ -480,7 +510,10 @@ export function TaskStartDialog({
             type="button"
             className="app-button-ghost shrink-0 px-2"
             disabled={pathLocked}
-            onClick={settings.reset}
+            onClick={() => {
+              settings.reset();
+              setOperationSkills(null);
+            }}
           >
             {t("tasks.launch.reset")}
           </button>
@@ -578,7 +611,7 @@ export function TaskStartDialog({
                   !kindAvailable ||
                   !sessionAvailable ||
                   missingSkills ||
-                  (selectedSkills.length > 0 && skills.loading) ||
+                  ((mrRepair || selectedSkills.length > 0) && skills.loading) ||
                   !source?.available ||
                   !prompt.trim() ||
                   promptTooLong ||

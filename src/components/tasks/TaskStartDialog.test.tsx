@@ -101,13 +101,19 @@ async function submit() {
   );
 }
 
-it.each(["review", "repair", "ci", "merge"] as const)(
+it.each(["review", "repair", "ci", "merge", undefined] as const)(
   "previews and explicitly launches the selected %s operation for the exact MR",
   async (action) => {
     const task = makeRepositoryTask({ project_id: project.id });
+    const effectiveAction = action ?? "repair";
+    const repairSkill = createManagedSkill({
+      id: "mr-agent",
+      name: "demo-mr-agent",
+      central_path: "/projects/library/mr-agent",
+    });
     vi.mocked(invoke).mockImplementation(async (command) => {
-      if (command === "get_managed_skills" || command === "get_project_skills")
-        return [];
+      if (command === "get_managed_skills") return [repairSkill];
+      if (command === "get_project_skills") return [];
       if (command === "task_detail")
         return {
           summary: task,
@@ -140,7 +146,16 @@ it.each(["review", "repair", "ci", "merge"] as const)(
     const preview = host.querySelector<HTMLTextAreaElement>(
       'textarea[aria-label="herdr.initialTask"]',
     )!.value;
-    expect(preview).toContain(`tasks.reviewActions.prompt.${action}`);
+    expect(preview).toContain(
+      `tasks.reviewActions.prompt.${effectiveAction === "repair" ? "mrRepair" : effectiveAction}`,
+    );
+    if (effectiveAction === "repair") {
+      expect(preview).toContain(`$demo-mr-agent "${task.url}" --repair`);
+      expect(preview).toContain("/projects/library/mr-agent/SKILL.md");
+      expect(preview).not.toContain("tasks.reviewActions.prompt.repair");
+    } else {
+      expect(preview).not.toContain("$demo-mr-agent");
+    }
     expect(preview).toContain("tasks.reviewActions.instructions");
     expect(preview).toContain(task.url);
     expect(preview).not.toContain("tasks.launch.promptInstruction");
@@ -157,6 +172,7 @@ it.each(["review", "repair", "ci", "merge"] as const)(
       }),
     );
     expect(readTaskStartPreferences(project.id).promptTemplate).toBeNull();
+    expect(readTaskStartPreferences(project.id).skills).toEqual([]);
     expect(
       vi
         .mocked(invoke)
