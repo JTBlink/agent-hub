@@ -6,11 +6,20 @@ import { productViteConfig } from "./scripts/app/product/vite-plugin.mjs";
 import { helpContentPlugin } from "./scripts/docs/vite-plugin.mjs";
 
 const product = productViteConfig(import.meta.dirname);
-// Keep the editor registry authoritative while prebundling its literal lazy imports.
-// Otherwise the first file open can invalidate dependency URLs in a live WebView.
+// Prebundle editor core and lazy languages together to preserve constructor identity.
+// The package manifest and language registry remain the authoritative dependency lists.
 const editorDependencies = [
-  ...new Set(
-    [
+  ...new Set([
+    ...Object.keys(
+      JSON.parse(
+        readFileSync(new URL("./package.json", import.meta.url), "utf8"),
+      ).dependencies,
+    ).filter(
+      (name) =>
+        /^@(codemirror|lezer)\//.test(name) &&
+        name !== "@codemirror/legacy-modes",
+    ),
+    ...[
       ...readFileSync(
         new URL(
           "./src/components/file-reader/codeLanguages.ts",
@@ -19,7 +28,7 @@ const editorDependencies = [
         "utf8",
       ).matchAll(/\bimport\(\s*["']([^"']+)["']\s*\)/g),
     ].map((match) => match[1]),
-  ),
+  ]),
 ];
 
 export default defineConfig({

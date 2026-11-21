@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EditorView } from "@codemirror/view";
@@ -25,6 +25,31 @@ const editors = () =>
   [...host.querySelectorAll<HTMLElement>(".cm-editor")].map((node) =>
     EditorView.findFromDOM(node)!,
   );
+it.each(["scripts/demo.py", "src/demo.ts"])(
+  "highlights syntax on both sides of %s",
+  async (path) => {
+    const context = path.endsWith(".py") ? "import os" : 'import os from "os";';
+    const changes = `@@ -1,2 +1,2 @@\n ${context}\n-print("before")\n+print("after")\n`;
+    await act(async () =>
+      root.render(
+        <StrictMode>
+          <GitDiffViewer patch={changes} staged={false} path={path} />
+        </StrictMode>,
+      ),
+    );
+    await vi.waitFor(() => {
+      const views = editors();
+      expect(views).toHaveLength(2);
+      for (const [index, view] of views.entries()) {
+        const tokens = [...view.contentDOM.querySelectorAll("span")].map(
+          (node) => node.textContent,
+        );
+        expect(tokens).toContain("import");
+        expect(tokens).toContain(index === 0 ? '"before"' : '"after"');
+      }
+    });
+  },
+);
 it("selects and copies only source text from one side, excluding line numbers, gaps and the other version", async () => {
   await act(async () =>
     root.render(<GitDiffViewer patch={patch} staged={false} path="demo.ts" />),
