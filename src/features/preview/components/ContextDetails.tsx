@@ -1,4 +1,4 @@
-import { Camera, Copy, Trash2 } from "lucide-react";
+import { Camera, Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { PreviewModel } from "../usePreviewWorkspace";
 import type { Annotation } from "../shared/session";
@@ -18,19 +18,6 @@ export function ContextDetails({
     <article className="preview-note">
       <header>
         <strong>{note.selector}</strong>
-        <button
-          aria-label={t("common.delete")}
-          onClick={() =>
-            model.setSession((previous) => ({
-              ...previous,
-              annotations: previous.annotations.filter(
-                (item) => item.id !== note.id,
-              ),
-            }))
-          }
-        >
-          <Trash2 size={13} />
-        </button>
       </header>
       {note.screenshot && (
         <img
@@ -51,7 +38,7 @@ export function ContextDetails({
         </button>
       )}
       <textarea
-        autoFocus={note.intent === "annotate" || note.contextKind === "text"}
+        autoFocus={!note.contextKind || note.contextKind === "text"}
         aria-label={t("preview.annotationNumber", { number: index + 1 })}
         placeholder={t(
           note.contextKind === "text"

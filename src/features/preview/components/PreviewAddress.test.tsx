@@ -32,6 +32,13 @@ it("switches between a selectable source path and an editable URL in the same ad
     );
     expect(container.querySelector("input")?.value).toBe(props.sourcePath);
     expect(container.querySelector("input")?.readOnly).toBe(true);
+    const input = container.querySelector("input")!;
+    input.setSelectionRange(4, 4);
+    await act(async () => input.click());
+    expect([input.selectionStart, input.selectionEnd]).toEqual([
+      0,
+      props.sourcePath.length,
+    ]);
     await act(async () => {
       submit();
     });
@@ -48,6 +55,12 @@ it("switches between a selectable source path and an editable URL in the same ad
       ),
     );
     expect(container.querySelector("input")?.readOnly).toBe(false);
+    input.setSelectionRange(4, 4);
+    await act(async () => input.click());
+    expect([input.selectionStart, input.selectionEnd]).toEqual([
+      0,
+      input.value.length,
+    ]);
     expect(container.querySelector("button")?.getAttribute("aria-label")).toBe(
       "preview.showSourcePath",
     );

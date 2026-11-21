@@ -2,12 +2,15 @@
 import { act, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { toast } from "sonner";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { usePreviewWorkspace } from "../usePreviewWorkspace";
 import { previewApi } from "../api";
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
   writeText: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -58,9 +61,42 @@ it("keeps one summary row per annotation, expands the newest by default and expa
     host.querySelectorAll<HTMLButtonElement>(".preview-annotation-summary");
   try {
     await act(async () => root.render(<Harness />));
+    const annotate = host.querySelector<HTMLButtonElement>(
+      '[title="preview.annotateElement"]',
+    )!;
+    const grab = host.querySelector<HTMLButtonElement>(
+      '[title="preview.grabElement"]',
+    )!;
+    vi.mocked(writeText).mockClear();
+    vi.mocked(toast.success).mockClear();
+    await act(async () => grab.click());
+    expect(grab.getAttribute("aria-pressed")).toBe("true");
     await act(async () =>
       host.querySelector<HTMLButtonElement>("[data-add]")!.click(),
     );
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(
+      expect.stringContaining("Note 1"),
+    );
+    expect(toast.success).toHaveBeenCalledExactlyOnceWith("preview.copied");
+    expect(rows()).toHaveLength(0);
+    expect(grab.getAttribute("aria-pressed")).toBe("false");
+    vi.mocked(writeText).mockRejectedValueOnce(Error("clipboard unavailable"));
+    await act(async () => grab.click());
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>("[data-add]")!.click(),
+    );
+    expect(toast.success).toHaveBeenCalledTimes(1);
+    expect(rows()).toHaveLength(0);
+    await act(async () => annotate.click());
+    expect(annotate.getAttribute("aria-pressed")).toBe("true");
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>("[data-add]")!.click(),
+    );
+    expect(annotate.getAttribute("aria-pressed")).toBe("false");
+    expect(document.activeElement).toBe(
+      host.querySelector(".preview-note textarea"),
+    );
+    expect(writeText).toHaveBeenCalledTimes(2);
     await act(async () =>
       host.querySelector<HTMLButtonElement>("[data-add]")!.click(),
     );
@@ -70,19 +106,32 @@ it("keeps one summary row per annotation, expands the newest by default and expa
     );
     expect(rows()[0].textContent).toBe("1Note 1");
     expect(rows()[1].textContent).toBe("2Note 2");
+    expect(host.querySelectorAll(".preview-annotation-delete")).toHaveLength(2);
     await act(async () => rows()[0].click());
     expect([...rows()].map((row) => row.getAttribute("aria-expanded"))).toEqual(
       ["true", "false"],
     );
-    expect(host.querySelectorAll(".preview-note")).toHaveLength(1);
+    await act(async () => rows()[0].click());
+    await act(async () => rows()[1].click());
     await act(async () =>
       host
-        .querySelector<HTMLButtonElement>(".preview-note header button")!
+        .querySelector<HTMLButtonElement>(".preview-annotation-delete")!
         .click(),
     );
     expect(rows()).toHaveLength(1);
     expect(rows()[0].textContent).toBe("1Note 2");
     expect(rows()[0].getAttribute("aria-expanded")).toBe("true");
+    await act(async () => rows()[0].click());
+    expect([...rows()].map((row) => row.getAttribute("aria-expanded"))).toEqual(
+      ["false"],
+    );
+    expect(host.querySelectorAll(".preview-note")).toHaveLength(0);
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(".preview-annotation-delete")!
+        .click(),
+    );
+    expect(rows()).toHaveLength(0);
   } finally {
     await act(async () => root.unmount());
     host.remove();

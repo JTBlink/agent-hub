@@ -49,6 +49,7 @@ export function PreviewAddress({
         placeholder={t("preview.addressPlaceholder")}
         onChange={(event) => onChange(event.target.value)}
         onFocus={(event) => event.currentTarget.select()}
+        onClick={(event) => event.currentTarget.select()}
       />
     </form>
   );

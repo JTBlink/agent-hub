@@ -7,6 +7,7 @@ import {
   Globe,
   Image,
   MessageSquareText,
+  Trash2,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -132,28 +133,49 @@ export function AnnotationPanel({
               const expanded = selected?.id === note.id;
               return (
                 <section className="preview-annotation-row" key={note.id}>
-                  <button
-                    type="button"
-                    className="preview-annotation-summary"
-                    aria-expanded={expanded}
-                    disabled={disabled}
-                    title={note.selector}
-                    onClick={() => setSelectedId(expanded ? null : note.id)}
-                  >
-                    <span className="preview-annotation-number">
-                      {index + 1}
-                    </span>
-                    <span className="preview-annotation-label">
-                      {note.note.trim() ||
-                        note.accessibility?.label ||
-                        note.text.trim() ||
-                        note.selector}
-                    </span>
-                    <ChevronRight
-                      size={14}
-                      className={expanded ? "rotate-90" : undefined}
-                    />
-                  </button>
+                  <div className="preview-annotation-heading">
+                    <button
+                      type="button"
+                      className="preview-annotation-summary"
+                      aria-expanded={expanded}
+                      disabled={disabled}
+                      title={note.selector}
+                      onClick={() => setSelectedId(expanded ? null : note.id)}
+                    >
+                      <span className="preview-annotation-number">
+                        {index + 1}
+                      </span>
+                      <span className="preview-annotation-label">
+                        {note.note.trim() ||
+                          note.accessibility?.label ||
+                          note.text.trim() ||
+                          note.selector}
+                      </span>
+                      <ChevronRight
+                        size={14}
+                        className={expanded ? "rotate-90" : undefined}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      className="preview-annotation-delete"
+                      aria-label={t("preview.removeContext", {
+                        name: `${index + 1}`,
+                      })}
+                      title={t("common.delete")}
+                      disabled={disabled}
+                      onClick={() =>
+                        model.setSession((previous) => ({
+                          ...previous,
+                          annotations: previous.annotations.filter(
+                            (item) => item.id !== note.id,
+                          ),
+                        }))
+                      }
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                   {expanded && (
                     <fieldset
                       disabled={disabled}

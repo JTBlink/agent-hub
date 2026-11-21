@@ -13,7 +13,6 @@ export interface PreviewTab {
   execution?: ExecutionLocation;
 }
 export interface Annotation {
-  intent?: "grab" | "annotate";
   contextKind?: "text" | "file" | "image";
   id: string;
   tabId: string;

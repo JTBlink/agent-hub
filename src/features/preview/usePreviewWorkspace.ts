@@ -15,6 +15,7 @@ import { copyScreenshot } from "./shared/copyScreenshot";
 import { resolveAddress } from "./shared/address";
 import { capturePreview } from "./shared/screenshot";
 import { useEffect, useRef, useState, type SetStateAction } from "react";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import {
   previewApi,
@@ -88,7 +89,7 @@ export function usePreviewWorkspace({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
-  const [pickIntent, setPickIntent] = useState<"grab" | "annotate">("grab");
+  const [pickIntent, setPickIntent] = useState<"grab" | "annotate">("annotate");
   const [source, setSource] = useState(false);
   const [sourceLine, setSourceLine] = useState<number | undefined>();
   const [panel, setPanel] = useState<PreviewPanel>("annotations");
@@ -356,19 +357,31 @@ export function usePreviewWorkspace({
       return;
     }
     try {
-      setSession((previous) =>
-        addAnnotation(previous, {
-          ...value,
-          id: crypto.randomUUID(),
-          tabId,
-          revision: tab.revision,
-          note: "",
-          intent: pickIntent,
-        }),
-      );
+      const note: Annotation = {
+        ...value,
+        id: crypto.randomUUID(),
+        tabId,
+        revision: tab.revision,
+        note: "",
+      };
+      setPicking(false);
+      if (picking && pickIntent === "grab" && !value.contextKind) {
+        setBusy(true);
+        void annotationActions({
+          sourcePath: documentsRef.current[tabId]?.path,
+          tab,
+          notes: [note],
+          verify: verifyContext,
+          onCopied: () => toast.success(t("preview.copied")),
+          onError: report,
+        })
+          .copyNotes()
+          .finally(() => setBusy(false));
+        return;
+      }
+      setSession((previous) => addAnnotation(previous, note));
       setPanel("annotations");
       setPanelOpen(true);
-      setPicking(false);
     } catch (error) {
       report(error);
     }

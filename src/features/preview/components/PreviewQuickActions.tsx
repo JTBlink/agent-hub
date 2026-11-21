@@ -25,21 +25,21 @@ export function PreviewQuickActions({
     >
       <button
         disabled={unavailable}
-        aria-pressed={model.picking && model.pickIntent === "grab"}
-        title={t("preview.grabElement")}
-        onClick={() => model.beginPicking("grab")}
-      >
-        <Crosshair size={16} />
-        {t("preview.grabElement")}
-      </button>
-      <button
-        disabled={unavailable}
         aria-pressed={model.picking && model.pickIntent === "annotate"}
         title={t("preview.annotateElement")}
         onClick={() => model.beginPicking("annotate")}
       >
         <MessageSquarePlus size={16} />
         {t("preview.annotateElement")}
+      </button>
+      <button
+        disabled={unavailable}
+        aria-pressed={model.picking && model.pickIntent === "grab"}
+        title={t("preview.grabElement")}
+        onClick={() => model.beginPicking("grab")}
+      >
+        <Crosshair size={16} />
+        {t("preview.grabElement")}
       </button>
       <button
         disabled={unavailable}
