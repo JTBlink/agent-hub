@@ -1168,3 +1168,79 @@ it("filters real runner inventories by platform and retains task search when ret
   await act(async () => root.unmount());
   host.remove();
 });
+
+it("shows schedules within the selected platform and filters by active state", async () => {
+  vi.mocked(invoke).mockImplementation(async (command, args) => {
+    if (command === "task_bindings") return scopedBindings;
+    if (command === "task_list")
+      return { items: [], identity: "demo", has_more: false, limited: false };
+    if (command === "task_schedules") {
+      const repo = scopedBindings.find(
+        (binding) =>
+          args && "bindingId" in args && binding.id === args.bindingId,
+      )!;
+      const gitlab = repo.provider === "gitlab";
+      return {
+        limited: false,
+        items: [
+          {
+            id: "10",
+            title: gitlab ? "Daily GitLab checks" : "Scheduled GitHub workflow",
+            rules: [
+              { cron: "0 1 * * *", timezone: gitlab ? "Asia/Shanghai" : "UTC" },
+            ],
+            target: gitlab ? "dev" : "main",
+            active: gitlab,
+            last_status: gitlab ? "success" : null,
+            last_run_url: null,
+            owner: gitlab ? "Demo Owner" : null,
+            next_run_at: null,
+            url: `https://${repo.host}/${repo.repository}/${gitlab ? "-/pipeline_schedules" : "actions"}`,
+          },
+        ],
+      };
+    }
+    return undefined;
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <TaskBrowser
+          projects={scopedBindings.map(({ project_id }) => ({
+            ...makeProject(),
+            id: project_id,
+          }))}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  const radio = (label: string) =>
+    host.querySelector<HTMLButtonElement>(
+      `[role="radio"][aria-label="${label}"]`,
+    )!;
+  await act(async () => radio("schedules.title").click());
+  expect(host.querySelector("tbody")?.textContent).toContain(
+    "Daily GitLab checks",
+  );
+  expect(host.querySelector("tbody")?.textContent).toContain(
+    "Scheduled GitHub workflow",
+  );
+  await act(async () => radio("schedules.active (1)").click());
+  expect(host.querySelector("tbody")?.textContent).toContain("Demo Owner");
+  expect(host.querySelector("tbody")?.textContent).not.toContain(
+    "Scheduled GitHub workflow",
+  );
+  await act(async () => radio("schedules.all (2)").click());
+  await chooseProvider(host, "GitHub");
+  expect(host.querySelector("tbody")?.textContent).toContain(
+    "Scheduled GitHub workflow",
+  );
+  expect(host.querySelector("tbody")?.textContent).not.toContain(
+    "Daily GitLab checks",
+  );
+  await act(async () => root.unmount());
+  host.remove();
+});

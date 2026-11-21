@@ -18,6 +18,8 @@ import { TaskToolbar } from "./TaskToolbar";
 import { TaskProjectIcon } from "./TaskProjectSelect";
 import { TaskSelectedProjects } from "./TaskSelectedProjects";
 import { TaskWorkspaceSidebar } from "./TaskWorkspaceSidebar";
+import { SchedulesWorkspace } from "./SchedulesWorkspace";
+import { TaskSourceAlerts } from "./TaskSourceAlerts";
 import { RunnerWorkspace } from "./RunnerWorkspace";
 import { TaskListTable } from "./TaskListTable";
 import { PlatformAccountsProvider } from "../accounts/PlatformAccountsProvider";
@@ -57,7 +59,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const [connections, setConnections] = useState(false);
   const [accountsOpen, setAccountsOpen] = useState(false);
   const [accountRefresh, setAccountRefresh] = useState(0);
-  const [runnerAccountRevision, setRunnerAccountRevision] = useState(0);
+  const [remoteAccountRevision, setRemoteAccountRevision] = useState(0);
   const [settingsError, setSettingsError] = useState("");
   const [discovering, setDiscovering] = useState(true);
   const [initial] = useState(() => {
@@ -79,7 +81,14 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const [runnerProvider, setRunnerProvider] = useState<
     api.TaskProvider | "all"
   >("all");
-  const [showRunners, setShowRunners] = useState(false);
+  const [scheduleProvider, setScheduleProvider] = useState<
+    api.TaskProvider | "all"
+  >("all");
+  const [remoteView, setRemoteView] = useState<"runner" | "schedules" | null>(
+    null,
+  );
+  const remoteProvider =
+    remoteView === "schedules" ? scheduleProvider : runnerProvider;
   const [projectScope, setProjectScope] = useState({
     workspaceKey,
     projectIds: workspaceId ? [workspaceId] : initial.projectIds,
@@ -207,13 +216,13 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     appliedFilters,
     taskRefresh,
   );
-  const runnerBindings = useMemo(
+  const remoteBindings = useMemo(
     () =>
       projectBindings.filter(
         (binding) =>
-          runnerProvider === "all" || binding.provider === runnerProvider,
+          remoteProvider === "all" || binding.provider === remoteProvider,
       ),
-    [projectBindings, runnerProvider],
+    [projectBindings, remoteProvider],
   );
   const changeFilters = (patch: Partial<TaskFilters>) => {
     const next = changeTaskFilters(
@@ -280,15 +289,28 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const reviewLabel =
     provider === "gitlab" ? "MR" : provider === "github" ? "PR" : "PR / MR";
   const refresh = () =>
-    void refreshBindings(showRunners, true).catch((error) =>
+    void refreshBindings(remoteView !== null, true).catch((error) =>
       setSettingsError(api.taskFailure(error).message),
     );
-  const activeProvider = showRunners ? runnerProvider : provider;
+  const activeProvider = remoteView ? remoteProvider : provider;
   const sharedToolbar = {
     connections,
     accountRefresh,
     onConnections: () => setConnections((value) => !value),
     onAccounts: () => setAccountsOpen(true),
+  };
+  const remoteScopeKey = JSON.stringify([
+    workspaceKey,
+    activeProjectIds,
+    remoteProvider,
+    remoteAccountRevision,
+  ]);
+  const remoteToolbar = {
+    ...sharedToolbar,
+    provider: remoteProvider,
+    onProvider:
+      remoteView === "schedules" ? setScheduleProvider : setRunnerProvider,
+    onRefresh: refresh,
   };
   const settingsNotice = settingsError && (
     <p role="alert" className="my-3 text-xs text-danger">
@@ -311,11 +333,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
       <div className="flex min-h-0 min-w-0 flex-1 gap-3">
         <TaskWorkspaceSidebar
           view={
-            connections
-              ? "connections"
-              : showRunners
-                ? "runner"
-                : appliedFilters.kind
+            connections ? "connections" : (remoteView ?? appliedFilters.kind)
           }
           reviewLabel={reviewLabel}
           projects={projects}
@@ -325,10 +343,13 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           onView={(view) => {
             setConnections(view === "connections");
             if (view === "connections") return;
-            setShowRunners(view === "runner");
             setSelection(null);
-            if (view !== "runner" && view !== appliedFilters.kind)
-              changeFilters({ kind: view });
+            if (view === "runner" || view === "schedules") {
+              setRemoteView(view);
+              return;
+            }
+            setRemoteView(null);
+            if (view !== appliedFilters.kind) changeFilters({ kind: view });
           }}
         />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -346,7 +367,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
             </>
           ) : (
             <>
-              {showRunners ? null : (
+              {!remoteView && (
                 <TaskToolbar
                   scopeInSidebar
                   leading={projectTitle(
@@ -410,61 +431,32 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
                   onOpenRepository={openRepository}
                 />
               )}
-              {!showRunners && settingsNotice}
+              {!remoteView && settingsNotice}
 
-              {showRunners ? (
+              {remoteView === "schedules" ? (
+                <SchedulesWorkspace
+                  bindings={remoteBindings}
+                  title={projectTitle(t("schedules.title"))}
+                  discovering={discovering}
+                  notice={settingsNotice}
+                  scopeKey={remoteScopeKey}
+                  refreshKey={accountRefresh}
+                  toolbar={remoteToolbar}
+                />
+              ) : remoteView === "runner" ? (
                 <RunnerWorkspace
-                  bindings={runnerBindings}
+                  bindings={remoteBindings}
                   projects={projects}
                   title={projectTitle(t("runners.title"))}
                   discovering={discovering}
                   notice={settingsNotice}
-                  scopeKey={JSON.stringify([
-                    workspaceKey,
-                    activeProjectIds,
-                    runnerProvider,
-                    runnerAccountRevision,
-                  ])}
+                  scopeKey={remoteScopeKey}
                   refreshKey={accountRefresh}
-                  toolbar={{
-                    ...sharedToolbar,
-                    provider: runnerProvider,
-                    onProvider: setRunnerProvider,
-                    onRefresh: refresh,
-                  }}
+                  toolbar={remoteToolbar}
                 />
               ) : (
                 <>
-                  {sources
-                    .filter((source) => source.error)
-                    .map((source) => (
-                      <div
-                        role="alert"
-                        key={source.binding.id}
-                        className="my-2 flex flex-wrap items-center gap-2 text-xs text-danger"
-                      >
-                        <span>
-                          {source.binding.repository} ·{" "}
-                          {t(`tasks.errors.${source.error?.kind}`, {
-                            defaultValue: t("common.error"),
-                          })}
-                          : {source.error?.message}
-                        </span>
-                        <button
-                          type="button"
-                          className="app-button-ghost"
-                          disabled={source.loading}
-                          onClick={() =>
-                            void load(source.binding, source.nextPage)
-                          }
-                        >
-                          {t("common.retry")}
-                        </button>
-                      </div>
-                    ))}
-                  {sources.some((source) => source.limited) && (
-                    <p className="text-xs text-muted">{t("tasks.limited")}</p>
-                  )}
+                  <TaskSourceAlerts sources={sources} load={load} />
                   <div className="flex min-h-0 flex-1 gap-3">
                     <div
                       hidden={selection?.full}
@@ -571,7 +563,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
                   activeProvider === "all" ? undefined : activeProvider
                 }
                 onChanged={async () => {
-                  setRunnerAccountRevision((value) => value + 1);
+                  setRemoteAccountRevision((value) => value + 1);
                   void refreshBindings(true).catch((error) =>
                     setSettingsError(api.taskFailure(error).message),
                   );

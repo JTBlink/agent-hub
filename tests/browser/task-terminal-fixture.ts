@@ -192,6 +192,36 @@ export function taskTerminalFixture(
   }
   if (command === "task_bindings")
     return { handled: true, value: [...bindings] };
+  if (command === "task_schedules") {
+    const binding = bindings.find(
+      (binding) => "bindingId" in args && binding.id === args.bindingId,
+    );
+    if (!binding)
+      return { handled: true, value: { items: [], limited: false } };
+    const gitlab = binding.provider === "gitlab";
+    return {
+      handled: true,
+      value: {
+        limited: false,
+        items: [
+          {
+            id: "75",
+            title: gitlab ? "每日自动检查" : "Scheduled checks",
+            rules: [
+              { cron: "0 1 * * *", timezone: gitlab ? "Asia/Shanghai" : "UTC" },
+            ],
+            target: gitlab ? "dev" : "main",
+            active: true,
+            last_status: gitlab ? "success" : "in_progress",
+            last_run_url: null,
+            next_run_at: gitlab ? "2026-11-23T01:00:00+08:00" : null,
+            owner: gitlab ? "Demo Owner" : null,
+            url: `https://${binding.host}/${binding.repository}/${gitlab ? "-/pipeline_schedules" : "actions"}`,
+          },
+        ],
+      },
+    };
+  }
   if (command === "task_runners") {
     const binding = bindings.find(
       (binding) => "bindingId" in args && binding.id === args.bindingId,

@@ -7,6 +7,7 @@ pub(crate) mod github;
 #[cfg(feature = "gitlab")]
 pub(crate) mod gitlab;
 pub(crate) mod hosts;
+pub mod schedules;
 use crate::core::task_browser::{Provider, TaskFailure};
 impl Provider {
     /// Whether this provider implementation is included in the current product.

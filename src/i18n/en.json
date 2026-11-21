@@ -2449,6 +2449,29 @@
     "launchSchemes": "Launch schemes",
     "schemeCount": "{{count}} schemes"
   },
+  "schedules": {
+    "title": "Pipeline schedules",
+    "status": "Schedule status",
+    "all": "All",
+    "active": "Active",
+    "inactive": "Inactive",
+    "interval": "Interval",
+    "target": "Target",
+    "lastRun": "Last run",
+    "nextRun": "Next run",
+    "owner": "Owner",
+    "open": "View on platform",
+    "limited": "Some schedule information could not be retrieved.",
+    "empty": "No pipeline schedules are visible for these repositories.",
+    "noMatch": "No schedules match the current filter.",
+    "run": {
+      "passed": "Passed",
+      "running": "Running",
+      "pending": "Pending",
+      "failed": "Failed",
+      "canceled": "Canceled"
+    }
+  },
   "runners": {
     "status": "Status",
     "configuration": "Runner configuration",

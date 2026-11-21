@@ -1,11 +1,18 @@
-import { CircleDot, GitPullRequest, Server, Settings2 } from "lucide-react";
+import {
+  CalendarClock,
+  CircleDot,
+  GitPullRequest,
+  Server,
+  Settings2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ResizableSidebar } from "../ResizableSidebar";
 import type { Project, TaskBinding } from "../../lib/tauri";
 import { TaskProjectSelect } from "./TaskProjectSelect";
 import { SingleChoiceGroup } from "../SingleChoiceGroup";
 
-export type TaskWorkspaceView = "issue" | "review" | "runner" | "connections";
+export type TaskWorkspaceView =
+  "issue" | "review" | "runner" | "schedules" | "connections";
 
 export function TaskWorkspaceSidebar({
   view,
@@ -29,6 +36,7 @@ export function TaskWorkspaceSidebar({
     { key: "issue", label: t("tasks.issues"), icon: CircleDot },
     { key: "review", label: reviewLabel, icon: GitPullRequest },
     { key: "runner", label: t("runners.title"), icon: Server },
+    { key: "schedules", label: t("schedules.title"), icon: CalendarClock },
     {
       key: "connections",
       label: t("tasks.platformConnections"),

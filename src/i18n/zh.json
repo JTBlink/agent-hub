@@ -2446,6 +2446,29 @@
     "launchSchemes": "启动方案",
     "schemeCount": "{{count}} 套"
   },
+  "schedules": {
+    "title": "流水线计划",
+    "status": "计划状态",
+    "all": "全部",
+    "active": "已启用",
+    "inactive": "未启用",
+    "interval": "运行周期",
+    "target": "目标",
+    "lastRun": "最近运行",
+    "nextRun": "下次运行",
+    "owner": "负责人",
+    "open": "在平台查看",
+    "limited": "部分计划信息未能读取。",
+    "empty": "当前仓库没有可见的流水线计划。",
+    "noMatch": "没有符合筛选条件的计划。",
+    "run": {
+      "passed": "成功",
+      "running": "运行中",
+      "pending": "等待中",
+      "failed": "失败",
+      "canceled": "已取消"
+    }
+  },
   "runners": {
     "status": "状态",
     "configuration": "Runner 配置",

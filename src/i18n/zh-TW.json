@@ -2406,6 +2406,29 @@
     "launchSchemes": "啟動方案",
     "schemeCount": "{{count}} 套"
   },
+  "schedules": {
+    "title": "流水線排程",
+    "status": "排程狀態",
+    "all": "全部",
+    "active": "已啟用",
+    "inactive": "未啟用",
+    "interval": "執行週期",
+    "target": "目標",
+    "lastRun": "最近執行",
+    "nextRun": "下次執行",
+    "owner": "負責人",
+    "open": "在平台查看",
+    "limited": "部分排程資訊無法讀取。",
+    "empty": "目前儲存庫沒有可見的流水線排程。",
+    "noMatch": "沒有符合篩選條件的排程。",
+    "run": {
+      "passed": "成功",
+      "running": "執行中",
+      "pending": "等待中",
+      "failed": "失敗",
+      "canceled": "已取消"
+    }
+  },
   "runners": {
     "status": "狀態",
     "configuration": "Runner 設定",
