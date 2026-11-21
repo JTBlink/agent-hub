@@ -75,3 +75,4 @@ Thumbs.db
 /public/help-assets/
 /docs-site/.generated/
 /docs-site/.vitepress/cache/
+/docs/prototypes/.preview/

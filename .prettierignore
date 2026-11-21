@@ -10,3 +10,5 @@ public/help-assets/
 docs-site/.generated/
 docs-site/.vitepress/cache/
 _site/
+/docs/prototypes/index.html
+/docs/prototypes/runners/index.html

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Serve the disposable preview prototype without starting the desktop app.
+# Export a local prototype, or serve it explicitly for live development.
 set -euo pipefail
 
 project_dir="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -8,17 +8,18 @@ preview_layout=""
 prototype_id=index
 list_only=false
 open_browser=true
+serve=false
 
 usage() {
   cat <<'HELP'
-用法：./prototype.sh [原型名称] [--port 端口] [--no-open]
+用法：./prototype.sh [原型名称] [--no-open]
+      ./prototype.sh [原型名称] --port 端口 [--no-open]
       ./prototype.sh --list
 
-默认打开需求原型目录；如 ./prototype.sh preview 可直达预览与浏览。
-已有当前工作树的原型服务时复用。
+默认生成并打开本地 HTML；如 ./prototype.sh preview 可直达预览与浏览。
   --list       列出原型名称、用途和状态
-  --port       本地端口，默认 4176
-  --no-open    只显示地址，不自动打开浏览器
+  --port       启用开发服务，复用当前工作树的同端口服务
+  --no-open    只显示预览地址
   -h, --help   显示帮助
 
 新启动的服务在当前终端运行，按 Ctrl+C 停止。
@@ -32,7 +33,12 @@ while (($#)); do
         printf '缺少 %s 的参数\n' "$1" >&2
         exit 1
       fi
-      if [[ "$1" == --port ]]; then preview_port="$2"; else preview_layout="$2"; fi
+      if [[ "$1" == --port ]]; then
+        preview_port="$2"
+        serve=true
+      else
+        preview_layout="$2"
+      fi
       shift 2
       ;;
     --list) list_only=true; shift ;;
@@ -55,6 +61,26 @@ command -v node >/dev/null 2>&1 || { printf '需要 Node.js，请先安装项目
 
 if "$list_only"; then exec node "$project_dir/scripts/prototype/catalog.mjs" --list; fi
 preview_path="$(node "$project_dir/scripts/prototype/catalog.mjs" "$prototype_id" "$preview_layout")"
+open_preview() {
+  if "$open_browser"; then
+    if command -v open >/dev/null 2>&1; then open "$1";
+    elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$1";
+    fi
+  fi
+}
+
+if ! "$serve"; then
+  if [[ ! -f "$project_dir/node_modules/vite/bin/vite.js" ]]; then
+    printf '尚未安装前端依赖，请在项目根目录执行 npm ci 后重试。\n' >&2
+    exit 1
+  fi
+  cd -- "$project_dir"
+  preview_url="$(node scripts/prototype/export.mjs "$prototype_id" "$preview_layout")"
+  printf '%s\n' "$preview_url"
+  open_preview "$preview_url"
+  exit 0
+fi
+
 preview_url="http://127.0.0.1:$preview_port$preview_path"
 probe_result=0
 node --input-type=module - "$preview_port" "$project_dir" <<'JS' || probe_result=$?
@@ -87,11 +113,7 @@ JS
 
 if ((probe_result == 0)); then
   printf '复用已有原型服务：%s\n' "$preview_url"
-  if "$open_browser"; then
-    if command -v open >/dev/null 2>&1; then open "$preview_url";
-    elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$preview_url";
-    else printf '请在浏览器打开上述地址。\n'; fi
-  fi
+  open_preview "$preview_url"
   exit 0
 fi
 if ((probe_result != 1)); then

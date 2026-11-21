@@ -31,7 +31,7 @@
 
 ## 预览
 
-运行 `npm run prototype:agents`，打开 `/docs/prototypes/agent-settings/`。默认深色，`?theme=light` 可预览浅色。
+运行 `npm run prototype:agents`，生成并打开本地 HTML 文件。默认深色，`?theme=light` 可预览浅色。
 
 ## 自动化与终端联动
 

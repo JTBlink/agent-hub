@@ -40,6 +40,9 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
     "./docs/prototypes/**/*.{html,js,ts,jsx,tsx,mjs}",
+    "!./docs/prototypes/index.html",
+    "!./docs/prototypes/runners/index.html",
+    "!./docs/prototypes/dist/**",
   ],
   darkMode: "class",
   theme: {

@@ -1,6 +1,6 @@
 # 预览与浏览交互原型
 
-运行 `./prototype.sh preview`，打开 <http://127.0.0.1:4176/docs/prototypes/preview/>。
+运行 `./prototype.sh preview`，生成并打开本地 HTML 文件 `docs/prototypes/dist/preview/index.html`。
 
 只保留一个实现对照方案：浏览区加右侧「检查与批注」面板。旧 `variant` 查询参数不再改变布局，也不再提供方向键或菜单切换方案。
 

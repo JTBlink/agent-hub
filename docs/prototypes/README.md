@@ -1,18 +1,17 @@
 # 需求原型目录
 
-启动实现位于 `scripts/prototype/preview.sh`，项目根目录的 `prototype.sh` 是转发入口，两者参数一致：
+直接打开 [index.html](index.html) 查看原型目录。首次预览具体原型前，在项目根目录运行 `npm ci` 和 `./prototype.sh`，生成并打开本地 HTML。
 
 ```sh
-./prototype.sh                       # 启动并打开目录索引
-./prototype.sh --list                # 列出原型，无需启动服务
-./prototype.sh preview               # 直达预览与浏览
-./prototype.sh herdr-sidebar         # Herdr 侧栏
-./prototype.sh --port 4180 --no-open # 指定端口，只显示地址
+./prototype.sh                     # 生成全部原型并打开本地目录索引
+./prototype.sh --list              # 列出原型
+./prototype.sh runners --no-open   # 生成 Runner 原型并显示文件地址
+./prototype.sh herdr-sidebar       # 生成并打开 Herdr 侧栏原型
 ```
 
-首次使用先执行 `npm ci`。新服务在当前终端运行，按 Ctrl+C 停止；同目录已有服务时复用，不会停止其他服务或自动切换 Git 分支。正式应用的预览功能随应用启动，不依赖原型服务。
+原型文件默认输出到 `docs/prototypes/dist/`。[Runner 原型](runners/index.html)的单文件入口位于自身目录。可以用浏览器或 AgentHub 直接打开这些 HTML。修改源码后重新运行命令更新对应文件。
 
-浏览器索引为 `docs/prototypes/index.html`。原型名称、实现状态、当前实现说明（`implementation`）、入口及旧网址集中在 [catalog.json](catalog.json)，终端和目录页共用这一份数据，按清单顺序展示；新增需求插入列表顶部，方便优先查看最新原型。
+目录页由 `catalog.html`、样式和 [catalog.json](catalog.json) 生成。原型名称、实现状态、当前实现说明（`implementation`）、入口及旧网址集中维护在清单中，终端和目录页按清单顺序展示。修改清单后运行 `./prototype.sh --no-open` 更新目录页。开发时需要热更新可显式传入 `--port 4176`。
 
 | 名称              | 目录                                           | 用途                               |
 | ----------------- | ---------------------------------------------- | ---------------------------------- |
@@ -25,6 +24,7 @@
 | `install`         | [install/](install/index.html)                 | 发现入口、技能与自动化任务安装     |
 | `hosts`           | [hosts/](hosts/index.html)                     | Hosts 列表与编辑器实现对照         |
 | `agent-settings`  | [agent-settings/](agent-settings/index.html)   | Agent 多组启动方案与自定义命令     |
+| `runners`         | [runners/](runners/README.md)                  | 任务侧栏、项目筛选与 Runner 管理   |
 
 `tasks-herdr` 是任务与终端原型的旧名称，统一归入 `tasks-terminal`。历史 `/docs/prototypes/*.html` 和 `/tests/browser/preview-module-prototype.html` 网址在 Vite 开发服务中保留跳转，查询参数沿用。
 

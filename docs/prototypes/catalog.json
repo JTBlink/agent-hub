@@ -98,5 +98,15 @@
     "path": "/docs/prototypes/hosts/",
     "aliases": ["/tests/browser/settings-hosts-prototype.html"],
     "implementation": "设置页已采用方案列表与编辑器，支持系统 Hosts 编辑、方案新建 / 复制 / 重命名 / 删除、保存和显式应用。保存不修改系统，应用时校验修订并按需授权；方案接入统一 Git 备份，CLI 共用实现。"
+  },
+  {
+    "id": "runners",
+    "title": "Runner 管理",
+    "description": "沿用任务页首行布局，按项目和平台查看 GitHub 自托管 Runner 与 GitLab Runner。",
+    "status": "已有实现",
+    "path": "/docs/prototypes/runners/",
+    "source": "docs/prototypes/runners/",
+    "standaloneEntry": true,
+    "implementation": "正式任务工作台通过已绑定仓库和 CLI 账号只读查询 GitHub 自托管 Runner 与 GitLab Runner，支持按项目和平台筛选并查看详情。本原型使用演示数据。"
   }
 ]

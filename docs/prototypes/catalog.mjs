@@ -4,6 +4,13 @@ const count = document.querySelector("#count");
 const search = document.querySelector("#search");
 const empty = document.querySelector("#empty");
 const theme = document.querySelector("#theme");
+const previewDirectory = document.documentElement.dataset.previewDirectory;
+const canonicalCatalog = previewDirectory === "./dist/";
+const servedByVite =
+  canonicalCatalog &&
+  /^https?:$/.test(location.protocol) &&
+  ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) &&
+  location.pathname.startsWith("/docs/prototypes/");
 function applyTheme(dark) {
   document.documentElement.classList.toggle("dark", dark);
   theme.setAttribute("aria-pressed", String(dark));
@@ -52,21 +59,27 @@ function render() {
     }
     const actions = node("div", "", "actions");
     if (entry.path) {
+      const directory =
+        entry.standaloneEntry && canonicalCatalog ? "./" : previewDirectory;
+      const path =
+        directory && !servedByVite
+          ? `${directory}${entry.id}/index.html`
+          : entry.path;
       const link = node("a", "打开原型", "open");
       const query = new URLSearchParams(entry.previewQuery);
-      link.href = entry.path + (query.size ? `?${query}` : "");
+      link.href = path + (query.size ? `?${query}` : "");
       link.setAttribute("aria-label", `打开${entry.title}原型`);
       actions.append(link);
       for (const layout of entry.layouts ?? []) {
         const variant = node("a", `方案 ${layout}`);
         const variantQuery = new URLSearchParams(query);
         variantQuery.set("variant", layout);
-        variant.href = `${entry.path}?${variantQuery}`;
+        variant.href = `${path}?${variantQuery}`;
         actions.append(variant);
       }
       if (entry.previewQuery) {
         const settings = node("a", "开关页面");
-        settings.href = entry.path;
+        settings.href = path;
         actions.append(settings);
       }
     } else actions.append(node("span", "保留在历史分支", "archived-note"));

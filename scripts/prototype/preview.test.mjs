@@ -6,6 +6,7 @@ import tailwindcss from "tailwindcss";
 import http from "node:http";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { JSDOM } from "jsdom";
 import { it } from "vitest";
 import { createServer } from "vite";
 
@@ -122,3 +123,57 @@ it("compiles the catalog stylesheet with the shared theme", async () => {
   assert.ok(result.css.includes(".dark"));
   assert.ok(!result.css.includes("@tailwind base"));
 });
+
+it.each([
+  ["file", undefined],
+  [
+    "AgentHub",
+    "http://grant.agent-hub.localhost:4321/docs/prototypes/index.html",
+  ],
+])(
+  "links the %s catalog to directly readable prototype files",
+  (_, address) => {
+    const index = new URL("../../docs/prototypes/index.html", import.meta.url);
+    const catalog = JSON.parse(
+      readFileSync(new URL("./catalog.json", index), "utf8"),
+    );
+    const { window } = new JSDOM(readFileSync(index, "utf8"), {
+      url: address ?? index.href,
+      runScripts: "outside-only",
+    });
+    try {
+      window.matchMedia = () => ({ matches: false });
+      const { document } = window;
+      assert.equal(
+        document.querySelectorAll("script[src], link[rel=stylesheet]").length,
+        0,
+      );
+      window.eval(document.querySelector("script").textContent);
+      for (const entry of catalog.filter(
+        ({ path, branch }) => path && !branch,
+      )) {
+        const link = document.querySelector(
+          `a[aria-label="打开${entry.title}原型"]`,
+        );
+        const directory = entry.standaloneEntry ? "./" : "./dist/";
+        const filename = `${directory}${entry.id}/index.html`;
+        const expected = new URL(filename, window.location.href);
+        expected.search = new URLSearchParams(entry.previewQuery).toString();
+        assert.equal(link?.href, expected.href, entry.id);
+        if (entry.standaloneEntry) {
+          const bytes = readFileSync(new URL(filename, index)).length;
+          assert.ok(
+            bytes <= 1024 * 1024,
+            `${entry.id} exceeds the text preview limit`,
+          );
+        }
+      }
+      const search = document.querySelector("#search");
+      search.value = "Runner";
+      search.dispatchEvent(new window.Event("input"));
+      assert.equal(document.querySelectorAll("#entries article").length, 1);
+    } finally {
+      window.close();
+    }
+  },
+);

@@ -31,7 +31,7 @@ it("opens the sidebar from catalog and CLI preview links while keeping the bare 
   const index = new JSDOM(
     readFileSync(new URL("../index.html", import.meta.url), "utf8"),
     {
-      url: "https://example.invalid/docs/prototypes/",
+      url: new URL("../index.html", import.meta.url).href,
       runScripts: "outside-only",
       beforeParse(window) {
         window.matchMedia = () => ({ matches: false });
@@ -55,7 +55,12 @@ it("opens the sidebar from catalog and CLI preview links while keeping the bare 
     false,
   );
   const url = new URL(links[0].href);
-  expect(prototypePath("ai-native")).toBe(url.pathname + url.search);
+  expect(url.pathname).toBe(
+    new URL("../dist/ai-native/index.html", import.meta.url).pathname,
+  );
+  const cli = new URL(prototypePath("ai-native"), "https://example.invalid");
+  expect(cli.pathname).toBe("/docs/prototypes/ai-native/");
+  expect(cli.search).toBe(url.search);
   const sidebar = open(url.search);
   expect(
     sidebar.window.document.querySelector('[aria-label="AI Native"]'),

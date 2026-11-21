@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>需求原型目录 · AgentHub</title>
+    <link rel="stylesheet" href="./catalog.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="brand">AgentHub</p>
+          <h1>需求原型目录</h1>
+        </div>
+        <button id="theme" type="button" aria-pressed="false">
+          切换深色主题
+        </button>
+      </header>
+      <p class="intro">
+        每项需求只保留一个方案，新需求排在最上面；下方对照当前代码列出实现范围。已有实现表示正式应用已接入相关功能，不代表原型中的全部交互或各平台均已验收。原型使用演示数据。
+      </p>
+      <div class="catalog-tools">
+        <label class="search"
+          >查找原型<input
+            id="search"
+            type="search"
+            placeholder="名称、用途、实现能力或状态"
+        /></label>
+        <p id="count" role="status"></p>
+      </div>
+      <div id="entries"></div>
+      <p id="empty" hidden>没有匹配的原型，试试其他关键词。</p>
+      <footer>
+        <details>
+          <summary>启动与维护说明</summary>
+          <p>
+            <code>./prototype.sh --list</code> 查看命令行目录；<code
+              >./prototype.sh preview</code
+            >
+            生成并打开指定原型的本地 HTML。<br />新增原型请登记
+            <code>docs/prototypes/catalog.json</code>
+            的列表顶部，入口、实现状态、当前实现说明、源码位置和展示顺序统一维护。功能变化时同步核对实现说明。
+          </p>
+        </details>
+      </footer>
+    </main>
+    <script type="module" src="./catalog.mjs"></script>
+  </body>
+</html>
