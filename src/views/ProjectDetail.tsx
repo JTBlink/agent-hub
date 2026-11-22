@@ -1,3 +1,4 @@
+import { Tag } from "../components/Tag";
 import { ProjectSkillDetailPanel } from "../components/ProjectSkillDetailPanel";
 import {
   groupProjectSkills,
@@ -21,7 +22,7 @@ import {
   CircleSlash,
   CheckCircle2,
   Circle,
-  Tag,
+  Tag as TagIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -38,12 +39,7 @@ import { BatchTagDialog } from "../components/BatchTagDialog";
 import { uploadProjectSkillToGroup } from "../lib/projectSkillUpload";
 import { ProjectSkillConflictPreview } from "../components/ProjectSkillConflictPreview";
 import { SkillGroupBar } from "../components/SkillGroupBar";
-import {
-  getTagActiveColor,
-  getTagColor,
-  pruneStaleTagFilters,
-  UNTAGGED_FILTER,
-} from "../lib/skillTags";
+import { pruneStaleTagFilters, UNTAGGED_FILTER } from "../lib/skillTags";
 import {
   detectedProjectAgentFilters,
   getDefaultExportAgents,
@@ -1180,7 +1176,7 @@ export function ProjectDetail({ projectId }: { projectId?: string } = {}) {
             {allTags.map((tag) => {
               const active = tagFilters.has(tag);
               return (
-                <button
+                <Tag
                   key={tag}
                   onClick={() => {
                     setTagFilters((prev) => {
@@ -1190,15 +1186,10 @@ export function ProjectDetail({ projectId }: { projectId?: string } = {}) {
                       return next;
                     });
                   }}
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
-                    active
-                      ? getTagActiveColor(tag, allTags)
-                      : getTagColor(tag, allTags),
-                  )}
+                  selected={active}
                 >
                   {tag}
-                </button>
+                </Tag>
               );
             })}
           </div>
@@ -1281,7 +1272,7 @@ export function ProjectDetail({ projectId }: { projectId?: string } = {}) {
                     label: t("project.batchEditTags", {
                       count: selectedCenterSkills.length,
                     }),
-                    icon: <Tag className="h-3.5 w-3.5" />,
+                    icon: <TagIcon className="h-3.5 w-3.5" />,
                     onSelect: () => setBatchTagDialogOpen(true),
                   },
                 ]
@@ -1354,7 +1345,6 @@ export function ProjectDetail({ projectId }: { projectId?: string } = {}) {
           togglingSkill={togglingSkill}
           togglingAgentTarget={togglingAgentTarget}
           repairingDirectory={projectLibrary.repairingDirectory}
-          allTags={allTags}
           skillGroupsForEntry={skillGroupsForEntry}
           activeGroupId={groupFilter}
           targets={projectAgentTargets}

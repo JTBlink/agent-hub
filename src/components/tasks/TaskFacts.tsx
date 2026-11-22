@@ -1,3 +1,4 @@
+import { Tag } from "../Tag";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { RepositoryTask, TaskDevelopment } from "../../lib/taskBrowserApi";
@@ -140,12 +141,7 @@ export function TaskFacts({
           className="flex flex-wrap gap-1"
         >
           {m.labels.map((label) => (
-            <span
-              key={label}
-              className="rounded bg-surface-hover px-2 py-0.5 text-xs text-secondary"
-            >
-              {label}
-            </span>
+            <Tag key={label}>{label}</Tag>
           ))}
         </div>
       )}

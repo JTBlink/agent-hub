@@ -1,3 +1,4 @@
+import { Tag } from "./Tag";
 import { useId, useState, type ReactNode } from "react";
 import {
   Check,
@@ -300,29 +301,22 @@ export function SkillLibraryFilterPanel(props: Props) {
                 </FilterChoice>
               )}
               {visibleTags.map((tag) => (
-                <button
+                <Tag
                   key={tag}
-                  type="button"
-                  aria-pressed={props.tags.has(tag)}
+                  selected={props.tags.has(tag)}
                   onClick={() => props.onTagsChange(toggle(props.tags, tag))}
                   onContextMenu={(event) => {
                     event.preventDefault();
                     props.onTagContextMenu(tag, event.clientX, event.clientY);
                   }}
                   title={t("mySkills.tags.manageHint")}
-                  className={cn(
-                    chipClass,
-                    "max-w-full break-words text-left",
-                    props.tags.has(tag)
-                      ? "border-accent-border bg-surface-active text-accent-light"
-                      : "border-transparent text-secondary hover:bg-surface-hover",
-                  )}
+                  className="text-left"
                 >
                   {props.tags.has(tag) && (
                     <Check aria-hidden="true" className="h-3 w-3 shrink-0" />
                   )}
                   {tag}
-                </button>
+                </Tag>
               ))}
             </div>
             {(hiddenCount > 0 || expanded) && (

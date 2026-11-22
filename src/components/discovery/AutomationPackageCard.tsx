@@ -1,3 +1,4 @@
+import { Tag } from "../Tag";
 import { Bot, Check, Plus, SquareTerminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AutomationInstallSource } from "../../lib/automationDiscovery";
@@ -87,12 +88,7 @@ export function AutomationPackageCard({
           {task.source}
         </span>
         {tags.map((tag) => (
-          <span
-            key={tag}
-            className="max-w-full truncate rounded-sm border border-border-faint bg-bg-secondary px-1.5 py-0.5 text-xs leading-4 text-muted"
-          >
-            {tag}
-          </span>
+          <Tag key={tag}>{tag}</Tag>
         ))}
         {task.requiresAdmin && (
           <span className="rounded-[5px] border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-700 dark:text-amber-400">

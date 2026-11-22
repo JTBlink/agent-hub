@@ -1,3 +1,4 @@
+import { Tag } from "../components/Tag";
 import {
   agentWorkspacePath,
   installedWorkspaceAgents,
@@ -33,12 +34,7 @@ import { DocumentDiffViewer } from "../components/DocumentDiffViewer";
 import * as api from "../lib/tauri";
 import type { ManagedSkill, ProjectSkill } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
-import {
-  getTagActiveColor,
-  getTagColor,
-  pruneStaleTagFilters,
-  UNTAGGED_FILTER,
-} from "../lib/skillTags";
+import { pruneStaleTagFilters, UNTAGGED_FILTER } from "../lib/skillTags";
 import { AddSkillsSheet } from "../components/AddSkillsSheet";
 import { SyncFromAgentMenu } from "../components/SyncFromAgentMenu";
 import { WorkspaceSkillCard } from "../components/WorkspaceSkillCard";
@@ -918,7 +914,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
             {allLocalTags.map((tag) => {
               const active = tagFilters.has(tag);
               return (
-                <button
+                <Tag
                   key={tag}
                   onClick={() => {
                     setTagFilters((prev) => {
@@ -928,15 +924,10 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
                       return next;
                     });
                   }}
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
-                    active
-                      ? getTagActiveColor(tag, allLocalTags)
-                      : getTagColor(tag, allLocalTags),
-                  )}
+                  selected={active}
                 >
                   {tag}
-                </button>
+                </Tag>
               );
             })}
           </div>
@@ -1058,7 +1049,6 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
                   description={skill.description || skill.relative_path}
                   tags={skill.tags.map((tag) => ({
                     label: tag,
-                    className: getTagColor(tag, allLocalTags),
                   }))}
                   status={statusMeta}
                   fileCount={skill.files.length}

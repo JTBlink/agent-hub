@@ -1,7 +1,7 @@
+import { Tag } from "./Tag";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Plus, Tag } from "lucide-react";
+import { X, Plus, Tag as TagIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { cn } from "../utils";
 
 interface TaggableSkill {
   tags: string[];
@@ -116,7 +116,7 @@ export function BatchTagDialog({
       <div className="relative bg-surface border border-border rounded-xl w-full max-w-[440px] p-5 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
-            <Tag className="w-4 h-4 text-accent-light" />
+            <TagIcon className="w-4 h-4 text-accent-light" />
             {t("mySkills.batchTagDialog.title", { count: skills.length })}
           </h2>
           <button
@@ -147,15 +147,11 @@ export function BatchTagDialog({
                 {tagCounts.map(([tag, count]) => {
                   const marked = removes.includes(tag);
                   return (
-                    <button
+                    <Tag
                       key={tag}
                       onClick={() => toggleRemove(tag)}
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors",
-                        marked
-                          ? "bg-red-500/15 text-red-500 line-through"
-                          : "bg-accent-bg text-accent-light hover:bg-red-500/10 hover:text-red-500",
-                      )}
+                      tone={marked ? "danger" : "accent"}
+                      className={marked ? "line-through" : undefined}
                       title={
                         marked
                           ? t("mySkills.batchTagDialog.undoRemove")
@@ -167,7 +163,7 @@ export function BatchTagDialog({
                         {count}/{skills.length}
                       </span>
                       <X className="h-2.5 w-2.5" />
-                    </button>
+                    </Tag>
                   );
                 })}
               </div>
@@ -180,10 +176,7 @@ export function BatchTagDialog({
             </label>
             <div className="flex flex-wrap items-center gap-1.5">
               {adds.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
-                >
+                <Tag key={tag} tone="success">
                   {tag}
                   <button
                     onClick={() => setAdds(adds.filter((a) => a !== tag))}
@@ -191,7 +184,7 @@ export function BatchTagDialog({
                   >
                     <X className="h-2.5 w-2.5" />
                   </button>
-                </span>
+                </Tag>
               ))}
               <div className="relative">
                 <input

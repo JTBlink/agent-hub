@@ -1,3 +1,4 @@
+import { Tag } from "../Tag";
 import { LockKeyhole } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PlatformOpenButton } from "../PlatformOpenButton";
@@ -195,18 +196,13 @@ export function RunnerTable({
                 {Boolean(runner.labels?.length) && (
                   <div className="flex flex-wrap gap-1">
                     {[...new Set(runner.labels)].map((label) => (
-                      <button
+                      <Tag
                         key={label}
-                        type="button"
-                        aria-pressed={tag === label}
-                        className={cn(
-                          "max-w-full break-words rounded bg-surface-hover px-1.5 py-px text-xs text-secondary hover:text-accent focus-visible:outline focus-visible:outline-accent",
-                          tag === label && "text-accent",
-                        )}
+                        selected={tag === label}
                         onClick={() => onTag(tag === label ? null : label)}
                       >
                         {label}
-                      </button>
+                      </Tag>
                     ))}
                   </div>
                 )}

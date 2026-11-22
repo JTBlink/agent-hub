@@ -1,3 +1,4 @@
+import { Tag } from "./Tag";
 import { FileText, Square, SquareCheck, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ProjectAgentTarget, SkillGroup } from "../lib/tauri";
@@ -6,7 +7,6 @@ import {
   getProjectSkillStatusMeta as getSyncStatusMeta,
   type ProjectSkillEntry,
 } from "../lib/projectSkillEntries";
-import { getTagColor } from "../lib/skillTags";
 import { cn } from "../utils";
 import { ProjectEnabledAgents } from "./ProjectEnabledAgents";
 import { ProjectSkillCardHeader } from "./ProjectSkillCardHeader";
@@ -26,7 +26,6 @@ interface ProjectSkillCollectionProps {
   togglingSkill: string | null;
   togglingAgentTarget: { skillKey: string; agent: string } | null;
   repairingDirectory: string | null;
-  allTags: string[];
   skillGroupsForEntry: ReadonlyMap<string, SkillGroup[]>;
   activeGroupId: string | null;
   targets: ProjectAgentTarget[];
@@ -57,7 +56,6 @@ export function ProjectSkillCollection({
   togglingSkill,
   togglingAgentTarget,
   repairingDirectory,
-  allTags,
   skillGroupsForEntry,
   activeGroupId,
   targets,
@@ -169,15 +167,7 @@ export function ProjectSkillCollection({
                 {skill.tags.length > 0 && (
                   <div className="mt-2 flex flex-wrap items-center gap-1">
                     {skill.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className={cn(
-                          "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                          getTagColor(tag, allTags),
-                        )}
-                      >
-                        {tag}
-                      </span>
+                      <Tag key={tag}>{tag}</Tag>
                     ))}
                   </div>
                 )}
@@ -289,15 +279,7 @@ export function ProjectSkillCollection({
             {skill.tags.length > 0 && (
               <div className="flex shrink-0 items-center gap-1.5">
                 {skill.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className={cn(
-                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium",
-                      getTagColor(tag, allTags),
-                    )}
-                  >
-                    {tag}
-                  </span>
+                  <Tag key={tag}>{tag}</Tag>
                 ))}
               </div>
             )}

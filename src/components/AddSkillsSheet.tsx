@@ -1,3 +1,4 @@
+import { Tag } from "./Tag";
 import { enabledInstalledAgents } from "../lib/agentAvailability";
 import {
   useCallback,
@@ -21,11 +22,7 @@ import {
   type PickerContext,
   type ProjectPickerContext,
 } from "../lib/skillPickerStatus";
-import {
-  getTagActiveColor,
-  getTagColor,
-  UNTAGGED_FILTER,
-} from "../lib/skillTags";
+import { UNTAGGED_FILTER } from "../lib/skillTags";
 import { AgentIcon } from "./AgentIcon";
 import { SkillPickerRow } from "./SkillPickerRow";
 import { ProjectInstallOptions } from "./ProjectInstallOptions";
@@ -694,18 +691,13 @@ function AddSkillsSheetBody({
               {allTags.map((tag) => {
                 const active = tagFilters.has(tag);
                 return (
-                  <button
+                  <Tag
                     key={tag}
                     onClick={() => toggleTagFilter(tag)}
-                    className={cn(
-                      "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
-                      active
-                        ? getTagActiveColor(tag, allTags)
-                        : getTagColor(tag, allTags),
-                    )}
+                    selected={active}
                   >
                     {tag}
-                  </button>
+                  </Tag>
                 );
               })}
             </div>
@@ -753,7 +745,6 @@ function AddSkillsSheetBody({
                     key={skill.id}
                     skill={skill}
                     status={status}
-                    allTags={allTags}
                     sourceLabel={sourceLabel(skill.source_type)}
                     selected={selectedIds.has(skill.id)}
                     onToggle={handleRowClick(index)}

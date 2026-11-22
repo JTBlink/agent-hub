@@ -1,3 +1,4 @@
+import { Tag } from "../components/Tag";
 import {
   canApplySkillSource,
   skillRefreshMessage,
@@ -26,7 +27,7 @@ import {
   Circle,
   Pencil,
   Share2,
-  Tag,
+  Tag as TagIcon,
   Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -49,7 +50,6 @@ import { SkillGroupContext } from "../components/SkillGroupContext";
 import { CardActionMenu } from "../components/CardActionMenu";
 import { SkillGroupSwitchMenu } from "../components/SkillGroupSwitchMenu";
 import * as api from "../lib/tauri";
-import { getTagColor } from "../lib/skillTags";
 import type {
   ManagedSkill,
   ToolInfo,
@@ -1273,7 +1273,7 @@ export function MySkills() {
             {
               key: "tags",
               label: t("mySkills.batchEditTags", { count: selectedIds.size }),
-              icon: <Tag className="h-3.5 w-3.5" />,
+              icon: <TagIcon className="h-3.5 w-3.5" />,
               onSelect: () => setBatchTagDialogOpen(true),
             },
           ]}
@@ -1573,13 +1573,7 @@ export function MySkills() {
                             )}
                             <div className="mt-2 flex flex-wrap items-center gap-1">
                               {skill.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className={cn(
-                                    "group/tag inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium",
-                                    getTagColor(tag, allTags),
-                                  )}
-                                >
+                                <Tag key={tag} className="group/tag">
                                   {tag}
                                   <button
                                     onClick={(e) => {
@@ -1590,7 +1584,7 @@ export function MySkills() {
                                   >
                                     <X className="h-2.5 w-2.5" />
                                   </button>
-                                </span>
+                                </Tag>
                               ))}
                               {tagEditSkillId === skill.id ? (
                                 <div
@@ -1799,15 +1793,7 @@ export function MySkills() {
 
                         <div className="flex shrink-0 items-center gap-1.5">
                           {skill.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className={cn(
-                                "inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium",
-                                getTagColor(tag, allTags),
-                              )}
-                            >
-                              {tag}
-                            </span>
+                            <Tag key={tag}>{tag}</Tag>
                           ))}
                         </div>
 

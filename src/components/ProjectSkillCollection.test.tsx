@@ -67,7 +67,6 @@ async function render(
         togglingSkill={null}
         togglingAgentTarget={null}
         repairingDirectory={null}
-        allTags={[]}
         skillGroupsForEntry={new Map()}
         activeGroupId={null}
         targets={[]}

@@ -1,3 +1,4 @@
+import { Tag } from "./Tag";
 import { isLocalSkillSource } from "../lib/skillUpdatePresentation";
 import { useState, type ReactNode } from "react";
 import {
@@ -188,12 +189,7 @@ function SkillDetailPanelContent({
           <>
             {tools && <span className="mx-0.5 h-3 w-px bg-border-subtle" />}
             {skill.tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-secondary"
-              >
-                {tag}
-              </span>
+              <Tag key={tag}>{tag}</Tag>
             ))}
           </>
         )}

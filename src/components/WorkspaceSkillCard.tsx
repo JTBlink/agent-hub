@@ -1,10 +1,10 @@
+import { Tag } from "./Tag";
 import type { ReactNode } from "react";
 import { FileText, Square, SquareCheck } from "lucide-react";
 import { cn } from "../utils";
 
 interface WorkspaceSkillCardTag {
   label: string;
-  className: string;
 }
 
 interface WorkspaceSkillCardStatus {
@@ -80,15 +80,7 @@ export function WorkspaceSkillCard({
         {tags.length > 0 && (
           <div className="flex shrink-0 items-center gap-1.5">
             {tags.map((tag) => (
-              <span
-                key={tag.label}
-                className={cn(
-                  "inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium",
-                  tag.className,
-                )}
-              >
-                {tag.label}
-              </span>
+              <Tag key={tag.label}>{tag.label}</Tag>
             ))}
           </div>
         )}
@@ -156,15 +148,7 @@ export function WorkspaceSkillCard({
         {tags.length > 0 && (
           <div className="mt-2 flex flex-wrap items-center gap-1">
             {tags.map((tag) => (
-              <span
-                key={tag.label}
-                className={cn(
-                  "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                  tag.className,
-                )}
-              >
-                {tag.label}
-              </span>
+              <Tag key={tag.label}>{tag.label}</Tag>
             ))}
           </div>
         )}

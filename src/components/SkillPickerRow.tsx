@@ -1,15 +1,14 @@
+import { Tag } from "./Tag";
 import type { MouseEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
 import type { ManagedSkill } from "../lib/tauri";
 import type { PickerStatus } from "../lib/skillPickerStatus";
-import { getTagColor } from "../lib/skillTags";
 
 interface Props {
   skill: ManagedSkill;
   status: PickerStatus;
-  allTags: string[];
   sourceLabel: string;
   selected: boolean;
   onToggle: (e: MouseEvent<HTMLDivElement>) => void;
@@ -19,7 +18,6 @@ interface Props {
 export function SkillPickerRow({
   skill,
   status,
-  allTags,
   sourceLabel,
   selected,
   onToggle,
@@ -89,15 +87,7 @@ export function SkillPickerRow({
         {skill.tags.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
             {skill.tags.map((tag) => (
-              <span
-                key={tag}
-                className={cn(
-                  "inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium",
-                  getTagColor(tag, allTags),
-                )}
-              >
-                {tag}
-              </span>
+              <Tag key={tag}>{tag}</Tag>
             ))}
           </div>
         )}
