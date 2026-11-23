@@ -190,11 +190,7 @@ export function AutomationTaskDetail({
                   {task?.name || t("automation.details")}
                 </h1>
                 <CopyTextButton
-                  text={
-                    task
-                      ? automationContext(task, projectName, i18n.language, t)
-                      : ""
-                  }
+                  text={task ? automationContext(task, projectName, t) : ""}
                   disabled={!task?.name}
                   label={t("automation.copyContext")}
                   copiedMessage={t("automation.contextCopied")}

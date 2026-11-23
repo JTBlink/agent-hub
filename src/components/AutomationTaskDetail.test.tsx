@@ -75,11 +75,12 @@ async function render(value: AutomationTask | undefined) {
   )!;
 }
 
-it("copies task identity, scheduling, recent runs and the active prompt from the heading", async () => {
+it("copies only the troubleshooting summary for an installed task package", async () => {
   const button = await render({
     ...task,
     source: "launchd",
     origin: "agent_hub",
+    is_package: true,
     status: "active",
     identifier: "demo.review",
     last_run: "2026-11-12T07:00:00+08:00",
@@ -117,34 +118,35 @@ it("copies task identity, scheduling, recent runs and the active prompt from the
   await act(async () => button.click());
   expect(api.writeText).toHaveBeenCalledOnce();
   const [[context]] = api.writeText.mock.calls;
-  expect(context).toContain(`# ${task.name}`);
-  expect(context).toContain("- 任务 ID: cron:review");
-  expect(context).toContain("- 任务标识: demo.review");
-  expect(context).toContain("- 项目工作区: Demo · /workspace/demo");
-  expect(context).toContain("- 脚本目录: /automation/review");
-  expect(context).toContain("- 任务版本: 3.5.2");
-  expect(context).toContain("- 状态: 已启用");
-  expect(context).toContain("- 调度器: launchd");
-  expect(context).toContain("- 日程: 每 10 分钟");
-  expect(context).toContain("- 下次运行: 由系统调度（每 10 分钟）");
-  expect(context).toContain("- 最近运行: 2026-11-12T07:00:00+08:00");
-  expect(context).toContain(`- 最近结果: ${i18n.t("automation.runSucceeded")}`);
-  expect(context).toContain(
-    `- ${i18n.t("automation.activePromptVariant")}: Review`,
+  expect(context).toBe(
+    [
+      `# ${task.name}`,
+      "",
+      "- 任务 ID: cron:review",
+      "- 项目工作区: /workspace/demo",
+      "- 脚本目录: /automation/review",
+      "- 任务版本: 3.5.2",
+      "- 状态: 已启用",
+      "- 日程: 每 10 分钟",
+      "- 最近运行: 2026-11-12T07:00:00+08:00",
+      "- 最近结果: 执行成功",
+      "- 当前使用: Review",
+    ].join("\n"),
   );
-  expect(context).toContain(
-    "    Review the queued changes.\n    Summarize the findings.",
-  );
-  expect(context).toContain("    sh scripts/review.sh");
-  expect(context).not.toContain("Inactive prompt");
-  expect(context).not.toContain("Script contents");
   expect(api.success).toHaveBeenCalledWith("任务上下文已复制");
 
-  const other = await render({ ...task, id: "cron:other", name: "另一任务" });
+  const other = await render({
+    ...task,
+    id: "cron:other",
+    name: "另一任务",
+    command: "sh ./check.sh",
+  });
   await act(async () => other.click());
   const [, [otherContext]] = api.writeText.mock.calls;
   expect(otherContext).toContain("# 另一任务");
   expect(otherContext).toContain("- 日程: 0 * * * *");
+  expect(otherContext).toContain("    sh ./check.sh");
+  expect(otherContext).not.toContain("未知");
   expect(otherContext).not.toContain("Review the queued changes.");
 });
 

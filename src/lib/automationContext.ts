@@ -1,22 +1,18 @@
 import type { TFunction } from "i18next";
-import {
-  automationLastResult,
-  automationNextRun,
-  automationSchedule,
-} from "./automation";
+import { automationLastResult, automationSchedule } from "./automation";
 import { automationPrompts } from "./automationPrompts";
 import type { AutomationTask } from "./tauri";
 
 export function automationContext(
   task: AutomationTask,
   projectName: string | null,
-  locale: string,
   t: TFunction,
 ): string {
   const { definition } = task;
-  const project = [projectName, task.project]
-    .filter((value, index, values) => value && values.indexOf(value) === index)
-    .join(" · ");
+  const project = task.project || projectName;
+  const scriptDir = definition?.script_dir;
+  const location = scriptDir || task.location;
+  const workdir = definition?.workdir;
   const prompts =
     task.prompt && definition
       ? automationPrompts(definition, t("automation.defaultPromptVariant"))
@@ -27,36 +23,58 @@ export function automationContext(
       : null;
   const fields = [
     [t("automation.taskId"), task.id],
-    [t("automation.columns.identifier"), task.identifier],
-    [t("automation.columns.bundleId"), task.bundle_id],
-    [t("automation.originFilter"), t(`automation.origins.${task.origin}`)],
-    [t("automation.scheduler"), t(`automation.sources.${task.source}`)],
-    [t("automation.columns.status"), t(`automation.states.${task.status}`)],
     [t("automation.columns.project"), project],
-    [t("automation.workdir"), definition?.workdir],
-    [t("automation.scriptDir"), definition?.script_dir],
-    [t("automation.columns.location"), task.location],
+    [
+      t("automation.workdir"),
+      workdir !== project && workdir !== location ? workdir : null,
+    ],
+    [
+      t(scriptDir ? "automation.scriptDir" : "automation.columns.location"),
+      location !== project ? location : null,
+    ],
     [t("automation.packageVersion"), definition?.package_options?.version],
-    [t("automation.columns.agent"), task.agent_kind],
-    [t("automation.columns.schedule"), automationSchedule(task, t)],
-    [t("automation.columns.nextRun"), automationNextRun(task, locale, t)],
+    [
+      t("automation.columns.status"),
+      task.status !== "unknown" ? t(`automation.states.${task.status}`) : null,
+    ],
+    [
+      t("automation.columns.schedule"),
+      definition || task.schedule ? automationSchedule(task, t) : null,
+    ],
     [t("automation.columns.lastRun"), task.last_run],
-    [t("automation.columns.lastResult"), automationLastResult(task, t)],
+    [
+      t("automation.columns.lastResult"),
+      task.last_result && task.status !== "running"
+        ? automationLastResult(task, t)
+        : null,
+    ],
     [t("automation.activePromptVariant"), variant],
   ];
-  const sections = [
-    [t("automation.descriptionLabel"), definition?.description],
-    [t("automation.prompt"), task.prompt],
-    [t("automation.command"), task.command],
-  ];
-  return [
+  const lines = [
     `# ${task.name}`,
     "",
     ...fields.flatMap(([label, value]) =>
       value ? [`- ${label}: ${value}`] : [],
     ),
-    ...sections.flatMap(([label, value]) =>
-      value ? ["", `## ${label}`, "", value.replace(/^/gm, "    ")] : [],
-    ),
-  ].join("\n");
+  ];
+  // A task package provides the full configuration at the copied script directory.
+  if (task.is_package && scriptDir) return lines.join("\n");
+
+  const sections = [
+    [t("automation.prompt"), task.prompt],
+    [
+      t("automation.command"),
+      task.command !== task.prompt ? task.command : null,
+    ],
+  ];
+  for (const [label, value] of sections) {
+    if (value?.trim())
+      lines.push(
+        "",
+        `## ${label}`,
+        "",
+        value.trimEnd().replace(/^(?=.)/gm, "    "),
+      );
+  }
+  return lines.join("\n");
 }
