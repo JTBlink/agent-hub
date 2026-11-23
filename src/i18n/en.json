@@ -438,8 +438,9 @@
     },
     "breadcrumb": "Automation navigation",
     "backToList": "Back to automations",
-    "copyTitle": "Copy task title",
-    "titleCopied": "Task title copied",
+    "copyContext": "Copy task context",
+    "contextCopied": "Task context copied",
+    "taskId": "Task ID",
     "detailTabs": {
       "overview": "Overview",
       "technical": "Technical details",

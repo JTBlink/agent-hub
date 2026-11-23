@@ -158,6 +158,16 @@ export function automationTime(value: string | null, locale: string) {
   return Number.isNaN(time) ? value : new Date(time).toLocaleString(locale);
 }
 
+export function automationLastResult(
+  task: AutomationTask | undefined,
+  t: TFunction,
+) {
+  if (task?.status === "running") return t("automation.states.running");
+  if (task?.last_result === "ok" || task?.last_result === "0")
+    return t("automation.runSucceeded");
+  return task?.last_result || t("automation.unknown");
+}
+
 /** launchd interval jobs expose a cadence, not an authoritative next timestamp. */
 export function automationNextRun(
   task: AutomationTask | undefined,

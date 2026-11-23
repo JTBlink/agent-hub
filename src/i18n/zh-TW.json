@@ -438,8 +438,9 @@
     },
     "breadcrumb": "自動化導覽",
     "backToList": "返回自動化列表",
-    "copyTitle": "複製任務標題",
-    "titleCopied": "任務標題已複製",
+    "copyContext": "複製任務上下文",
+    "contextCopied": "任務上下文已複製",
+    "taskId": "任務 ID",
     "detailTabs": {
       "overview": "概述",
       "technical": "技術資訊",

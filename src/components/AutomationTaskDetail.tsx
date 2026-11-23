@@ -6,7 +6,9 @@ import {
   automationTime,
   automationSchedule,
   automationNextRun,
+  automationLastResult,
 } from "../lib/automation";
+import { automationContext } from "../lib/automationContext";
 import { AutomationTaskIcon } from "./AutomationTaskIcon";
 import { AutomationTaskSource } from "./AutomationTaskSource";
 import { AutomationStatusBadge } from "./AutomationStatusBadge";
@@ -68,12 +70,7 @@ export function AutomationTaskDetail({
     task?.definition?.script_dir ?? task?.definition?.workdir;
   const unknown = t("automation.unknown");
   const nextRun = automationNextRun(task, i18n.language, t);
-  const lastResult =
-    task?.status === "running"
-      ? t("automation.states.running")
-      : ["ok", "0"].includes(task?.last_result ?? "")
-        ? t("automation.runSucceeded")
-        : task?.last_result || unknown;
+  const lastResult = automationLastResult(task, t);
   const technicalFields: { key: string; value: string; copy?: boolean }[] = task
     ? [
         ...(task.identifier
@@ -193,10 +190,14 @@ export function AutomationTaskDetail({
                   {task?.name || t("automation.details")}
                 </h1>
                 <CopyTextButton
-                  text={task?.name ?? ""}
+                  text={
+                    task
+                      ? automationContext(task, projectName, i18n.language, t)
+                      : ""
+                  }
                   disabled={!task?.name}
-                  label={t("automation.copyTitle")}
-                  copiedMessage={t("automation.titleCopied")}
+                  label={t("automation.copyContext")}
+                  copiedMessage={t("automation.contextCopied")}
                   className="h-7 w-7 justify-center p-1.5"
                 />
               </div>

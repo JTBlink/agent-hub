@@ -71,24 +71,84 @@ async function render(value: AutomationTask | undefined) {
     ),
   );
   return container.querySelector<HTMLButtonElement>(
-    'button[aria-label="复制任务标题"]',
+    'button[aria-label="复制任务上下文"]',
   )!;
 }
 
-it("copies the full task title from the icon beside the heading", async () => {
-  const button = await render(task);
+it("copies task identity, scheduling, recent runs and the active prompt from the heading", async () => {
+  const button = await render({
+    ...task,
+    source: "launchd",
+    origin: "agent_hub",
+    status: "active",
+    identifier: "demo.review",
+    last_run: "2026-11-12T07:00:00+08:00",
+    last_result: "0",
+    command: "sh scripts/review.sh",
+    prompt: "Review the queued changes.\nSummarize the findings.",
+    definition: {
+      name: task.name,
+      provider: "system",
+      description: "Checks queued changes in the demo project.",
+      content: "sh scripts/review.sh",
+      workdir: "/workspace/demo",
+      script_dir: "/automation/review",
+      enabled: true,
+      schedule: { kind: "interval", minutes: 10 },
+      package_options: { version: "3.5.2", dependencies: [] },
+      files: [
+        {
+          path: "config/prompt-variants.json",
+          content: JSON.stringify({
+            version: 2,
+            active_id: "review",
+            variants: [
+              { id: "review", name: "Review" },
+              { id: "other", name: "Other", content: "Inactive prompt" },
+            ],
+          }),
+        },
+        { path: "scripts/review.sh", content: "Script contents" },
+      ],
+    },
+  });
   expect(button.previousElementSibling?.tagName).toBe("H1");
   expect(button.querySelector(".lucide-copy")).not.toBeNull();
   await act(async () => button.click());
-  expect(api.writeText).toHaveBeenCalledExactlyOnceWith(task.name);
-  expect(api.success).toHaveBeenCalledWith("任务标题已复制");
+  expect(api.writeText).toHaveBeenCalledOnce();
+  const [[context]] = api.writeText.mock.calls;
+  expect(context).toContain(`# ${task.name}`);
+  expect(context).toContain("- 任务 ID: cron:review");
+  expect(context).toContain("- 任务标识: demo.review");
+  expect(context).toContain("- 项目工作区: Demo · /workspace/demo");
+  expect(context).toContain("- 脚本目录: /automation/review");
+  expect(context).toContain("- 任务版本: 3.5.2");
+  expect(context).toContain("- 状态: 已启用");
+  expect(context).toContain("- 调度器: launchd");
+  expect(context).toContain("- 日程: 每 10 分钟");
+  expect(context).toContain("- 下次运行: 由系统调度（每 10 分钟）");
+  expect(context).toContain("- 最近运行: 2026-11-12T07:00:00+08:00");
+  expect(context).toContain(`- 最近结果: ${i18n.t("automation.runSucceeded")}`);
+  expect(context).toContain(
+    `- ${i18n.t("automation.activePromptVariant")}: Review`,
+  );
+  expect(context).toContain(
+    "    Review the queued changes.\n    Summarize the findings.",
+  );
+  expect(context).toContain("    sh scripts/review.sh");
+  expect(context).not.toContain("Inactive prompt");
+  expect(context).not.toContain("Script contents");
+  expect(api.success).toHaveBeenCalledWith("任务上下文已复制");
 
-  await render({ ...task, id: "cron:other", name: "另一任务" });
-  await act(async () => button.click());
-  expect(api.writeText).toHaveBeenLastCalledWith("另一任务");
+  const other = await render({ ...task, id: "cron:other", name: "另一任务" });
+  await act(async () => other.click());
+  const [, [otherContext]] = api.writeText.mock.calls;
+  expect(otherContext).toContain("# 另一任务");
+  expect(otherContext).toContain("- 日程: 0 * * * *");
+  expect(otherContext).not.toContain("Review the queued changes.");
 });
 
-it("disables title copying when the task is unavailable", async () => {
+it("disables context copying when the task is unavailable", async () => {
   const button = await render(undefined);
   expect(button.disabled).toBe(true);
   await act(async () => button.click());

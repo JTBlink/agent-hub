@@ -438,8 +438,9 @@
     },
     "breadcrumb": "自动化导航",
     "backToList": "返回自动化列表",
-    "copyTitle": "复制任务标题",
-    "titleCopied": "任务标题已复制",
+    "copyContext": "复制任务上下文",
+    "contextCopied": "任务上下文已复制",
+    "taskId": "任务 ID",
     "detailTabs": {
       "overview": "概述",
       "technical": "技术信息",
