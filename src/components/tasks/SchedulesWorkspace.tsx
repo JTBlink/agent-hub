@@ -1,14 +1,18 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { GitBranch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   getRepositorySchedules,
   type RepositorySchedule,
   type TaskBinding,
 } from "../../lib/tauri";
+import { scheduleContext } from "../../lib/scheduleContext";
 import { taskTime } from "../../lib/taskTime";
-import { PlatformOpenButton } from "../PlatformOpenButton";
+import { CopyTextButton } from "../CopyTextButton";
 import { isLiveScheduleRun, useScheduleProgress } from "./useScheduleProgress";
-import { ScheduleProgressIndicator } from "./ScheduleProgressIndicator";
+import { GitlabScheduleActions } from "./gitlab/ScheduleActions";
+import { PlatformOpenButton } from "../PlatformOpenButton";
+import { ScheduleRunStatus } from "./ScheduleRunStatus";
 import { RepositoryPlatformIcon } from "../RepositoryPlatformIcon";
 import { SingleChoiceGroup } from "../SingleChoiceGroup";
 import {
@@ -16,7 +20,6 @@ import {
   type TaskScopeToolbarProps,
 } from "./TaskScopeToolbar";
 import { useRepositoryInventory } from "./useRepositoryInventory";
-import { cn } from "../../utils";
 
 const states = ["all", "active", "inactive"] as const;
 type ScheduleFilter = (typeof states)[number];
@@ -24,18 +27,6 @@ type ScheduleFilter = (typeof states)[number];
 function matches(schedule: RepositorySchedule, state: ScheduleFilter) {
   return state === "all" || schedule.active === (state === "active");
 }
-
-const statuses = {
-  success: "passed",
-  running: "running",
-  in_progress: "running",
-  pending: "pending",
-  queued: "pending",
-  failed: "failed",
-  failure: "failed",
-  canceled: "canceled",
-  cancelled: "canceled",
-} as const;
 
 export function SchedulesWorkspace({
   bindings,
@@ -58,10 +49,15 @@ export function SchedulesWorkspace({
   >;
 }) {
   const { t } = useTranslation();
+  const [runRefresh, setRunRefresh] = useState(0);
+  const onRunAccepted = useCallback(
+    () => setRunRefresh((value) => value + 1),
+    [],
+  );
   const [state, setState] = useState<ScheduleFilter>("all");
   const { sources, loading } = useRepositoryInventory(
     bindings,
-    refreshKey,
+    refreshKey + runRefresh,
     scopeKey,
     discovering,
     getRepositorySchedules,
@@ -144,7 +140,16 @@ export function SchedulesWorkspace({
         />
       </div>
       <div aria-busy={busy} className="app-panel min-h-0 overflow-auto">
-        <table className="w-full min-w-[740px] text-left text-xs">
+        <table className="w-full min-w-[1040px] table-fixed text-left text-xs">
+          <colgroup>
+            <col />
+            <col className="w-[15%]" />
+            <col className="w-[11%]" />
+            <col className="w-[18%]" />
+            <col className="w-[13%]" />
+            <col className="w-[10%]" />
+            <col className="w-40" />
+          </colgroup>
           <thead className="sticky top-0 z-10 border-b border-border-subtle bg-bg-secondary text-muted">
             <tr>
               {[
@@ -158,12 +163,12 @@ export function SchedulesWorkspace({
                 <th
                   key={column}
                   scope="col"
-                  className="whitespace-nowrap px-3 py-2 font-medium"
+                  className="whitespace-nowrap px-4 py-3 font-medium"
                 >
                   {t(`schedules.${column}`)}
                 </th>
               ))}
-              <th scope="col" className="w-12">
+              <th scope="col" className="w-40">
                 <span className="sr-only">{t("schedules.open")}</span>
               </th>
             </tr>
@@ -175,40 +180,47 @@ export function SchedulesWorkspace({
                 sample && "progress" in sample
                   ? (sample.progress.status ?? item.last_status)
                   : item.last_status;
-              const normalized =
-                status && Object.prototype.hasOwnProperty.call(statuses, status)
-                  ? statuses[status as keyof typeof statuses]
-                  : null;
-              const statusLabel = normalized
-                ? t(`schedules.run.${normalized}`)
-                : status;
               return (
                 <tr
                   key={key}
-                  className="border-t border-border-subtle align-top hover:bg-surface-hover"
+                  className="h-24 border-t border-border-subtle align-middle hover:bg-surface-hover"
                 >
-                  <td className="min-w-48 px-3 py-3">
-                    <div className="flex items-start gap-2">
+                  <td className="px-4 py-4">
+                    <div className="flex items-start gap-2.5">
                       <RepositoryPlatformIcon
                         providers={[binding.provider]}
                         fallbackLabel={t("tasks.provider")}
                       />
                       <div className="min-w-0">
-                        <div className="break-words text-sm font-medium">
+                        <CopyTextButton
+                          text={scheduleContext(binding, item, status)}
+                          label={`${t("schedules.copyContext")}: ${item.title}`}
+                          copiedMessage={t("schedules.copied")}
+                          className="block max-w-full break-words p-0 text-left text-sm font-medium text-primary hover:text-accent"
+                        >
                           {item.title}
-                        </div>
-                        <div className="break-words text-xs text-muted">
-                          {binding.repository}
+                        </CopyTextButton>
+                        <div className="mt-1 break-words text-xs text-muted">
+                          <CopyTextButton
+                            text={binding.repository}
+                            label={`${t("schedules.copyRepository")}: ${binding.repository}`}
+                            copiedMessage={t("schedules.copied")}
+                            className="max-w-full break-words p-0 text-left text-xs text-muted hover:text-accent"
+                          >
+                            {binding.repository}
+                          </CopyTextButton>
                           {item.active === false &&
                             ` · ${t("schedules.inactive")}`}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="space-y-1 px-3 py-3">
+                  <td className="space-y-1 px-4 py-4">
                     {item.rules.map((rule, index) => (
                       <div key={`${rule.cron}/${rule.timezone}/${index}`}>
-                        <code className="whitespace-nowrap">{rule.cron}</code>
+                        <code className="break-words font-mono leading-relaxed">
+                          {rule.cron}
+                        </code>
                         {rule.timezone && (
                           <span className="block text-muted">
                             {rule.timezone}
@@ -217,46 +229,44 @@ export function SchedulesWorkspace({
                       </div>
                     ))}
                   </td>
-                  <td className="px-3 py-3">{item.target ?? "—"}</td>
-                  <td className="px-3 py-3">
-                    {statusLabel ? (
-                      <span
-                        className={cn(
-                          "inline-flex rounded-md bg-surface-active px-1.5 py-0.5",
-                          normalized === "passed" && "text-success",
-                          normalized === "failed" && "text-danger",
-                        )}
-                      >
-                        {item.last_run_url ? (
-                          <PlatformOpenButton
-                            url={item.last_run_url}
-                            host={binding.host}
-                            label={t("schedules.openRun", {
-                              status: statusLabel,
-                            })}
-                            className="rounded hover:underline focus-visible:outline focus-visible:outline-accent"
-                          >
-                            {statusLabel}
-                          </PlatformOpenButton>
-                        ) : (
-                          statusLabel
-                        )}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                    {sample && <ScheduleProgressIndicator result={sample} />}
+                  <td className="px-4 py-4">
+                    <span className="inline-flex max-w-full items-start gap-1.5">
+                      {item.target && (
+                        <GitBranch
+                          size={14}
+                          aria-hidden="true"
+                          className="mt-0.5 shrink-0 text-muted"
+                        />
+                      )}
+                      <span className="break-all">{item.target ?? "—"}</span>
+                    </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
+                  <td className="px-4 py-4">
+                    <ScheduleRunStatus
+                      status={status}
+                      url={item.last_run_url}
+                      host={binding.host}
+                      progress={sample}
+                    />
+                  </td>
+                  <td className="px-4 py-4 tabular-nums">
                     {item.active === false ? "—" : taskTime(item.next_run_at)}
                   </td>
-                  <td className="px-3 py-3">{item.owner ?? "—"}</td>
-                  <td className="px-2 py-2.5">
-                    <PlatformOpenButton
-                      url={item.url}
-                      host={binding.host}
-                      label={t("tasks.openRemote")}
-                    />
+                  <td className="break-words px-4 py-4">{item.owner ?? "—"}</td>
+                  <td className="px-3 py-4">
+                    {binding.provider === "gitlab" ? (
+                      <GitlabScheduleActions
+                        binding={binding}
+                        schedule={item}
+                        onChanged={onRunAccepted}
+                      />
+                    ) : (
+                      <PlatformOpenButton
+                        url={item.url}
+                        host={binding.host}
+                        label={t("tasks.openRemote")}
+                      />
+                    )}
                   </td>
                 </tr>
               );

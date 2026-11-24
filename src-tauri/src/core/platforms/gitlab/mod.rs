@@ -1,6 +1,7 @@
 //! Gitlab integration; compiled independently of the other provider.
 pub(crate) mod accounts;
 pub(crate) mod cli;
+pub(crate) mod schedule_management;
 pub(crate) mod schedules;
 pub(crate) mod tasks;
 pub(crate) const CLI: &str = "glab";

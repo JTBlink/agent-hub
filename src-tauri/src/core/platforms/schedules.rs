@@ -1,6 +1,9 @@
+#[path = "schedule_contracts.rs"]
+mod config;
 #[cfg(any(feature = "github", feature = "gitlab"))]
 use super::contracts::Provider;
 use crate::core::task_browser::{Binding, CliReader, TaskClient, TaskFailure};
+pub use config::{ScheduleConfig, ScheduleEdit};
 use serde::Serialize;
 #[cfg(any(feature = "github", feature = "gitlab"))]
 use serde_json::Value;
@@ -93,6 +96,96 @@ impl<R: CliReader> TaskClient<R> {
             _ => Err(TaskFailure::new(
                 "feature_unavailable",
                 "The hosting platform is unavailable",
+            )),
+        }
+    }
+
+    /// Dispatch run schedule to the selected platform implementation.
+    pub fn run_schedule(
+        &self,
+        binding: &Binding,
+        schedule_id: u64,
+        cancel: &AtomicBool,
+    ) -> Result<(), TaskFailure> {
+        binding.validate()?;
+        let _ = (schedule_id, cancel);
+        match binding.provider {
+            #[cfg(feature = "gitlab")]
+            Provider::Gitlab => {
+                super::gitlab::schedule_management::run(self, binding, schedule_id, cancel)
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(TaskFailure::new(
+                "feature_unavailable",
+                "Schedule management is unavailable for this platform",
+            )),
+        }
+    }
+
+    /// Dispatch schedule config to the selected platform implementation.
+    pub fn schedule_config(
+        &self,
+        binding: &Binding,
+        schedule_id: u64,
+        cancel: &AtomicBool,
+    ) -> Result<ScheduleConfig, TaskFailure> {
+        binding.validate()?;
+        let _ = (schedule_id, cancel);
+        match binding.provider {
+            #[cfg(feature = "gitlab")]
+            Provider::Gitlab => {
+                super::gitlab::schedule_management::details(self, binding, schedule_id, cancel)
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(TaskFailure::new(
+                "feature_unavailable",
+                "Schedule management is unavailable for this platform",
+            )),
+        }
+    }
+
+    /// Dispatch edit schedule to the selected platform implementation.
+    pub fn edit_schedule(
+        &self,
+        binding: &Binding,
+        schedule_id: u64,
+        edit: &ScheduleEdit,
+        cancel: &AtomicBool,
+    ) -> Result<ScheduleConfig, TaskFailure> {
+        binding.validate()?;
+        let _ = (schedule_id, cancel);
+        let _ = edit;
+        match binding.provider {
+            #[cfg(feature = "gitlab")]
+            Provider::Gitlab => {
+                super::gitlab::schedule_management::edit(self, binding, schedule_id, edit, cancel)
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(TaskFailure::new(
+                "feature_unavailable",
+                "Schedule management is unavailable for this platform",
+            )),
+        }
+    }
+
+    /// Dispatch delete schedule to the selected platform implementation.
+    pub fn delete_schedule(
+        &self,
+        binding: &Binding,
+        schedule_id: u64,
+        cancel: &AtomicBool,
+    ) -> Result<(), TaskFailure> {
+        binding.validate()?;
+        let _ = (schedule_id, cancel);
+        match binding.provider {
+            #[cfg(feature = "gitlab")]
+            Provider::Gitlab => {
+                super::gitlab::schedule_management::delete(self, binding, schedule_id, cancel)
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(TaskFailure::new(
+                "feature_unavailable",
+                "Schedule management is unavailable for this platform",
             )),
         }
     }

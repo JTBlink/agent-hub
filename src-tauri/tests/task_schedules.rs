@@ -148,3 +148,170 @@ fn github_progress_counts_jobs_from_the_latest_run_attempt() {
         (3, 1, 1, 1)
     );
 }
+
+#[cfg(feature = "gitlab")]
+#[test]
+fn manually_runs_only_the_selected_schedule_through_its_repository_connection() {
+    let calls = std::cell::RefCell::new(Vec::new());
+    let reader = |current: &Binding, args: &[String], _: &AtomicBool| {
+        assert_eq!(current.host, "code.example.invalid");
+        calls.borrow_mut().push(args.to_vec());
+        Ok::<_, TaskFailure>(json!({"message": "201 Created"}))
+    };
+    let client = TaskClient::new(reader);
+    client
+        .run_schedule(&binding(Provider::Gitlab), 75, &AtomicBool::new(false))
+        .unwrap();
+    assert_eq!(calls.borrow().len(), 1);
+    assert_eq!(
+        calls.borrow()[0],
+        [
+            "api",
+            "--method",
+            "POST",
+            "--hostname",
+            "code.example.invalid",
+            "projects/team%2Fdemo/pipeline_schedules/75/play"
+        ]
+    );
+    assert_eq!(
+        client
+            .run_schedule(&binding(Provider::Gitlab), 0, &AtomicBool::new(false))
+            .unwrap_err()
+            .kind,
+        "invalid_input"
+    );
+    assert_eq!(calls.borrow().len(), 1);
+}
+
+#[cfg(feature = "gitlab")]
+#[test]
+fn a_rejected_schedule_run_is_returned_without_retrying() {
+    let count = std::cell::Cell::new(0);
+    let client = TaskClient::new(|_: &Binding, _: &[String], _: &AtomicBool| {
+        count.set(count.get() + 1);
+        Err::<serde_json::Value, _>(TaskFailure::new("permission", "Not allowed"))
+    });
+    assert_eq!(
+        client
+            .run_schedule(&binding(Provider::Gitlab), 75, &AtomicBool::new(false))
+            .unwrap_err()
+            .kind,
+        "permission"
+    );
+    assert_eq!(count.get(), 1);
+}
+
+#[cfg(feature = "github")]
+#[test]
+fn github_schedule_runs_do_not_dispatch_workflows_without_manual_trigger_support() {
+    let client = TaskClient::new(|_: &Binding, _: &[String], _: &AtomicBool| {
+        Err::<serde_json::Value, _>(TaskFailure::new(
+            "unexpected_request",
+            "Unsupported schedule issued a request",
+        ))
+    });
+    assert_eq!(
+        client
+            .run_schedule(&binding(Provider::Github), 75, &AtomicBool::new(false))
+            .unwrap_err()
+            .kind,
+        "feature_unavailable"
+    );
+}
+
+#[cfg(feature = "gitlab")]
+#[test]
+fn editing_schedule_preserves_unmodified_fields_and_excludes_secrets_from_settings() {
+    use app_lib::core::task_browser::ScheduleEdit;
+    let calls = std::cell::RefCell::new(Vec::new());
+    let client = TaskClient::new(|_: &Binding, args: &[String], _: &AtomicBool| {
+        calls.borrow_mut().push(args.to_vec());
+        Ok::<_, TaskFailure>(
+            json!({"id":75,"description":"Daily checks","ref":"refs/tags/release","cron":"0 1 * * *","cron_timezone":"Asia/Shanghai","active":true,"variables":[{"key":"SECRET","value":"fixture-only"}]}),
+        )
+    });
+    let config = client
+        .schedule_config(&binding(Provider::Gitlab), 75, &AtomicBool::new(false))
+        .unwrap();
+    assert_eq!(config.target, "refs/tags/release");
+    assert!(!serde_json::to_value(&config)
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .contains_key("variables"));
+    let edit = ScheduleEdit {
+        cron: Some("0 2 * * *".into()),
+        active: Some(false),
+        ..ScheduleEdit::default()
+    };
+    client
+        .edit_schedule(
+            &binding(Provider::Gitlab),
+            75,
+            &edit,
+            &AtomicBool::new(false),
+        )
+        .unwrap();
+    assert_eq!(calls.borrow()[1][2], "PUT");
+    assert_eq!(
+        &calls.borrow()[1][6..],
+        [
+            "--raw-field",
+            "cron=0 2 * * *",
+            "--raw-field",
+            "active=false"
+        ]
+    );
+    assert_eq!(
+        client
+            .edit_schedule(
+                &binding(Provider::Gitlab),
+                75,
+                &ScheduleEdit::default(),
+                &AtomicBool::new(false)
+            )
+            .unwrap_err()
+            .kind,
+        "invalid_input"
+    );
+    assert_eq!(
+        client
+            .edit_schedule(
+                &binding(Provider::Gitlab),
+                75,
+                &ScheduleEdit {
+                    target: Some(" ".into()),
+                    ..ScheduleEdit::default()
+                },
+                &AtomicBool::new(false)
+            )
+            .unwrap_err()
+            .kind,
+        "invalid_input"
+    );
+    assert_eq!(calls.borrow().len(), 2);
+}
+
+#[cfg(feature = "gitlab")]
+#[test]
+fn deleting_schedule_is_repository_scoped_and_propagates_permission_failures() {
+    let client = TaskClient::new(|_: &Binding, args: &[String], _: &AtomicBool| {
+        assert_eq!(args[2], "DELETE");
+        assert_eq!(args[5], "projects/team%2Fdemo/pipeline_schedules/75");
+        Err::<serde_json::Value, _>(TaskFailure::new("permission", "Denied"))
+    });
+    assert_eq!(
+        client
+            .delete_schedule(&binding(Provider::Gitlab), 75, &AtomicBool::new(false))
+            .unwrap_err()
+            .kind,
+        "permission"
+    );
+    let client = TaskClient::new(|_: &Binding, _: &[String], _: &AtomicBool| {
+        Ok::<_, TaskFailure>(serde_json::Value::Null)
+    });
+    client
+        .delete_schedule(&binding(Provider::Gitlab), 75, &AtomicBool::new(false))
+        .unwrap();
+}

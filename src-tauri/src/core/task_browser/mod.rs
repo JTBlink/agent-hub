@@ -11,6 +11,7 @@ mod mutation;
 mod query;
 mod runner_projects;
 mod runners;
+pub use crate::core::platforms::schedules::{ScheduleConfig, ScheduleEdit};
 pub use runner_projects::CreatedProjectRunner;
 pub use runners::{RunnerAction, RunnerEdit, RunnerInventory, RunnerSummary};
 mod types;

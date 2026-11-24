@@ -1085,6 +1085,16 @@ it("filters real runner inventories by platform and retains task search when ret
     'tbody button[aria-label="runners.actions.edit"]',
   )!;
   expect(rowEditButton).toBeDefined();
+  const rowActions = rowEditButton.closest("td")!;
+  expect(
+    [...rowActions.querySelectorAll("button")].map((button) =>
+      button.getAttribute("aria-label"),
+    ),
+  ).toEqual([
+    "runners.actions.edit",
+    "runners.actions.resume",
+    "tasks.openRemote",
+  ]);
   expect(
     host.querySelector('tbody button[aria-label="runners.actions.delete"]'),
   ).toBeNull();
@@ -1249,6 +1259,44 @@ it("shows schedules within the selected platform and filters by active state", a
   expect(host.querySelector("tbody")?.textContent).toContain(
     "Scheduled GitHub workflow",
   );
+  for (const [label, text] of [
+    ["schedules.copyContext: Daily GitLab checks", "Daily GitLab checks"],
+    ["schedules.copyRepository: team/project-1", "team/project-1"],
+    [
+      "schedules.copyContext: Scheduled GitHub workflow",
+      "Scheduled GitHub workflow",
+    ],
+  ]) {
+    const button = host.querySelector<HTMLButtonElement>(
+      `button[aria-label="${label}"]`,
+    );
+    expect(button).not.toBeNull();
+    await act(async () => button!.click());
+    if (label.startsWith("schedules.copyRepository")) {
+      expect(writeText).toHaveBeenLastCalledWith(text);
+    } else {
+      const copied = vi.mocked(writeText).mock.lastCall?.[0];
+      expect(copied).toContain(`Pipeline schedule #10: ${text}`);
+      expect(copied).toContain("Cron: 0 1 * * *");
+      if (text === "Daily GitLab checks") {
+        expect(copied).toContain(
+          "GitLab · gitlab.example.invalid/team/project-1",
+        );
+        expect(copied).toContain("Ref: dev");
+        expect(copied).toContain("Asia/Shanghai");
+        expect(copied).toContain("Last run status: running");
+        expect(copied).toContain("Last run ID: 50");
+        expect(copied).toContain(
+          "https://gitlab.example.invalid/team/project-1/-/pipeline_schedules",
+        );
+      } else {
+        expect(copied).toContain("GitHub ·");
+        expect(copied).toContain("Ref: main");
+        expect(copied).not.toContain("Last run");
+      }
+    }
+  }
+  expect(openUrl).not.toHaveBeenCalled();
   const meter = host.querySelector('[role="progressbar"]');
   expect(meter?.getAttribute("aria-valuenow")).toBe("4");
   expect(meter?.getAttribute("aria-valuemax")).toBe("6");
@@ -1272,6 +1320,15 @@ it("shows schedules within the selected platform and filters by active state", a
   expect(openUrl).toHaveBeenCalledWith(
     "https://gitlab.example.invalid/team/project-1/-/pipeline_schedules",
   );
+  const run = host.querySelector<HTMLButtonElement>(
+    'button[aria-label="schedules.runNow"]',
+  );
+  expect(run).not.toBeNull();
+  await act(async () => run!.click());
+  expect(invoke).toHaveBeenCalledWith("task_run_schedule", {
+    bindingId: scopedBindings[1].id,
+    scheduleId: 10,
+  });
   await act(async () => radio("schedules.active (1)").click());
   expect(host.querySelector("tbody")?.textContent).toContain("Demo Owner");
   expect(host.querySelector("tbody")?.textContent).not.toContain(
@@ -1285,6 +1342,9 @@ it("shows schedules within the selected platform and filters by active state", a
   expect(host.querySelector("tbody")?.textContent).not.toContain(
     "Daily GitLab checks",
   );
+  expect(
+    host.querySelector('button[aria-label="schedules.runNow"]'),
+  ).toBeNull();
   await act(async () => root.unmount());
   host.remove();
 });

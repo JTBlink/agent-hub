@@ -27,6 +27,9 @@ export interface RepositorySchedules {
 export const getRepositorySchedules = (bindingId: string, requestId: string) =>
   invoke<RepositorySchedules>("task_schedules", { bindingId, requestId });
 
+export const runRepositorySchedule = (bindingId: string, scheduleId: number) =>
+  invoke<void>("task_run_schedule", { bindingId, scheduleId });
+
 export interface ScheduleProgress {
   total: number;
   finished: number;
@@ -46,3 +49,31 @@ export const getScheduleProgress = (
     runId,
     requestId,
   });
+
+export interface ScheduleConfig {
+  title: string;
+  target: string;
+  cron: string;
+  timezone: string;
+  active: boolean;
+}
+export const getScheduleConfig = (
+  bindingId: string,
+  scheduleId: number,
+  requestId: string,
+) =>
+  invoke<ScheduleConfig>("task_schedule_config", {
+    bindingId,
+    scheduleId,
+    requestId,
+  });
+export const editRepositorySchedule = (
+  bindingId: string,
+  scheduleId: number,
+  edit: Partial<ScheduleConfig>,
+) =>
+  invoke<ScheduleConfig>("task_edit_schedule", { bindingId, scheduleId, edit });
+export const deleteRepositorySchedule = (
+  bindingId: string,
+  scheduleId: number,
+) => invoke<void>("task_delete_schedule", { bindingId, scheduleId });

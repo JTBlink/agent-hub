@@ -121,6 +121,87 @@ pub async fn task_schedules(
 }
 
 #[tauri::command]
+pub async fn task_run_schedule(
+    store: State<'_, Arc<SkillStore>>,
+    binding_id: String,
+    schedule_id: u64,
+) -> Result<(), TaskFailure> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (binding, client) = client(&store, &binding_id)?;
+        client.run_schedule(
+            &binding,
+            schedule_id,
+            &std::sync::atomic::AtomicBool::new(false),
+        )
+    })
+    .await
+    .map_err(|error| TaskFailure::new("internal", error.to_string()))?
+}
+
+#[tauri::command]
+pub async fn task_schedule_config(
+    window: Webview,
+    store: State<'_, Arc<SkillStore>>,
+    registry: State<'_, Arc<InstallCancelRegistry>>,
+    binding_id: String,
+    schedule_id: u64,
+    request_id: String,
+) -> Result<crate::core::platforms::schedules::ScheduleConfig, TaskFailure> {
+    let key = request_key(&window, &request_id)?;
+    let registry = registry.inner().clone();
+    let cancel = registry.register(&key);
+    let store = store.inner().clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let (binding, client) = client(&store, &binding_id)?;
+        client.schedule_config(&binding, schedule_id, &cancel)
+    })
+    .await;
+    registry.remove(&key);
+    result.map_err(|error| TaskFailure::new("internal", error.to_string()))?
+}
+
+#[tauri::command]
+pub async fn task_edit_schedule(
+    store: State<'_, Arc<SkillStore>>,
+    binding_id: String,
+    schedule_id: u64,
+    edit: crate::core::platforms::schedules::ScheduleEdit,
+) -> Result<crate::core::platforms::schedules::ScheduleConfig, TaskFailure> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (binding, client) = client(&store, &binding_id)?;
+        client.edit_schedule(
+            &binding,
+            schedule_id,
+            &edit,
+            &std::sync::atomic::AtomicBool::new(false),
+        )
+    })
+    .await
+    .map_err(|error| TaskFailure::new("internal", error.to_string()))?
+}
+
+#[tauri::command]
+pub async fn task_delete_schedule(
+    store: State<'_, Arc<SkillStore>>,
+    binding_id: String,
+    schedule_id: u64,
+) -> Result<(), TaskFailure> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (binding, client) = client(&store, &binding_id)?;
+        client.delete_schedule(
+            &binding,
+            schedule_id,
+            &std::sync::atomic::AtomicBool::new(false),
+        )
+    })
+    .await
+    .map_err(|error| TaskFailure::new("internal", error.to_string()))?
+}
+
+#[tauri::command]
 pub async fn task_schedule_progress(
     window: Webview,
     store: State<'_, Arc<SkillStore>>,

@@ -210,6 +210,10 @@ agent-hub/
 │   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理
 │   │       ├── platforms/          #     独立 GitHub／GitLab 实现、共享契约与缺省适配
+│   │       │   ├── schedules.rs    #       中立流水线计划契约与按平台分发的公共入口
+│   │       │   ├── schedule_contracts.rs # 计划配置读取与局部编辑契约
+│   │       │   ├── github/         #       GitHub 独立 API、鉴权及数据解析
+│   │       │   └── gitlab/         #       GitLab 独立实现；schedule_management.rs 处理计划读写
 │   │       ├── cloud_sync.rs        #     本地修改对接可选备份的窄接口
 │   │       ├── credential_cache.rs #     进程内钥匙串读取缓存与并发合并
 │   │       ├── library_layout.rs   #     默认库层级升级、冲突保护与中断恢复

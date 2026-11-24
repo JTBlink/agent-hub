@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Copy, Loader2 } from "lucide-react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useTranslation } from "react-i18next";
@@ -12,12 +12,14 @@ export function CopyTextButton({
   copiedMessage,
   disabled = false,
   className,
+  children,
 }: {
   text: string;
   label: string;
   copiedMessage: string;
   disabled?: boolean;
   className?: string;
+  children?: ReactNode;
 }) {
   const { t } = useTranslation();
   const [copying, setCopying] = useState(false);
@@ -49,11 +51,12 @@ export function CopyTextButton({
         className,
       )}
     >
-      {copying ? (
-        <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
-      ) : (
-        <Copy aria-hidden="true" className="h-3.5 w-3.5" />
-      )}
+      {children ??
+        (copying ? (
+          <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Copy aria-hidden="true" className="h-3.5 w-3.5" />
+        ))}
     </button>
   );
 }

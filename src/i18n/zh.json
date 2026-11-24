@@ -2448,6 +2448,24 @@
     "schemeCount": "{{count}} 套"
   },
   "schedules": {
+    "edit": "编辑计划",
+    "delete": "删除计划",
+    "deleteMessage": "删除后将不再按此计划触发流水线，此操作无法撤销。",
+    "saved": "计划已保存",
+    "deleted": "计划已删除",
+    "fields": {
+      "title": "计划名称",
+      "target": "目标分支或标签",
+      "cron": "Cron 表达式",
+      "timezone": "时区"
+    },
+    "runNow": "立即运行：{{title}}",
+    "runSubmitted": "已请求运行：{{title}}（一分钟后可再次运行）",
+    "runAccepted": "已请求运行「{{title}}」",
+    "runUncertain": "运行请求结果未确认，请在平台查看后再决定是否重试。",
+    "copyContext": "复制计划关键信息",
+    "copyRepository": "复制仓库路径",
+    "copied": "已复制",
     "openRun": "打开最近运行（{{status}}）",
     "progress": {
       "unavailable": "进度暂不可用",
@@ -2925,6 +2943,11 @@
       "running": "正在执行 Git 操作…"
     },
     "graph": {
+      "fileHistory": "查看文件 Git 历史",
+      "directoryHistory": "查看目录 Git 历史",
+      "pathTitle": "Git 历史 · {{path}}",
+      "closePath": "关闭 Git 历史",
+      "noPathCommits": "此路径没有提交记录",
       "branches": "分支",
       "allBranches": "全部分支",
       "localBranch": "本地分支",
@@ -2943,11 +2966,6 @@
       "close": "关闭 Git Graph",
       "remotes": "显示远端分支",
       "column": "关系图",
-      "fileHistory": "查看文件 Git 历史",
-      "directoryHistory": "查看目录 Git 历史",
-      "pathTitle": "Git 历史 · {{path}}",
-      "closePath": "关闭 Git 历史",
-      "noPathCommits": "此路径没有提交记录",
       "date": "时间",
       "uncommitted": "未提交的更改（{{count}}）",
       "loadMore": "加载更多",

@@ -2451,6 +2451,24 @@
     "schemeCount": "{{count}} schemes"
   },
   "schedules": {
+    "edit": "Edit schedule",
+    "delete": "Delete schedule",
+    "deleteMessage": "This schedule will stop triggering pipelines. Deleting it cannot be undone.",
+    "saved": "Schedule saved",
+    "deleted": "Schedule deleted",
+    "fields": {
+      "title": "Schedule name",
+      "target": "Target branch or tag",
+      "cron": "Cron expression",
+      "timezone": "Time zone"
+    },
+    "runNow": "Run now: {{title}}",
+    "runSubmitted": "Run requested: {{title}} (available again in one minute)",
+    "runAccepted": "Run requested for “{{title}}”",
+    "runUncertain": "The run request could not be confirmed. Check the platform before retrying.",
+    "copyContext": "Copy schedule context",
+    "copyRepository": "Copy repository path",
+    "copied": "Copied",
     "openRun": "Open last run ({{status}})",
     "progress": {
       "unavailable": "Progress unavailable",
@@ -2928,6 +2946,11 @@
       "running": "Running Git operation…"
     },
     "graph": {
+      "fileHistory": "View File Git History",
+      "directoryHistory": "View Folder Git History",
+      "pathTitle": "Git History · {{path}}",
+      "closePath": "Close Git History",
+      "noPathCommits": "No commits for this path.",
       "branches": "Branches",
       "allBranches": "All branches",
       "localBranch": "Local branch",
@@ -2946,11 +2969,6 @@
       "close": "Close Git Graph",
       "remotes": "Show remote branches",
       "column": "Graph",
-      "fileHistory": "View File Git History",
-      "directoryHistory": "View Folder Git History",
-      "pathTitle": "Git History · {{path}}",
-      "closePath": "Close Git History",
-      "noPathCommits": "No commits for this path.",
       "date": "Date",
       "uncommitted": "Uncommitted changes ({{count}})",
       "loadMore": "Load more",
