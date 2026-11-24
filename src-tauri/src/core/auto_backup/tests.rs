@@ -3,27 +3,29 @@ use std::path::Path;
 
 // ── is_due (pure debounce/backoff decision) ──
 
-const MIN2: i64 = 120_000;
+const MINUTE_MS: i64 = 60_000;
 
 #[test]
 fn not_due_without_pending_change() {
-    assert!(!is_due(false, 0, MIN2 * 10, 0));
+    assert!(!is_due(false, 0, 10 * MINUTE_MS, 0));
 }
 
 #[test]
 fn due_after_quiet_period() {
-    assert!(!is_due(true, 1_000_000, 1_000_000 + MIN2 - 1, 0));
-    assert!(is_due(true, 1_000_000, 1_000_000 + MIN2, 0));
+    let last_change = 1_000_000;
+    let deadline = last_change + 10 * MINUTE_MS;
+    assert!(!is_due(true, last_change, deadline - 1, 0));
+    assert!(is_due(true, last_change, deadline, 0));
 }
 
 #[test]
 fn failures_stretch_the_quiet_period_with_a_cap() {
-    let base = 1_000_000;
-    assert!(!is_due(true, base, base + MIN2, 1));
-    assert!(is_due(true, base, base + 2 * MIN2, 1));
-    // Backoff is capped at 2^5 — an hour-ish, never unbounded.
-    assert!(is_due(true, base, base + 32 * MIN2, 40));
-    assert!(!is_due(true, base, base + 31 * MIN2, 40));
+    let last_change = 1_000_000;
+    for (failures, minutes) in [(1, 20), (2, 40), (3, 64), (u32::MAX, 64)] {
+        let deadline = last_change + minutes * MINUTE_MS;
+        assert!(!is_due(true, last_change, deadline - 1, failures));
+        assert!(is_due(true, last_change, deadline, failures));
+    }
 }
 
 // ── round behaviour against a local bare remote ──

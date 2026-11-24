@@ -1,5 +1,5 @@
-//! Automatic backup (§3.4): after central-repo changes settle for a couple of
-//! minutes, commit and push in the background — no snapshot tag (tags are
+//! Automatic backup (§3.4): after central-repo changes settle, commit and
+//! push in the background — no snapshot tag (tags are
 //! reserved for user-visible backup points).
 //!
 //! With the object merge engine (merge-engine design §9 3d-γ) a round that
@@ -31,14 +31,14 @@ pub const SETTING_LAST_ERROR: &str = "backup_last_auto_error";
 const EVENT_COMPLETED: &str = "backup-auto-completed";
 
 /// Trailing debounce after the last central-repo change (§3.4 分钟级防抖).
-const DEBOUNCE: Duration = Duration::from_secs(120);
+const DEBOUNCE: Duration = Duration::from_secs(10 * 60);
 /// Scheduler wake cadence; also the retry latency after a busy repo lock.
 const POLL_INTERVAL: Duration = Duration::from_secs(15);
 /// Delay before the first round, which uploads anything committed at the
 /// previous exit. Matches the auto-updater's startup courtesy delay.
 const INITIAL_DELAY: Duration = Duration::from_secs(90);
-/// Cap for the exponential retry backoff after failed rounds: 2^5 × 2min ≈ 1h.
-const MAX_BACKOFF_SHIFT: u32 = 5;
+/// Maximum delay before retrying a failed round.
+const MAX_BACKOFF: Duration = Duration::from_secs(64 * 60);
 
 static DIRTY: AtomicBool = AtomicBool::new(false);
 static LAST_CHANGE_MS: AtomicI64 = AtomicI64::new(0);
@@ -58,9 +58,9 @@ fn is_due(dirty: bool, last_change_ms: i64, now_ms: i64, failures: u32) -> bool 
     if !dirty {
         return false;
     }
-    let quiet = DEBOUNCE.as_millis() as i64;
-    let backoff = quiet << failures.min(MAX_BACKOFF_SHIFT);
-    now_ms - last_change_ms >= backoff
+    let multiplier = 2u32.checked_pow(failures).unwrap_or(u32::MAX);
+    let quiet_period = DEBOUNCE.saturating_mul(multiplier).min(MAX_BACKOFF);
+    now_ms - last_change_ms >= quiet_period.as_millis() as i64
 }
 
 pub fn is_enabled(store: &SkillStore) -> bool {
