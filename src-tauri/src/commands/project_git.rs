@@ -228,13 +228,23 @@ pub async fn get_project_git_graph(
     include_remotes: bool,
     limit: usize,
     branch: Option<String>,
+    path: Option<String>,
 ) -> Result<project_git::GitGraph, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
             .map_err(AppError::io)?;
-        project_git::graph_for_branch(&root, include_remotes, limit, branch.as_deref())
-            .map_err(AppError::io)
+        match path {
+            Some(path) => project_git::graph_for_path(
+                &root,
+                include_remotes,
+                limit,
+                branch.as_deref(),
+                Some(&path),
+            ),
+            None => project_git::graph_for_branch(&root, include_remotes, limit, branch.as_deref()),
+        }
+        .map_err(AppError::io)
     })
     .await?
 }

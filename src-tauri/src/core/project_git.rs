@@ -2,7 +2,7 @@
 mod actions;
 mod graph;
 mod history;
-pub use graph::{graph_for_branch, GitGraph};
+pub use graph::{graph_for_branch, graph_for_path, GitGraph};
 mod references;
 mod remotes;
 mod repository_actions;

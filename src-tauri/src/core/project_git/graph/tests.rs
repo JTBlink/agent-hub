@@ -99,3 +99,59 @@ fn lists_branch_tips_outside_loaded_history_and_loads_selected_ancestry() {
     assert_eq!(selected.commits[0].commit.sha, base.id().to_string());
     assert_eq!(selected.branches.len(), page.branches.len());
 }
+
+#[test]
+fn path_graph_skips_unrelated_commits_and_reconnects_literal_path_history() {
+    let dir = tempfile::tempdir().unwrap();
+    let repo = git2::Repository::init(dir.path()).unwrap();
+    let mut index = repo.index().unwrap();
+    let mut write = |path: &str, contents: &str| {
+        let path = Path::new(path);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(dir.path().join(parent)).unwrap();
+        }
+        std::fs::write(dir.path().join(path), contents).unwrap();
+        index.add_path(path).unwrap();
+        index.write().unwrap();
+    };
+    write("src/[file].txt", "initial");
+    let first = repo.find_commit(commit(&repo, "add file", &[])).unwrap();
+    write("src/f.txt", "unrelated file");
+    let other = repo
+        .find_commit(commit(&repo, "edit other file", &[&first]))
+        .unwrap();
+    write("src/[file].txt", "updated");
+    let last = repo
+        .find_commit(commit(&repo, "edit file", &[&other]))
+        .unwrap();
+    repo.branch("main", &last, true).unwrap();
+    repo.set_head("refs/heads/main").unwrap();
+
+    let selected = graph_for_path(
+        dir.path(),
+        false,
+        100,
+        Some("refs/heads/main"),
+        Some("src/[file].txt"),
+    )
+    .unwrap();
+    assert_eq!(selected.commits.len(), 2);
+    assert_eq!(selected.commits[0].commit.sha, last.id().to_string());
+    assert_eq!(selected.commits[0].parents, [first.id().to_string()]);
+    assert_eq!(selected.commits[1].commit.sha, first.id().to_string());
+    assert!(!selected.has_more);
+    assert_eq!(
+        graph_for_path(dir.path(), false, 100, None, Some("src"))
+            .unwrap()
+            .commits
+            .len(),
+        3
+    );
+    assert!(
+        graph_for_path(dir.path(), false, 100, None, Some("untracked.txt"))
+            .unwrap()
+            .commits
+            .is_empty()
+    );
+    assert!(graph_for_path(dir.path(), false, 100, None, Some("../outside")).is_err());
+}

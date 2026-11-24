@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useContext, useRef, useState, type ReactNode } from "react";
 import {
   Copy,
   ClipboardPaste,
@@ -11,9 +11,11 @@ import {
   RefreshCw,
   Globe,
   Terminal,
+  History,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { worktreeUrl } from "../../lib/worktreeApi";
+import type { GitFileHistoryRequest } from "../../lib/gitApi";
 import { isRunnableScript } from "../../lib/worktreeScripts";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -27,6 +29,7 @@ import {
   revealWorktreeEntry,
   type WorktreeFileAction,
 } from "../../lib/worktreeApi";
+import { WorkspaceFilesContext } from "../../hooks/useWorkspaceFiles";
 import { hasPendingWorktreeDocument } from "../../hooks/useWorktreeDocument";
 import { canPreviewDocument } from "../../features/preview/shared/projectPreview";
 import { useWorktreeBrowserPreview } from "../../hooks/useWorktreeBrowserPreview";
@@ -73,6 +76,7 @@ export function WorktreeEntryMenu({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const workspaceFiles = useContext(WorkspaceFilesContext);
   const target = useRef<HTMLDivElement>(null);
   const [operation, setOperation] = useState<WorktreeFileAction["kind"]>();
   const [name, setName] = useState("");
@@ -357,6 +361,29 @@ export function WorktreeEntryMenu({
             danger: true,
             disabled: symlink,
             onSelect: () => begin("delete"),
+          },
+        ]
+      : []),
+    ...(path
+      ? [
+          {
+            key: "git_history",
+            separatorBefore: true,
+            label: t(
+              directory
+                ? "git.graph.directoryHistory"
+                : "git.graph.fileHistory",
+            ),
+            icon: <History size={14} />,
+            onSelect: () => {
+              const gitFileHistory: GitFileHistoryRequest = {
+                projectId,
+                worktreePath,
+                path,
+              };
+              workspaceFiles?.setCheckout({ projectId, worktreePath });
+              navigate("/git", { state: { gitFileHistory } });
+            },
           },
         ]
       : []),

@@ -223,6 +223,12 @@ export interface GitGraphBranch {
   remote: boolean;
   sha: string;
 }
+export interface GitFileHistoryRequest {
+  projectId: string;
+  worktreePath: string;
+  path: string;
+}
+
 export interface GitGraphData {
   branches?: GitGraphBranch[];
   commits: GitGraphCommit[];
@@ -234,6 +240,7 @@ export const getProjectGitGraph = (
   includeRemotes: boolean,
   limit: number,
   branch?: string,
+  path?: string,
 ) =>
   invoke<GitGraphData>("get_project_git_graph", {
     projectId,
@@ -241,4 +248,5 @@ export const getProjectGitGraph = (
     includeRemotes,
     limit,
     branch,
+    ...(path ? { path } : {}),
   });

@@ -124,6 +124,28 @@ export function GitEditorWorkspace({
       </div>
     </GitEditorTabsContext.Provider>
   );
+  const graphPane = (
+    id: string,
+    path?: string,
+    focusCommit?: { sha: string },
+  ) =>
+    pane(
+      id,
+      <GitGraph
+        key={path}
+        target={target}
+        path={path}
+        focusCommit={focusCommit}
+        revision={revision}
+        changedFiles={path ? 0 : files.length}
+        busy={busy}
+        fetching={fetching}
+        onFetch={onFetch}
+        onRefresh={onRefresh}
+        onClose={() => editors.close(id)}
+        onSelect={editors.openFile}
+      />,
+    );
   return (
     <>
       {!shared && (
@@ -133,22 +155,8 @@ export function GitEditorWorkspace({
           className="flex h-9 shrink-0 overflow-x-auto border-b border-border-subtle bg-bg-secondary"
         />
       )}
-      {editors.graph &&
-        pane(
-          "graph",
-          <GitGraph
-            target={target}
-            focusCommit={editors.graphCommit}
-            revision={revision}
-            changedFiles={files.length}
-            busy={busy}
-            fetching={fetching}
-            onFetch={onFetch}
-            onRefresh={onRefresh}
-            onClose={() => editors.close("graph")}
-            onSelect={editors.openFile}
-          />,
-        )}
+      {editors.graph && graphPane("graph", undefined, editors.graphCommit)}
+      {editors.historyPath && graphPane("fileHistory", editors.historyPath)}
       {editors.files.map((file) =>
         pane(
           editors.fileId(file),

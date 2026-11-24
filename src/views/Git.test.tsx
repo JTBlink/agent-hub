@@ -135,7 +135,9 @@ it("follows the shared checkout on entry and when the workspace changes without 
         setCheckout,
       }}
     >
-      <Git />
+      <MemoryRouter>
+        <Git />
+      </MemoryRouter>
     </WorkspaceFilesContext.Provider>
   );
   try {
@@ -1290,6 +1292,98 @@ it("keeps actual repository read failures visible", async () => {
     expect(host.textContent).not.toContain("git.initializeRepository");
   } finally {
     await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});
+
+it("opens scoped file history in Git Graph and keeps the repository graph available", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const sha = "d".repeat(40);
+  vi.mocked(getProjectGitStatus).mockResolvedValue({
+    branch: "topic",
+    head: sha,
+    upstream: null,
+    ahead: 0,
+    behind: 0,
+    state: "Clean",
+    files: [],
+    commits: [],
+    truncated: false,
+  });
+  vi.mocked(getProjectGitGraph).mockResolvedValue({
+    commits: [
+      {
+        sha,
+        author: "Example",
+        summary: "File history commit",
+        time: 1,
+        parents: [],
+        refs: [],
+      },
+    ],
+    has_more: false,
+  });
+  const checkout = { projectId: "second", worktreePath: "<workspace>/topic" };
+  const path = "src/notes.md";
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const button = (label: string) =>
+    host.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!;
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: "/git",
+              state: { gitFileHistory: { ...checkout, path } },
+            },
+          ]}
+        >
+          <WorkspaceFilesContext.Provider
+            value={{
+              files: {},
+              checkout,
+              setCheckout: vi.fn(),
+              setFiles: vi.fn(),
+            }}
+          >
+            <Git />
+          </WorkspaceFilesContext.Provider>
+        </MemoryRouter>,
+      ),
+    );
+    expect(getProjectGitGraph).toHaveBeenLastCalledWith(
+      "second",
+      "<workspace>/topic",
+      true,
+      200,
+      undefined,
+      path,
+    );
+    const history = host.querySelector(
+      'section[aria-label="git.graph.pathTitle"]',
+    )!;
+    expect(history.textContent).toContain("File history commit");
+
+    await act(async () => button("git.graph.open").click());
+    expect(getProjectGitGraph).toHaveBeenLastCalledWith(
+      "second",
+      "<workspace>/topic",
+      true,
+      200,
+    );
+    expect(
+      host.querySelector('section[aria-label="git.graph.pathTitle"]'),
+    ).toBe(history);
+    await act(async () => button("git.graph.closePath").click());
+    expect(
+      host.querySelector('section[aria-label="git.graph.pathTitle"]'),
+    ).toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
     vi.unstubAllGlobals();
   }
 });

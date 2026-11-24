@@ -1,6 +1,6 @@
 import { isPreviewableImage } from "../features/image-preview";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState, useContext } from "react";
@@ -16,6 +16,7 @@ import {
   setProjectGitStaged,
   getProjectGitDiff,
   type GitFile,
+  type GitFileHistoryRequest,
   runProjectGitAction,
   type GitRepositoryAction,
 } from "../lib/gitApi";
@@ -64,6 +65,22 @@ export function Git() {
   const [fileView, setFileView] = useState(false);
   const scope = JSON.stringify([activeId, root]);
   const editors = useGitEditors(scope);
+  const { openFileHistory } = editors;
+  const location = useLocation();
+  const historyRequest: GitFileHistoryRequest | undefined =
+    location.state?.gitFileHistory;
+  const handledHistory = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (
+      !historyRequest ||
+      handledHistory.current === location.key ||
+      historyRequest.projectId !== activeId ||
+      historyRequest.worktreePath !== root
+    )
+      return;
+    handledHistory.current = location.key;
+    openFileHistory(historyRequest.path);
+  }, [historyRequest, location.key, activeId, root, openFileHistory]);
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const [previousScope, setPreviousScope] = useState(scope);
@@ -85,6 +102,7 @@ export function Git() {
     !noRepository &&
     (!activeId ||
       editors.graph ||
+      !!editors.historyPath ||
       editors.files.length > 0 ||
       !!selection ||
       !!error ||

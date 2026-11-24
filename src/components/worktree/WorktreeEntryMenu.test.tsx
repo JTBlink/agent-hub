@@ -622,3 +622,24 @@ it("confirms batch deletion, checks all unsaved targets before deleting and retr
   ).toEqual(["src/notes.md", "assets", "assets", "other.ts"]);
   expect(host.querySelector('[role="alertdialog"]')).toBeNull();
 });
+
+it.each([
+  ["src/notes.md", false, "git.graph.fileHistory"],
+  ["src", true, "git.graph.directoryHistory"],
+] as const)(
+  "opens Git Graph history for %s in the selected checkout",
+  async (path, directory, label) => {
+    await render(path, directory);
+    await open();
+    await choose(label);
+    expect(navigate).toHaveBeenCalledWith("/git", {
+      state: {
+        gitFileHistory: {
+          projectId: "demo",
+          worktreePath: "/workspace/demo",
+          path,
+        },
+      },
+    });
+  },
+);

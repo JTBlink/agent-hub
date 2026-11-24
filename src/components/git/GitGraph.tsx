@@ -22,6 +22,7 @@ import { GitEditorTab } from "./GitEditorTab";
 export function GitGraph({
   target,
   focusCommit,
+  path,
   revision,
   changedFiles,
   onSelect,
@@ -33,6 +34,7 @@ export function GitGraph({
 }: {
   target: CommitTarget;
   focusCommit?: { sha: string };
+  path?: string;
   revision: number;
   changedFiles: number;
   onSelect: (selection: CommitFileSelection) => void;
@@ -68,22 +70,28 @@ export function GitGraph({
     limit,
     revision + refresh,
     branchRef,
+    path,
   );
   const commits = result?.data?.commits;
   const branchOption = graphBranchOptions(
     commits ?? [],
     result?.data?.branches,
   ).find((option) => option.value === branchFilter);
-  const visibleCommits = graphBranchHistory(commits ?? [], branchOption?.sha);
+  const visibleCommits = path
+    ? (commits ?? [])
+    : graphBranchHistory(commits ?? [], branchOption?.sha);
+  const title = path
+    ? t("git.graph.pathTitle", { path })
+    : t("git.graph.title");
   return (
     <section
       className="flex min-h-0 min-w-0 flex-1 flex-col"
-      aria-label={t("git.graph.title")}
+      aria-label={title}
     >
       <GitEditorTab
-        label={t("git.graph.title")}
+        label={title}
         icon={<GraphIcon size={14} className="shrink-0 text-accent-light" />}
-        closeLabel={t("git.graph.close")}
+        closeLabel={t(path ? "git.graph.closePath" : "git.graph.close")}
         onClose={onClose}
       />
       <GitGraphToolbar
@@ -91,7 +99,7 @@ export function GitGraph({
           <GitGraphBranchFilter
             commits={commits ?? []}
             branches={result?.data?.branches}
-            value={branchOption ? branchFilter : ""}
+            value={path ? branchFilter : branchOption ? branchFilter : ""}
             onChange={(value) => {
               setBranchFilter(value);
               const option = graphBranchOptions(
@@ -109,7 +117,7 @@ export function GitGraph({
         remotes={remotes}
         onRemotes={(next) => {
           setRemotes(next);
-          if (!next && branchOption?.remote) {
+          if (!next && branchRef?.startsWith("refs/remotes/")) {
             setBranchFilter("");
             setBranchRef(undefined);
           }
@@ -161,6 +169,11 @@ export function GitGraph({
                 {t("git.tagActions.outsideGraph")}
               </p>
             )}
+          {path && !commits?.length && !result.loading && !result.error && (
+            <p role="status" className="px-3 py-2 text-xs text-muted">
+              {t("git.graph.noPathCommits")}
+            </p>
+          )}
           <GitGraphTable
             key={JSON.stringify([
               target.projectId,

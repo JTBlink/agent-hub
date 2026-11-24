@@ -7,6 +7,7 @@ export function useGitEditors(scope: string) {
   const [state, setState] = useState({
     scope,
     graph: false,
+    historyPath: undefined as string | undefined,
     graphCommit: undefined as { sha: string } | undefined,
     active: "working",
     files: [] as CommitFileSelection[],
@@ -15,6 +16,7 @@ export function useGitEditors(scope: string) {
     setState({
       scope,
       graph: false,
+      historyPath: undefined,
       graphCommit: undefined,
       active: "working",
       files: [],
@@ -30,6 +32,14 @@ export function useGitEditors(scope: string) {
     },
     openGraph: () => {
       setState((previous) => ({ ...previous, graph: true, active: "graph" }));
+      shared?.onSelect();
+    },
+    openFileHistory: (path: string) => {
+      setState((previous) => ({
+        ...previous,
+        historyPath: path,
+        active: "fileHistory",
+      }));
       shared?.onSelect();
     },
     revealGraph: (sha: string) => {
@@ -55,17 +65,22 @@ export function useGitEditors(scope: string) {
       setState((previous) => {
         const files = previous.files.filter((file) => fileId(file) !== id);
         const graph = id === "graph" ? false : previous.graph;
+        const historyPath =
+          id === "fileHistory" ? undefined : previous.historyPath;
         return {
           ...previous,
           files,
           graph,
+          historyPath,
           active:
             previous.active === id
               ? graph
                 ? "graph"
-                : files.length
-                  ? fileId(files[files.length - 1])
-                  : "working"
+                : historyPath
+                  ? "fileHistory"
+                  : files.length
+                    ? fileId(files[files.length - 1])
+                    : "working"
               : previous.active,
         };
       }),

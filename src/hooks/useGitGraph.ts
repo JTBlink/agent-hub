@@ -8,8 +8,15 @@ export function useGitGraph(
   limit: number,
   revision: number,
   branch?: string,
+  path?: string,
 ) {
-  const scope = JSON.stringify([projectId, worktreePath, remotes]);
+  const scope = JSON.stringify([
+    projectId,
+    worktreePath,
+    remotes,
+    path,
+    path ? branch : undefined,
+  ]);
   const key = JSON.stringify([
     projectId,
     worktreePath,
@@ -17,6 +24,7 @@ export function useGitGraph(
     limit,
     revision,
     branch,
+    path,
   ]);
   const [result, setResult] = useState<{
     key: string;
@@ -31,7 +39,7 @@ export function useGitGraph(
       worktreePath,
       remotes,
       limit,
-      ...(branch ? [branch] : []),
+      ...(path ? ([branch, path] as const) : branch ? ([branch] as const) : []),
     ).then(
       (data) => {
         if (!cancelled) setResult({ key, scope, data });
@@ -49,7 +57,17 @@ export function useGitGraph(
     return () => {
       cancelled = true;
     };
-  }, [projectId, worktreePath, remotes, limit, revision, branch, key, scope]);
+  }, [
+    projectId,
+    worktreePath,
+    remotes,
+    limit,
+    revision,
+    branch,
+    path,
+    key,
+    scope,
+  ]);
   return result?.scope === scope
     ? { ...result, loading: result.key !== key }
     : undefined;
