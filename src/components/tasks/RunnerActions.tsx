@@ -42,14 +42,16 @@ export function RunnerActions({
     <>
       <div
         className={cn(
-          "flex items-center",
-          compact ? "justify-end gap-0.5" : "mb-4 flex-wrap gap-2",
+          "items-center",
+          compact
+            ? "grid w-[88px] shrink-0 grid-cols-3 gap-0.5"
+            : "mb-4 flex flex-wrap gap-2",
         )}
       >
         {runner.can_update === true && (
           <button
             type="button"
-            className={buttonClass}
+            className={cn(buttonClass, compact && "col-start-1 row-start-1")}
             aria-label={t("runners.actions.edit")}
             title={t("runners.actions.edit")}
             onClick={() => setEditing(true)}
@@ -64,7 +66,7 @@ export function RunnerActions({
         {runner.can_update === true && runner.paused != null && (
           <button
             type="button"
-            className={buttonClass}
+            className={cn(buttonClass, compact && "col-start-2 row-start-1")}
             aria-label={t(`runners.actions.${pauseAction}`)}
             title={t(`runners.actions.${pauseAction}`)}
             onClick={() => open(pauseAction)}
@@ -79,7 +81,11 @@ export function RunnerActions({
         {runner.can_delete === true && (
           <button
             type="button"
-            className={cn(buttonClass, "text-danger")}
+            className={cn(
+              buttonClass,
+              "text-danger",
+              compact && "col-start-3 row-start-1",
+            )}
             aria-label={t("runners.actions.delete")}
             title={t("runners.actions.delete")}
             onClick={() => open("delete")}

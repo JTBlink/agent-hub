@@ -231,11 +231,6 @@ export function RunnerTable({
                   )}
                 >
                   <div className="flex items-center justify-end gap-0.5">
-                    <PlatformOpenButton
-                      url={runnerPlatformUrl(source, runner.web_url)}
-                      host={source.host}
-                      label={t("tasks.openRemote")}
-                    />
                     {canManage(item) && (
                       <RunnerActions
                         compact
@@ -247,6 +242,11 @@ export function RunnerTable({
                         }
                       />
                     )}
+                    <PlatformOpenButton
+                      url={runnerPlatformUrl(source, runner.web_url)}
+                      host={source.host}
+                      label={t("tasks.openRemote")}
+                    />
                   </div>
                 </td>
               )}
