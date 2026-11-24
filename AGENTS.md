@@ -25,7 +25,7 @@
 
 新增代码遵循 [ADR-0006：文件体量、模块拆分与代码复用规范](docs/adr/0006-file-size-and-reuse-conventions.md)：页面文件超过 600 行、Rust 模块超过 800 行必须拆分；优先复用领域类型、路径解析、扫描器、bindings 和展示纯函数，禁止复制 Agent 路径、安全校验或诊断文案。
 
-具体的 SOLID 落地、模块边界、状态迁移、错误处理与验证要求见[开发规范](.agents/skills/rust-dev/references/coding-standards.md)。
+具体的 SOLID 落地、模块边界、状态迁移、错误处理与验证要求见[开发规范](.agents/skills/rust-dev/references/coding-standards.md)。GitHub 与 GitLab 按[独立集成边界](.agents/skills/rust-dev/references/coding-standards.md#github--gitlab-独立集成)分别实现和验证。
 
 ## 需求原型
 
@@ -57,6 +57,8 @@
 使用标准 `rustfmt` 格式（四空格缩进），并解决所有 Clippy 警告。模块、函数和变量使用 `snake_case`；类型和 trait 使用 `UpperCamelCase`；常量使用 `SCREAMING_SNAKE_CASE`。优先创建职责单一的小型模块，提供清晰的错误信息，并为公开 API 编写文档。不要提交 `target/`、`debug/`、变异测试产物或 IDE 元数据。
 
 ## 隐私与示例数据
+
+组织或个人专用的代码托管工作流、全局 Skill 路由及自动化业务实现不得放入本仓库，也不得成为对外 Skill 的依赖；这些内容留在其独立全局 Skill、目标项目或本地任务中。产品仅维护通用能力与公开扩展边界。
 
 本项目对外发布。代码、内置任务、工程规范、文档与测试不得包含组织专属平台、内网域名、内部工具路由或公司账户信息；平台操作沿用目标项目声明的通用工具和流程，不绑定某个组织的基础设施。
 

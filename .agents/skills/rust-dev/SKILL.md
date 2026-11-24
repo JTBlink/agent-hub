@@ -3,7 +3,7 @@ name: rust-dev
 description: 项目内部开发规范。在本仓库进行 Rust、Tauri、React 功能开发、缺陷修复、UI 调整或代码审查时使用，落实 SOLID、性能、复用设计、测试、兼容性和提交要求。
 license: MIT
 metadata:
-  version: "1.6.0"
+  version: "1.7.0"
 ---
 
 # 项目开发规范
@@ -38,7 +38,7 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 ## 执行与交付
 
 1. 确认需求、验收条件和影响边界。先找现有组件、纯函数、bindings、适配器和安全校验，再设计变更。
-2. 按职责实现最小完整改动。按[复用设计与性能规则](references/coding-standards.md#复用设计)检查现有实现、数据来源、执行成本和资源生命周期；变更跨端契约时检查注册、DTO、bindings 和调用方。
+2. 按职责实现最小完整改动。涉及代码平台时遵循[GitHub / GitLab 独立集成边界](references/coding-standards.md#github--gitlab-独立集成)，平台实现独立、共享层保持中立。按[复用设计与性能规则](references/coding-standards.md#复用设计)检查现有实现、数据来源、执行成本和资源生命周期；变更跨端契约时检查注册、DTO、bindings 和调用方。
 3. 用可观察行为验证验收条件。缺陷修复增加回归测试；UI 检查主题、缩放、键盘与异步反馈；仅文档改动检查结构、链接与规则一致性。
 4. 涉及 CLI 或共享 Rust core 的变更，按[开发指南：CLI 自动更新约定](references/development.md#cli-自动更新约定)通过项目编译入口更新本机 CLI；涉及桌面行为时启动新构建并验证运行实例，不能用编译成功代替生效验收。
    构建与打包按[构建产物保留规范](references/development.md#构建产物保留规范)只保留各目标最新产物，成功后自动清理历史版本；检测到并行 Cargo 编译时延后清理。

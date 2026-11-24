@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.23.1"
+  version: "1.23.3"
 description: Create and manage local scheduled tasks through agent-hub-cli, including scripts, schedules, prompt variants, persistent state, execution limits and run inspection. Also manage the shared agent-skill library, deployments and skill groups, open local files in the desktop, and operate the preview browser or Hosts profiles. Use when creating or maintaining an AgentHub automation or managing managed skills across coding agents.
 ---
 
@@ -91,6 +91,15 @@ sentence:
 Tell the user which path is in the way, that its contents are untouched, and
 offer the two ways out: adopt it into the library (`skills adopt`), or move it
 aside and retry. Never delete it for them.
+
+## Public skill boundary
+
+This is a public, product-level skill. Keep its instructions independent of any
+organization's code-hosting platform, private skill names, repository workflow,
+or task-specific resource manager. Discover those requirements from the target
+project or selected task and leave their implementation with that owner. Examples
+use generic placeholders; do not turn a local automation's business rules into
+product-wide dependencies.
 
 ## Mental model
 
