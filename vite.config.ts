@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import react from "@vitejs/plugin-react";
@@ -46,6 +47,21 @@ export default defineConfig({
   plugins: [
     ...(product.plugins ?? []),
     react(),
+    {
+      name: "isolated-dev-dependency-cache",
+      config(config, { command }) {
+        if (command !== "serve" || config.cacheDir) return;
+        // Live Vite servers retain module transforms in memory. Sharing their
+        // optimizer output can mix old core chunks with newly loaded languages.
+        return {
+          cacheDir: resolve(
+            import.meta.dirname,
+            "node_modules/.vite",
+            `dev-${config.server?.port ?? 1420}`,
+          ),
+        };
+      },
+    },
     helpContentPlugin(import.meta.dirname),
     {
       name: "prototype-checkout-identity",

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import {
   Annotation,
   Compartment,
@@ -196,7 +196,8 @@ function useCodeLanguage(
   language: RefObject<Compartment>,
   path: string,
 ) {
-  useEffect(() => {
+  // Suspense recreates the view through layout effects; restore its language too.
+  useLayoutEffect(() => {
     let cancelled = false;
     const editor = view.current;
     const description = languageForPath(path);

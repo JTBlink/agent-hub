@@ -54,3 +54,20 @@ it("prebundles editor core and lazy languages with compatible extension identiti
     rmSync(cacheDir, { recursive: true, force: true });
   }
 }, 30_000);
+
+it("isolates dependency caches for concurrent development servers and preserves explicit caches", async () => {
+  const first = await resolveConfig(
+    { logLevel: "silent", server: { port: 4187 } },
+    "serve",
+  );
+  const second = await resolveConfig(
+    { logLevel: "silent", server: { port: 4191 } },
+    "serve",
+  );
+  expect(first.cacheDir).not.toBe(second.cacheDir);
+  const explicit = await resolveConfig(
+    { logLevel: "silent", cacheDir: first.cacheDir, server: { port: 4191 } },
+    "serve",
+  );
+  expect(explicit.cacheDir).toBe(first.cacheDir);
+});

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, Suspense } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { undo } from "@codemirror/commands";
@@ -305,4 +305,29 @@ it("searches only the focused editor and leaves workspace search untouched", asy
   const workspace = press(editors[1], "F", { ctrlKey: true, shiftKey: true });
   expect(workspace.defaultPrevented).toBe(false);
   expect(host.querySelector(".cm-file-search")).toBeNull();
+});
+
+it("restores Python highlighting when Suspense recreates the editor view", async () => {
+  const file = { path: "audit.py", content: 'import os\nprint("ready")\n' };
+  const pending = new Promise<void>(() => {});
+  function Suspend({ active }: { active: boolean }) {
+    if (active) throw pending;
+    return null;
+  }
+  const render = (active: boolean) => (
+    <Suspense fallback={<span>Loading</span>}>
+      <CodeEditor file={file} wrap={false} />
+      <Suspend active={active} />
+    </Suspense>
+  );
+  const highlighted = () =>
+    [...host.querySelectorAll(".cm-line span")].some(
+      (node) => node.textContent === "import",
+    );
+  await act(async () => root.render(render(false)));
+  await vi.waitFor(() => expect(highlighted()).toBe(true));
+  await act(async () => root.render(render(true)));
+  await act(async () => root.render(render(false)));
+  await vi.waitFor(() => expect(highlighted()).toBe(true));
+  expect(codeEditor(host).state.sliceDoc()).toBe(file.content);
 });
