@@ -6,11 +6,14 @@ function inspect(
   projectId: string,
   worktreePath: string | undefined,
   sha: string,
+  path?: string,
 ) {
-  const key = JSON.stringify([projectId, worktreePath, sha]);
+  const key = JSON.stringify([projectId, worktreePath, sha, path]);
   const existing = requests.get(key);
   if (existing) return existing;
-  const request = getProjectGitCommit(projectId, worktreePath, sha);
+  const request = path
+    ? getProjectGitCommit(projectId, worktreePath, sha, path)
+    : getProjectGitCommit(projectId, worktreePath, sha);
   if (requests.size >= 100) requests.delete(requests.keys().next().value!);
   requests.set(key, request);
   void request.catch(() => {
@@ -25,8 +28,9 @@ export function useGitCommitDetails(
   worktreePath: string | undefined,
   sha: string,
   revision = 0,
+  path?: string,
 ) {
-  const key = JSON.stringify([projectId, worktreePath, sha, revision]);
+  const key = JSON.stringify([projectId, worktreePath, sha, revision, path]);
   const [response, setResponse] = useState<{
     key: string;
     data?: GitCommitDetails;
@@ -34,7 +38,7 @@ export function useGitCommitDetails(
   }>();
   useEffect(() => {
     let cancelled = false;
-    void inspect(projectId, worktreePath, sha).then(
+    void inspect(projectId, worktreePath, sha, path).then(
       (data) => {
         if (!cancelled) setResponse({ key, data });
       },
@@ -45,6 +49,6 @@ export function useGitCommitDetails(
     return () => {
       cancelled = true;
     };
-  }, [projectId, worktreePath, sha, key]);
+  }, [projectId, worktreePath, sha, key, path]);
   return response?.key === key ? response : undefined;
 }

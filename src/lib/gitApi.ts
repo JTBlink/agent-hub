@@ -145,11 +145,13 @@ export const getProjectGitCommit = (
   projectId: string,
   worktreePath: string | undefined,
   sha: string,
+  path?: string,
 ) =>
   invoke<GitCommitDetails>("get_project_git_commit", {
     projectId,
     worktreePath,
     sha,
+    path,
   });
 export const getProjectGitCommitDiff = (
   projectId: string,

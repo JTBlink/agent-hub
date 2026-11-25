@@ -160,12 +160,13 @@ pub async fn get_project_git_commit(
     project_id: String,
     worktree_path: Option<String>,
     sha: String,
+    path: Option<String>,
 ) -> Result<project_git::GitCommitDetails, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
             .map_err(AppError::io)?;
-        project_git::commit_details(&root, &sha).map_err(AppError::io)
+        project_git::commit_details(&root, &sha, path.as_deref()).map_err(AppError::io)
     })
     .await?
 }

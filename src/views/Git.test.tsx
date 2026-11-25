@@ -1296,94 +1296,132 @@ it("keeps actual repository read failures visible", async () => {
   }
 });
 
-it("opens scoped file history in Git Graph and keeps the repository graph available", async () => {
-  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  const sha = "d".repeat(40);
-  vi.mocked(getProjectGitStatus).mockResolvedValue({
-    branch: "topic",
-    head: sha,
-    upstream: null,
-    ahead: 0,
-    behind: 0,
-    state: "Clean",
-    files: [],
-    commits: [],
-    truncated: false,
-  });
-  vi.mocked(getProjectGitGraph).mockResolvedValue({
-    commits: [
-      {
-        sha,
+it.each(["src/notes.md", "src"])(
+  "opens scoped history for %s and keeps the repository graph available",
+  async (path) => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    const sha = "d".repeat(40);
+    vi.mocked(getProjectGitStatus).mockResolvedValue({
+      branch: "topic",
+      head: sha,
+      upstream: null,
+      ahead: 0,
+      behind: 0,
+      state: "Clean",
+      files: [],
+      commits: [],
+      truncated: false,
+    });
+    vi.mocked(getProjectGitGraph).mockResolvedValue({
+      commits: [
+        {
+          sha,
+          author: "Example",
+          summary: "File history commit",
+          time: 1,
+          parents: [],
+          refs: [],
+        },
+      ],
+      has_more: false,
+    });
+    const checkout = { projectId: "second", worktreePath: "<workspace>/topic" };
+    vi.mocked(getProjectGitCommit).mockImplementation(
+      async (_project, _worktree, commit, ...scope) => ({
+        sha: commit,
         author: "Example",
-        summary: "File history commit",
+        author_email: "",
+        committer: "Example",
+        committer_email: "",
+        message: "File history commit",
         time: 1,
         parents: [],
-        refs: [],
-      },
-    ],
-    has_more: false,
-  });
-  const checkout = { projectId: "second", worktreePath: "<workspace>/topic" };
-  const path = "src/notes.md";
-  const host = document.createElement("div");
-  document.body.append(host);
-  const root = createRoot(host);
-  const button = (label: string) =>
-    host.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!;
-  try {
-    await act(async () =>
-      root.render(
-        <MemoryRouter
-          initialEntries={[
-            {
-              pathname: "/git",
-              state: { gitFileHistory: { ...checkout, path } },
-            },
-          ]}
-        >
-          <WorkspaceFilesContext.Provider
-            value={{
-              files: {},
-              checkout,
-              setCheckout: vi.fn(),
-              setFiles: vi.fn(),
-            }}
+        files: ["src/notes.md", "src/nested/other.md", "unrelated.md"]
+          .filter(
+            (file) =>
+              scope.length === 0 ||
+              file === scope[0] ||
+              file.startsWith(`${scope[0]}/`),
+          )
+          .map((file) => ({ path: file, old_path: null, status: "modified" })),
+        additions: 0,
+        deletions: 0,
+        truncated: false,
+      }),
+    );
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const button = (label: string) =>
+      host.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!;
+    try {
+      await act(async () =>
+        root.render(
+          <MemoryRouter
+            initialEntries={[
+              {
+                pathname: "/git",
+                state: { gitFileHistory: { ...checkout, path } },
+              },
+            ]}
           >
-            <Git />
-          </WorkspaceFilesContext.Provider>
-        </MemoryRouter>,
-      ),
-    );
-    expect(getProjectGitGraph).toHaveBeenLastCalledWith(
-      "second",
-      "<workspace>/topic",
-      true,
-      200,
-      undefined,
-      path,
-    );
-    const history = host.querySelector(
-      'section[aria-label="git.graph.pathTitle"]',
-    )!;
-    expect(history.textContent).toContain("File history commit");
+            <WorkspaceFilesContext.Provider
+              value={{
+                files: {},
+                checkout,
+                setCheckout: vi.fn(),
+                setFiles: vi.fn(),
+              }}
+            >
+              <Git />
+            </WorkspaceFilesContext.Provider>
+          </MemoryRouter>,
+        ),
+      );
+      expect(getProjectGitGraph).toHaveBeenLastCalledWith(
+        "second",
+        "<workspace>/topic",
+        true,
+        200,
+        undefined,
+        path,
+      );
+      const history = host.querySelector(
+        'section[aria-label="git.graph.pathTitle"]',
+      )!;
+      expect(history.textContent).toContain("File history commit");
+      const commitButton = [...history.querySelectorAll("button")].find(
+        (item) => item.textContent === "File history commit",
+      );
+      await act(async () => commitButton!.click());
+      expect(getProjectGitCommit).toHaveBeenLastCalledWith(
+        "second",
+        "<workspace>/topic",
+        sha,
+        path,
+      );
+      expect(history.textContent).toContain("notes.md");
+      expect(history.textContent).not.toContain("unrelated.md");
+      expect(history.textContent?.includes("other.md")).toBe(path === "src");
 
-    await act(async () => button("git.graph.open").click());
-    expect(getProjectGitGraph).toHaveBeenLastCalledWith(
-      "second",
-      "<workspace>/topic",
-      true,
-      200,
-    );
-    expect(
-      host.querySelector('section[aria-label="git.graph.pathTitle"]'),
-    ).toBe(history);
-    await act(async () => button("git.graph.closePath").click());
-    expect(
-      host.querySelector('section[aria-label="git.graph.pathTitle"]'),
-    ).toBeNull();
-  } finally {
-    await act(async () => root.unmount());
-    host.remove();
-    vi.unstubAllGlobals();
-  }
-});
+      await act(async () => button("git.graph.open").click());
+      expect(getProjectGitGraph).toHaveBeenLastCalledWith(
+        "second",
+        "<workspace>/topic",
+        true,
+        200,
+      );
+      expect(
+        host.querySelector('section[aria-label="git.graph.pathTitle"]'),
+      ).toBe(history);
+      await act(async () => button("git.graph.closePath").click());
+      expect(
+        host.querySelector('section[aria-label="git.graph.pathTitle"]'),
+      ).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.unstubAllGlobals();
+    }
+  },
+);

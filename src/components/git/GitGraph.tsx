@@ -229,6 +229,7 @@ export function GitGraph({
             key={selected}
             target={target}
             sha={selected}
+            path={path}
             expanded
             onSelectParent={setSelected}
             onSelect={onSelect}

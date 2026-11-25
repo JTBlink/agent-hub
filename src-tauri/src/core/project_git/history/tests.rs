@@ -34,8 +34,14 @@ fn previews_include_context_far_from_changes() {
 }
 
 fn save(repo: &git2::Repository, message: &str) -> String {
+    save_paths(repo, message, &["demo.txt"])
+}
+
+fn save_paths(repo: &git2::Repository, message: &str, paths: &[&str]) -> String {
     let mut index = repo.index().unwrap();
-    index.add_path(Path::new("demo.txt")).unwrap();
+    for path in paths {
+        index.add_path(Path::new(path)).unwrap();
+    }
     index.write().unwrap();
     let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
     let signature = git2::Signature::now("Example", "user@example.invalid").unwrap();
@@ -57,7 +63,7 @@ fn reads_initial_and_parent_diffs_without_using_the_working_tree() {
     let repo = git2::Repository::init(temp.path()).unwrap();
     std::fs::write(temp.path().join("demo.txt"), "first\n").unwrap();
     let first = save(&repo, "Initial\n\nFull description");
-    let initial = commit_details(temp.path(), &first).unwrap();
+    let initial = commit_details(temp.path(), &first, None).unwrap();
     assert_eq!(initial.message, "Initial\n\nFull description");
     assert!(initial.parents.is_empty());
     assert_eq!(initial.additions, 1);
@@ -72,7 +78,7 @@ fn reads_initial_and_parent_diffs_without_using_the_working_tree() {
     std::fs::write(temp.path().join("demo.txt"), "second\n").unwrap();
     let second = save(&repo, "Update");
     std::fs::write(temp.path().join("demo.txt"), "uncommitted\n").unwrap();
-    let details = commit_details(temp.path(), &second).unwrap();
+    let details = commit_details(temp.path(), &second, None).unwrap();
     assert_eq!(details.parents, vec![first]);
     assert_eq!((details.additions, details.deletions), (1, 1));
     assert_eq!(details.files[0].additions, Some(1));
@@ -80,7 +86,7 @@ fn reads_initial_and_parent_diffs_without_using_the_working_tree() {
     let patch = commit_diff(temp.path(), &second, "demo.txt").unwrap();
     assert!(patch.contains("-first") && patch.contains("+second"));
     assert!(!patch.contains("uncommitted"));
-    assert!(commit_details(temp.path(), "HEAD").is_err());
+    assert!(commit_details(temp.path(), "HEAD", None).is_err());
     assert!(commit_diff(temp.path(), &second, "../outside").is_err());
 }
 #[test]
@@ -89,7 +95,7 @@ fn binary_files_have_no_text_line_counts() {
     let repo = git2::Repository::init(temp.path()).unwrap();
     std::fs::write(temp.path().join("demo.txt"), b"binary\0content").unwrap();
     let sha = save(&repo, "Binary file");
-    let details = commit_details(temp.path(), &sha).unwrap();
+    let details = commit_details(temp.path(), &sha, None).unwrap();
     assert_eq!(details.files.len(), 1);
     assert_eq!(details.files[0].additions, None);
     assert_eq!(details.files[0].deletions, None);
@@ -126,13 +132,48 @@ fn preserves_rename_metadata_and_patch_paths() {
         )
         .unwrap()
         .to_string();
-    let details = commit_details(temp.path(), &sha).unwrap();
+    let details = commit_details(temp.path(), &sha, Some("demo.txt")).unwrap();
     assert_eq!(details.files.len(), 1);
     assert_eq!(details.files[0].status, "renamed");
     assert_eq!(details.files[0].old_path.as_deref(), Some("demo.txt"));
     let patch = commit_diff(temp.path(), &sha, "renamed.txt").unwrap();
     assert!(patch.contains("rename from demo.txt"));
     assert!(patch.contains("rename to renamed.txt"));
+}
+
+#[test]
+fn limits_commit_paths_and_totals_to_the_selected_file_or_directory() {
+    let temp = tempfile::tempdir().unwrap();
+    let repo = git2::Repository::init(temp.path()).unwrap();
+    let paths = ["src/notes.md", "src/nested/other.md", "src-old/notes.md"];
+    for path in paths {
+        let file = temp.path().join(path);
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(file, "old\n").unwrap();
+    }
+    save_paths(&repo, "Initial", &paths);
+    for path in paths {
+        std::fs::write(temp.path().join(path), "new\nadded\n").unwrap();
+    }
+    let sha = save_paths(&repo, "Change files together", &paths);
+    let file = commit_details(temp.path(), &sha, Some("src/notes.md")).unwrap();
+    assert_eq!(file.files.len(), 1);
+    assert_eq!(file.files[0].path, "src/notes.md");
+    assert_eq!((file.additions, file.deletions), (2, 1));
+
+    let directory = commit_details(temp.path(), &sha, Some("src")).unwrap();
+    assert_eq!(directory.files.len(), 2);
+    assert!(directory
+        .files
+        .iter()
+        .all(|file| file.path.starts_with("src/")));
+    assert_eq!((directory.additions, directory.deletions), (4, 2));
+    assert!(!directory.truncated);
+
+    let whole_commit = commit_details(temp.path(), &sha, None).unwrap();
+    assert_eq!(whole_commit.files.len(), 3);
+    assert_eq!((whole_commit.additions, whole_commit.deletions), (6, 3));
+    assert!(commit_details(temp.path(), &sha, Some("../outside")).is_err());
 }
 #[test]
 fn pages_tag_ancestry_without_reading_newer_head_commits() {

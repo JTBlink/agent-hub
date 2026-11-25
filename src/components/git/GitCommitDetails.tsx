@@ -24,6 +24,7 @@ export function GitCommitDetails({
   onSelect,
   expanded = false,
   onSelectParent,
+  path,
 }: {
   target: CommitTarget;
   sha: string;
@@ -31,6 +32,7 @@ export function GitCommitDetails({
   onSelect: (selection: CommitFileSelection) => void;
   expanded?: boolean;
   onSelectParent?: (sha: string) => void;
+  path?: string;
 }) {
   const { t } = useTranslation();
   const [revision, setRevision] = useState(0);
@@ -39,6 +41,7 @@ export function GitCommitDetails({
     target.worktreePath,
     sha,
     revision,
+    path,
   );
   if (!result)
     return (

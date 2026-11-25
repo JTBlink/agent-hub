@@ -48,54 +48,17 @@ fn trees<'a>(
     Ok((parent, commit.tree()?))
 }
 
-pub fn commit_details(root: &Path, sha: &str) -> Result<GitCommitDetails> {
+pub fn commit_details(root: &Path, sha: &str, path: Option<&str>) -> Result<GitCommitDetails> {
+    if let Some(path) = path {
+        super::validate_file_path(path)?;
+    }
     let repo =
         git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
     let commit = repo.find_commit(oid(sha)?)?;
     let (parent, tree) = trees(&repo, sha)?;
     let mut diff = repo.diff_tree_to_tree(parent.as_ref(), Some(&tree), None)?;
     diff.find_similar(None)?;
-    let stats = diff.stats()?;
-    let files = diff
-        .deltas()
-        .take(1000)
-        .enumerate()
-        .map(|(index, delta)| -> Result<CommitFile> {
-            let patch = git2::Patch::from_diff(&diff, index)?;
-            let lines = patch
-                .as_ref()
-                .filter(|patch| {
-                    let delta = patch.delta();
-                    !delta.old_file().is_binary() && !delta.new_file().is_binary()
-                })
-                .map(|patch| patch.line_stats())
-                .transpose()?;
-            let path = delta
-                .new_file()
-                .path()
-                .or(delta.old_file().path())
-                .map(|path| path.to_string_lossy().into_owned())
-                .unwrap_or_default();
-            let old_path = delta
-                .old_file()
-                .path()
-                .map(|path| path.to_string_lossy().into_owned())
-                .filter(|old| old != &path);
-            Ok(CommitFile {
-                path,
-                old_path,
-                additions: lines.map(|(_, added, _)| added),
-                deletions: lines.map(|(_, _, deleted)| deleted),
-                status: match delta.status() {
-                    git2::Delta::Added => "added",
-                    git2::Delta::Deleted => "deleted",
-                    git2::Delta::Renamed => "renamed",
-                    _ => "modified",
-                }
-                .into(),
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
+    let (files, additions, deletions, truncated) = commit_files(&diff, path.map(Path::new))?;
     let author = commit.author().name().unwrap_or_default().to_owned();
     let committer = commit.committer().name().unwrap_or_default().to_owned();
     let author_email = commit.author().email().unwrap_or_default().to_owned();
@@ -110,10 +73,84 @@ pub fn commit_details(root: &Path, sha: &str) -> Result<GitCommitDetails> {
         time: commit.time().seconds(),
         parents: commit.parent_ids().map(|id| id.to_string()).collect(),
         files,
-        additions: stats.insertions(),
-        deletions: stats.deletions(),
-        truncated: diff.deltas().len() > 1000,
+        additions,
+        deletions,
+        truncated,
     })
+}
+
+fn commit_files(
+    diff: &git2::Diff<'_>,
+    scope: Option<&Path>,
+) -> Result<(Vec<CommitFile>, usize, usize, bool)> {
+    const FILE_LIMIT: usize = 1000;
+    let mut additions = 0;
+    let mut deletions = 0;
+    let mut truncated = false;
+    let mut files = Vec::new();
+    for (index, delta) in diff.deltas().enumerate() {
+        if let Some(scope) = scope {
+            if ![delta.old_file().path(), delta.new_file().path()]
+                .into_iter()
+                .flatten()
+                .any(|path| path.starts_with(scope))
+            {
+                continue;
+            }
+        }
+        if files.len() == FILE_LIMIT {
+            truncated = true;
+            if scope.is_none() {
+                break;
+            }
+        }
+        let patch = git2::Patch::from_diff(diff, index)?;
+        let lines = patch
+            .as_ref()
+            .filter(|patch| {
+                let delta = patch.delta();
+                !delta.old_file().is_binary() && !delta.new_file().is_binary()
+            })
+            .map(|patch| patch.line_stats())
+            .transpose()?;
+        if let Some((_, added, deleted)) = lines {
+            additions += added;
+            deletions += deleted;
+        }
+        if truncated {
+            continue;
+        }
+        let path = delta
+            .new_file()
+            .path()
+            .or(delta.old_file().path())
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let old_path = delta
+            .old_file()
+            .path()
+            .map(|path| path.to_string_lossy().into_owned())
+            .filter(|old| old != &path);
+        files.push(CommitFile {
+            path,
+            old_path,
+            additions: lines.map(|(_, added, _)| added),
+            deletions: lines.map(|(_, _, deleted)| deleted),
+            status: match delta.status() {
+                git2::Delta::Added => "added",
+                git2::Delta::Deleted => "deleted",
+                git2::Delta::Renamed => "renamed",
+                _ => "modified",
+            }
+            .into(),
+        });
+    }
+    if scope.is_none() {
+        let stats = diff.stats()?;
+        additions = stats.insertions();
+        deletions = stats.deletions();
+    }
+    Ok((files, additions, deletions, truncated))
 }
 
 pub fn commit_diff(root: &Path, sha: &str, path: &str) -> Result<String> {
