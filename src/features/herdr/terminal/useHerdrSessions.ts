@@ -11,7 +11,11 @@ import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import { DEFAULT_HERDR_SESSION } from "../lib/herdrControlApi";
 import { getErrorMessage } from "../../../lib/error";
-import type { TerminalTab } from "../../../lib/terminalLayout";
+import {
+  TERMINAL_PANE_LIMIT,
+  terminalHerdrSession,
+  type TerminalTab,
+} from "../../../lib/terminalLayout";
 import type { PaneControl } from "../../../components/terminal/TerminalPane";
 import { attachHerdrClient, findHerdrClient } from "./herdrClientTabs";
 
@@ -64,6 +68,16 @@ export function useHerdrSessions(
     setBusy(true);
     setNotice("");
     try {
+      const preferred = terminalHerdrSession(activeTab, activeTab.activePane)
+        ? undefined
+        : { tab: activeTab, pane: activeTab.activePane };
+      if (
+        !preferred &&
+        !findHerdrClient(tabs.current, session) &&
+        tabs.current.reduce((count, tab) => count + tab.panes.length, 0) >=
+          TERMINAL_PANE_LIMIT
+      )
+        throw new Error(t("worktree.terminalLimit"));
       const initial =
         pane.herdrTarget || findHerdrClient(tabs.current, session)
           ? null
@@ -78,6 +92,7 @@ export function useHerdrSessions(
           selectTab(existing.tab.id);
           return;
         }
+        if (!preferred) throw new Error(t("terminal.herdrBusy"));
         await fallback();
         if (valid())
           setTabs((tabs) =>
@@ -106,7 +121,6 @@ export function useHerdrSessions(
         )
           throw new Error(t("terminal.herdrBusy"));
       }
-      const preferred = { tab: activeTab, pane: activeTab.activePane };
       const client = attachHerdrClient(tabs.current, opened, preferred);
       setTabs(
         (previous) => attachHerdrClient(previous, opened, preferred).tabs,

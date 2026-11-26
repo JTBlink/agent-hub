@@ -1,17 +1,10 @@
 import type { HerdrOpenedWorkspace } from "../lib/herdrControlApi";
 import {
   createTerminalTab,
+  terminalHerdrSession,
   type TerminalTab,
 } from "../../../lib/terminalLayout";
 import { removeTerminalPane } from "../../../lib/terminalPaneLayout";
-
-function sessionFor(tab: TerminalTab, pane: string) {
-  return (
-    tab.paneAttachments?.[pane]?.target.session ??
-    tab.herdrTarget?.session ??
-    tab.herdrSession
-  );
-}
 
 /** A session is rendered by one client, regardless of project workspace or entry point. */
 export function findHerdrClient(tabs: TerminalTab[], session: string) {
@@ -19,7 +12,7 @@ export function findHerdrClient(tabs: TerminalTab[], session: string) {
     const pane = [
       tab.activePane,
       ...tab.panes.filter((id) => id !== tab.activePane),
-    ].find((id) => sessionFor(tab, id) === session);
+    ].find((id) => terminalHerdrSession(tab, id) === session);
     if (pane) return { tab, pane };
   }
 }
@@ -31,7 +24,15 @@ export function attachHerdrClient(
   preferred?: { tab: TerminalTab; pane: string },
 ) {
   const session = opened.target.session;
-  const existing = findHerdrClient(tabs, session) ?? preferred;
+  const existing =
+    findHerdrClient(tabs, session) ??
+    (preferred &&
+    !terminalHerdrSession(
+      tabs.find((tab) => tab.id === preferred.tab.id) ?? preferred.tab,
+      preferred.pane,
+    )
+      ? preferred
+      : undefined);
   const client =
     existing ??
     (() => {
@@ -42,7 +43,7 @@ export function attachHerdrClient(
     let value = tab;
     for (const pane of tab.panes) {
       if (
-        sessionFor(tab, pane) !== session ||
+        terminalHerdrSession(tab, pane) !== session ||
         (tab.id === client.tab.id && pane === client.pane)
       )
         continue;
@@ -64,7 +65,6 @@ export function attachHerdrClient(
   if (!tabs.some((tab) => tab.id === client.tab.id)) {
     next.push({
       ...client.tab,
-      herdrTarget: opened.target,
       paneAttachments: { [client.pane]: opened },
     });
   }

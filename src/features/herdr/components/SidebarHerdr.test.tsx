@@ -372,6 +372,78 @@ it("opens the checkout returned by Herdr and navigates with an explicit attachme
   }
 });
 
+it("opens the current checkout in the selected running session", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.spyOn(document, "hasFocus").mockReturnValue(true);
+  const { makeProject } = await import("../../../../tests/fixtures/workspace");
+  app.projects.push({ ...makeProject(), path: "/projects/demo" });
+  vi.mocked(api.getHerdrInventory).mockResolvedValue({
+    installed: true,
+    sessions: [
+      { name: "default", running: true, default: true },
+      { name: "review", running: true, default: false },
+    ],
+  });
+  vi.mocked(api.ensureHerdrWorkspace).mockResolvedValue({
+    project_id: "demo",
+    path: "/projects/demo",
+    target: {
+      session: "review",
+      workspace_id: "w1",
+      pane_id: "w1:p1",
+      terminal_id: "native",
+      revision: 1,
+      agent_session: null,
+    },
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter initialEntries={["/project/demo"]}>
+          <SidebarHerdr active />
+          <Location />
+        </MemoryRouter>,
+      ),
+    );
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[role="combobox"][aria-label="herdr.session"]',
+        )!
+        .click(),
+    );
+    await act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('[role="option"]')]
+        .find((option) => option.textContent?.startsWith("review"))!
+        .click(),
+    );
+    expect(api.ensureHerdrWorkspace).not.toHaveBeenCalled();
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="herdr.openCurrent"]')!
+        .click(),
+    );
+    expect(api.prepareHerdrSession).not.toHaveBeenCalled();
+    expect(api.ensureHerdrWorkspace).toHaveBeenCalledWith(
+      "review",
+      "demo",
+      "/projects/demo",
+    );
+    expect(host.querySelector("output")?.dataset.attachment).toContain(
+      '"session":"review"',
+    );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    app.projects.length = 0;
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});
+
 it("does not navigate back when an earlier open-current request finishes after changing routes", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.spyOn(document, "hasFocus").mockReturnValue(true);

@@ -17,9 +17,11 @@ import {
   terminalScopeKey,
   TERMINAL_PANE_LIMIT,
   isTerminalTabVisible,
+  terminalHerdrSession,
   type TerminalLayout,
   type TerminalTab,
 } from "../../lib/terminalLayout";
+import { removeTerminalPane } from "../../lib/terminalPaneLayout";
 import { worktreeUrl } from "../../lib/worktreeApi";
 
 export interface TerminalStartupState {
@@ -56,22 +58,41 @@ export function useTerminalLayout(
   const [initializedScopes, setInitializedScopes] = useState<string[]>([]);
   const scopeKey = terminalScopeKey(projectId, path);
   const [owner, setOwner] = useState(scopeKey);
-  // Only the selected checkout owns terminals. Unmounting old panes closes
-  // their PTYs; leaving for a non-workspace page keeps the current owner.
+  // Local shells belong to a checkout, while Herdr clients follow their session.
   const scopeChanged = ready && !!projectId && !!path && scopeKey !== owner;
   if (scopeChanged) {
     setOwner(scopeKey);
-    setTabs([]);
+    setTabs(
+      tabs.flatMap((tab) => {
+        const clients = tab.panes.filter((pane) =>
+          terminalHerdrSession(tab, pane),
+        );
+        if (!clients.length) return [];
+        return [
+          tab.panes.reduce(
+            (kept, pane) =>
+              clients.includes(pane) ? kept : removeTerminalPane(kept, pane),
+            tab,
+          ),
+        ];
+      }),
+    );
     setActiveIds({});
     setInitializedScopes([]);
     rememberActive("");
   }
+  const inCheckout = (tab: TerminalTab) =>
+    tab.projectId === projectId && tab.worktreePath === path;
   const scopedTabs = projectId
     ? tabs.filter(
-        (tab) => tab.projectId === projectId && tab.worktreePath === path,
+        (tab) =>
+          inCheckout(tab) ||
+          tab.panes.some((pane) => terminalHerdrSession(tab, pane)),
       )
     : tabs;
-  const visibleTabs = scopedTabs.filter(isTerminalTabVisible);
+  const visibleTabs = tabs.filter(
+    (tab) => inCheckout(tab) && isTerminalTabVisible(tab),
+  );
   if (
     ready &&
     !scopeChanged &&

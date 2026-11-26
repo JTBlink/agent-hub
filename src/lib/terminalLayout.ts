@@ -49,6 +49,14 @@ export interface TerminalTab {
 export const isTerminalTabVisible = (tab: TerminalTab) =>
   !tab.development || !!tab.developmentVisible;
 
+export function terminalHerdrSession(tab: TerminalTab, pane: string) {
+  return (
+    tab.paneAttachments?.[pane]?.target.session ??
+    tab.herdrTarget?.session ??
+    tab.herdrSession
+  );
+}
+
 export interface TerminalLayout {
   tabs: TerminalTab[];
   activeIds: Record<string, string>;

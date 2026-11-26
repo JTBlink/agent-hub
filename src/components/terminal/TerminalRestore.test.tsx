@@ -307,6 +307,66 @@ it("restores only the selected checkout and closes every old pane when switching
   ).toBe(false);
 });
 
+it("keeps different Herdr session clients open across checkouts and reuses them on return", async () => {
+  const attachments = [
+    { session: "default", path: project.path },
+    { session: "review", path: topic },
+  ];
+  await act(async () =>
+    root.render(
+      <MemoryRouter initialEntries={[worktreeUrl(project.id, project.path)]}>
+        {attachments.map(({ session, path }) => (
+          <Link
+            key={session}
+            to={worktreeUrl(project.id, path)}
+            state={{
+              herdrAttachment: {
+                project_id: project.id,
+                path,
+                target: {
+                  session,
+                  workspace_id: "w1",
+                  pane_id: "w1:p1",
+                  terminal_id: "native",
+                  revision: 1,
+                  agent_session: null,
+                },
+              },
+            }}
+          >
+            {session}
+          </Link>
+        ))}
+        <TerminalWorkspace projects={[project]} />
+      </MemoryRouter>,
+    ),
+  );
+  await click("default");
+  await click("review");
+  expect(
+    host.querySelector('[role="tab"][title="herdr-default"]'),
+  ).not.toBeNull();
+  expect(
+    host.querySelector('[role="tab"][title="herdr-review"]'),
+  ).not.toBeNull();
+  await click("herdr-default");
+  expect(
+    host
+      .querySelector('[role="tab"][title="herdr-default"]')
+      ?.getAttribute("aria-selected"),
+  ).toBe("true");
+  const clients = creations().filter(
+    ([name]) => name === "herdr_terminal_create",
+  );
+  expect(clients).toHaveLength(2);
+  for (const [index, creation] of creations().entries()) {
+    if (creation[0] === "herdr_terminal_create")
+      expect(invoke).not.toHaveBeenCalledWith("terminal_close", {
+        id: `new-${index + 1}`,
+      });
+  }
+});
+
 it("waits for projects and all eight leftover PTYs to close before recreating saved panes", async () => {
   const tabs = Array.from({ length: 8 }, () =>
     createTerminalTab(project.id, undefined, topic),
@@ -458,7 +518,7 @@ it("closes all old project panes and starts fresh when returning", async () => {
   expect(creations()).toHaveLength(11);
 });
 
-it("opens a fresh Herdr client when returning through the sidebar with a refreshed target", async () => {
+it("reuses the attached Herdr client when returning through the sidebar", async () => {
   const other = {
     ...makeProject(),
     id: "other",
@@ -503,16 +563,20 @@ it("opens a fresh Herdr client when returning through the sidebar with a refresh
   );
   expect(creations()).toHaveLength(1);
   expect(creations()[0][0]).toBe("terminal_create");
-  const input = host.querySelector("textarea");
+  let attachedInput: Element | null = null;
   for (let i = 0; i < 3; i++) {
     await click("Other workspace");
     await click("Herdr workspace");
-    expect(creations()).toHaveLength(3 + i * 2);
-    expect(
-      host.querySelector('[role="tabpanel"]:not([hidden]) textarea'),
-    ).not.toBe(input);
+    expect(creations()).toHaveLength(3 + i);
+    const selectedInput = host.querySelector(
+      '[role="tabpanel"]:not([hidden]) textarea',
+    );
+    expect(selectedInput).not.toBeNull();
+    attachedInput ??= selectedInput;
+    expect(selectedInput).toBe(attachedInput);
     expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-1" });
-    expect(creations().at(-1)?.[1]).toMatchObject({
+    expect(invoke).not.toHaveBeenCalledWith("terminal_close", { id: "new-3" });
+    expect(creations()[2]?.[1]).toMatchObject({
       request: {
         target: {
           ...target,

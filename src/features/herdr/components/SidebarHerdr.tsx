@@ -274,7 +274,10 @@ export function SidebarHerdr({
             title={t("herdr.openCurrent")}
             disabled={
               !workspace.project ||
-              !session ||
+              (session !== DEFAULT_HERDR_SESSION &&
+                !source.inventory?.sessions.some(
+                  (item) => item.name === session && item.running,
+                )) ||
               busy ||
               unavailable ||
               projectFiles.loading
@@ -283,14 +286,13 @@ export function SidebarHerdr({
               void transact(async () => {
                 const scope = latest.current;
                 if (workspace.project) {
-                  if (session === DEFAULT_HERDR_SESSION) {
+                  if (session === DEFAULT_HERDR_SESSION)
                     await api.prepareHerdrSession();
-                    if (
-                      scope.session !== latest.current.session ||
-                      scope.route !== latest.current.route
-                    )
-                      return;
-                  }
+                  if (
+                    scope.session !== latest.current.session ||
+                    scope.route !== latest.current.route
+                  )
+                    return;
                   const value = await api.ensureHerdrWorkspace(
                     session,
                     workspace.project.id,

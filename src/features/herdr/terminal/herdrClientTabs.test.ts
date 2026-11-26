@@ -58,3 +58,17 @@ it("converts the preferred shell only when the session has no client", () => {
   expect(result.tabId).toBe(shell.id);
   expect(result.tabs[0].paneAttachments?.[shell.activePane]).toEqual(opened);
 });
+
+it("opens a new client when the preferred pane is attached to another session", () => {
+  const previous = {
+    ...createTerminalTab("demo"),
+    herdrTarget: { ...opened.target, session: "review" },
+  };
+  const result = attachHerdrClient([previous], opened, {
+    tab: previous,
+    pane: previous.activePane,
+  });
+  expect(result.tabs).toHaveLength(2);
+  expect(result.tabs[0]).toBe(previous);
+  expect(result.tabId).not.toBe(previous.id);
+});
