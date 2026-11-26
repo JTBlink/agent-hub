@@ -17,7 +17,7 @@
 | `gitlab`     | GitLab 任务查询、评审信息与写操作、CLI 适配                                                                    |
 | `herdr`      | Herdr 内置侧栏、终端与 Agent 集成                                                                              |
 
-标准版默认选择以上能力；Personal 默认不选择可选能力，保留公共本地功能。Agent Flow（`agent-flow`）用于企业 AI Native 研发编排定制，初始启用云端同步、GitLab 与 Herdr，代码平台只支持 GitLab，不编译或展示 GitHub 集成，后续专属功能按模块接入；AI Native 编排目前仍为独立原型，尚未成为该产品的正式能力。云端同步不依赖 GitHub／GitLab，可使用通用 Git 远端；GitHub 引导连接仅在 `cloud-sync` 和 `github` 同时启用时编译。
+标准版默认选择以上能力；Personal 默认不选择可选能力，保留公共本地功能。Agent Flow（`agent-flow`）用于企业 AI Native 研发编排定制，启用 GitLab 与 Herdr，关闭云端备份，代码平台只支持 GitLab，不编译或展示 GitHub 集成，后续专属功能按模块接入；AI Native 编排目前仍为独立原型，尚未成为该产品的正式能力。云端同步不依赖 GitHub／GitLab，可使用通用 Git 远端；GitHub 引导连接仅在 `cloud-sync` 和 `github` 同时启用时编译。
 
 例如，在统一配置的 `products` 中将个人版调整为仅包含云端同步和 GitLab：
 
@@ -54,6 +54,21 @@ npm run build -- --product personal                  # 只构建前端
 ```
 
 也可将 `--product` 指向产品 JSON 文件。产品选择、Cargo profile 和应用 `VERSION` 相互独立。生成的配置、入口与缓存由脚本管理，不手工编辑。
+
+## 复用和升级 Rust 核心库
+
+`crates/agent-hub-core` 的版本由它自己的 Cargo 清单维护。桌面与配套 CLI 通过同仓库路径依赖联调。完成 Registry 发布后，独立产品可以声明明确的库版本并提交自己的 `Cargo.lock`；升级时改依赖版本，重新验证实际调用与产品构建。
+
+当前可复用的入口是 `agent_hub_core::agent_launch`，包括兼容旧方案的配置校验、启动命令解析和启动计划指纹。配置文件读写与修订保护由现有宿主管理。核心能力从真实调用逐步迁入，执行、平台和备份仍使用现有应用实现。迁移可选集成时继续由产品清单驱动同名 Cargo 特性，云端备份、同步和恢复复用单一 `cloud-sync` 开关。
+
+```bash
+cargo test --locked --manifest-path crates/agent-hub-core/Cargo.toml
+cargo package --locked --manifest-path crates/agent-hub-core/Cargo.toml
+```
+
+测试覆盖库接口，打包校验确认源码归档能独立编译。以上命令适用于干净检出；验证本地未提交改动时可对 `cargo package` 追加 `--allow-dirty`。
+
+独立产品在本地可以用 Cargo 的 `[patch.crates-io]` 将依赖指向同一版本的本地 checkout。正式构建使用 Registry 版本与提交的锁文件。新增能力先从实际调用方验证一条完整行为，再扩展库的公开接口。
 
 ## 新功能放在哪里
 

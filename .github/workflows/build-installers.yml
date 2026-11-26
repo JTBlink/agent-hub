@@ -144,6 +144,14 @@ jobs:
           cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
           cargo test --manifest-path src-tauri/Cargo.toml
 
+      - name: Check shared Rust library
+        working-directory: crates/agent-hub-core
+        run: |
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked
+          cargo package --locked
+
   build:
     name: Build ${{ matrix.name }}
     needs: [preflight, quality]

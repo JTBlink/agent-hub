@@ -48,6 +48,6 @@
   "products": {
     "standard": ["cloud-sync", "github", "gitlab", "herdr"],
     "personal": [],
-    "agent-flow": ["cloud-sync", "gitlab", "herdr"]
+    "agent-flow": ["gitlab", "herdr"]
   }
 }

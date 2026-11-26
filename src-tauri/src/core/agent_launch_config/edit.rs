@@ -1,5 +1,6 @@
 //! Shared scheme edits used by CLI; persistence retains the normal revision guard.
 use super::*;
+use agent_hub_core::agent_launch::agent_key;
 
 pub enum SchemeEdit {
     Add {
@@ -23,12 +24,7 @@ pub enum SchemeEdit {
 }
 
 pub fn effective_schemes(snapshot: &Snapshot, agent: &str) -> Result<(String, AgentSchemes)> {
-    let key = key_for_kind(if agent == "default" {
-        &snapshot.document.default_agent
-    } else {
-        agent
-    });
-    ensure!(valid_key(key), "Invalid Agent key");
+    let key = agent_key(&snapshot.document, agent)?;
     let schemes = snapshot
         .document
         .schemes

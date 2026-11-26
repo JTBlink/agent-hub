@@ -322,6 +322,8 @@ agent-hub/
 | `skills/`                        | 内置管理 Skill                     |
 | `docs/reference/skills-manager/` | 导入来源清单与原许可证             |
 
+`crates/agent-hub-core/` 是独立版本的 Rust 核心库，目前提供 Agent 启动方案逻辑。
+
 默认本地布局：
 
 ```text

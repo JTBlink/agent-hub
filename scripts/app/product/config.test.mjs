@@ -118,12 +118,10 @@ it("builds Agent Flow with its own application identity and keeps standard outpu
         path.includes("products/agent-flow/icons/"),
       ),
     ).toBe(true);
-    expect(product.features).toContain("gitlab");
-    expect(product.features).not.toContain("github");
+    expect(product.features).toEqual(["gitlab", "herdr"]);
+    expect(product.sidebar.bottom).not.toContain("backup");
+    expect(standard.features).toContain("cloud-sync");
     expect(config.app.windows[0].title).toBe("Agent Flow");
-    expect(product.features).toEqual(
-      [...featureCatalog.products["agent-flow"]].sort(),
-    );
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

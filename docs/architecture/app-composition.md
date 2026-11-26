@@ -1,6 +1,6 @@
 # 应用组装边界
 
-AgentHub 保留一套主体源码、依赖、版本和构建流程。标准版、个人版与 Agent Flow 定制版通过产品配置选择编译能力，保持一套公共实现；不引入动态扩展宿主。
+AgentHub 保留一套主体源码和产品构建流程。标准版、个人版与 Agent Flow 定制版通过产品配置选择编译能力，保持一套公共实现；不引入动态扩展宿主。
 
 ## Rust 桌面宿主
 
@@ -53,9 +53,13 @@ app_lib::builder()?
 
 不预建动态库加载器、通用扩展 trait 或第二套业务实现。拆分按实际私有功能发生，通用业务、存储和 UI 保持单一实现。
 
+## 共享 Rust 核心库
+
+`crates/agent-hub-core` 独立维护库版本。当前桌面与配套 CLI 调用这个 crate 的同一套 Agent 启动方案解析、兼容校验和计划指纹实现。宿主管理配置持久化、修订保护、云备份恢复和后续启动。开发与验收命令见[核心库复用与升级](../product-development.md#复用和升级-rust-核心库)。
+
 ## 产品编译时组装
 
-产品清单位于 `products/`：`standard.json` 保留默认完整功能，`personal.json` 默认排除可选集成，`agent-flow.json` 定义面向企业 AI Native 研发编排的 Agent Flow 定制版，初始启用云端同步、GitLab 与 Herdr，代码平台只支持 GitLab，不编译或展示 GitHub 集成。产品可通过 `productName` 配置安装包名称与窗口标题；该名称不改变稳定产品 ID 或数据路径。脚本缺省选择标准版；产品类型与 Rust 构建 profile 独立，功能依赖通过 Cargo features 解析。可选能力及产品选择统一在 `products/features.json` 管理，覆盖 Herdr、云端同步、GitHub 与 GitLab；产品清单只保留身份与界面排列。
+产品清单位于 `products/`：`standard.json` 保留默认完整功能，`personal.json` 默认排除可选集成，`agent-flow.json` 定义面向企业 AI Native 研发编排的 Agent Flow 定制版，启用 GitLab 与 Herdr，关闭云端备份，代码平台只支持 GitLab，不编译或展示 GitHub 集成。产品可通过 `productName` 配置安装包名称与窗口标题；该名称不改变稳定产品 ID 或数据路径。脚本缺省选择标准版；产品类型与 Rust 构建 profile 独立，功能依赖通过 Cargo features 解析。可选能力及产品选择统一在 `products/features.json` 管理，覆盖 Herdr、云端同步、GitHub 与 GitLab；产品清单只保留身份与界面排列。
 
 `./agent-hub.sh build --product personal --debug --bundles app` 经共享 Node 入口解析产品，向前端、桌面和配套 CLI 传递相同配置摘要与实际特性集合。`src-tauri/src/product/` 保存编译期身份；`build-info` CLI 与 `get_build_info` IPC 只读返回该身份，前端在应用 Provider 初始化前核验，拒绝混用资源。
 

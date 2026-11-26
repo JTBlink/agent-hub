@@ -19,7 +19,7 @@ pub struct AgentSchemes {
 }
 
 /// Upgrade legacy single instructions in memory. Saving publishes one v2 authority.
-pub(super) fn normalize(mut document: Document) -> Result<Document> {
+pub fn normalize(mut document: Document) -> Result<Document> {
     ensure!(
         [1, 2].contains(&document.schema_version),
         "Unsupported Agent launch configuration version"

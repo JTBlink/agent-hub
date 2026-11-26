@@ -215,6 +215,17 @@ describe("GitHub Actions workflow contract", () => {
     expect(installers).toContain("--smoke");
   });
 
+  it.each([ci, installers])(
+    "validates the versioned Rust library package",
+    (workflow) => {
+      const checks = parse(workflow).jobs.quality.steps.find(
+        (step) => step["working-directory"] === "crates/agent-hub-core",
+      );
+      expect(checks?.run).toContain("cargo test --locked");
+      expect(checks?.run).toContain("cargo package --locked");
+    },
+  );
+
   it("captures the Windows GUI smoke exit code explicitly", () => {
     expect(installers).toContain(
       '$smoke = Start-Process -FilePath $executable -ArgumentList "--smoke" -Wait -PassThru',

@@ -1,6 +1,6 @@
 # Agent Flow 定制版
 
-Agent Flow 是面向企业 AI Native 研发编排的定制产品，产品 ID 为 `agent-flow`。标准版 `standard` 继续提供完整能力；本产品独立选择云端同步、GitLab 和 Herdr，不编译 GitHub 平台集成，不展示 GitHub 账号、更新、发布页和反馈入口。AI Native 编排仍是独立原型，正式执行能力后续按模块接入。
+Agent Flow 是面向企业 AI Native 研发编排的定制产品，产品 ID 为 `agent-flow`。标准版 `standard` 继续提供完整能力；本产品启用 GitLab 和 Herdr。云端备份与 GitHub 集成默认关闭。AI Native 编排仍是独立原型，正式执行能力后续按模块接入。
 
 产品身份与侧栏见 [`../agent-flow.json`](../agent-flow.json)，能力选择统一维护在 [`../features.json`](../features.json)。沿用共享构建流程：
 

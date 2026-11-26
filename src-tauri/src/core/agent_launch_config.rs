@@ -1,7 +1,8 @@
-//! Portable Agent launch preferences, independent of UI, scheduling and Git transport.
+//! Host persistence for shared Agent launch preferences.
 use super::{cloud_sync, repo_lock::RepoLock, user_config};
+use agent_hub_core::agent_launch::{default_instructions, normalize, resolve_document};
 use anyhow::{bail, ensure, Context, Result};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
@@ -9,13 +10,14 @@ use std::{
     io::{Read, Write},
     path::Path,
 };
-mod defaults;
+
 mod edit;
+pub use agent_hub_core::agent_launch::{
+    key_for_kind, kind_for_key, parse, plan_fingerprint, verify_plan, AgentSchemes, Document,
+    Launch, LaunchScheme,
+};
 pub use edit::{edit_schemes, effective_schemes, set_default_agent, SchemeEdit};
-mod schemes;
-pub use defaults::{key_for_kind, kind_for_key};
-use schemes::normalize;
-pub use schemes::{AgentSchemes, LaunchScheme};
+
 #[cfg(test)]
 mod scheme_tests;
 #[cfg(test)]
@@ -31,66 +33,14 @@ pub fn file_path() -> Result<String> {
     user_config::checked(&path).map_err(anyhow::Error::msg)?;
     Ok(path.to_string_lossy().into_owned())
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Document {
-    pub schema_version: u32,
-    pub default_agent: String,
-    /// Legacy input only; normalize consumes it before persistence or resolution.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub instructions: BTreeMap<String, String>,
-    #[serde(default)]
-    pub schemes: BTreeMap<String, AgentSchemes>,
-}
-impl Default for Document {
-    fn default() -> Self {
-        Self {
-            schema_version: 2,
-            default_agent: "codex".into(),
-            instructions: BTreeMap::new(),
-            schemes: BTreeMap::new(),
-        }
-    }
-}
+
 #[derive(Serialize)]
 pub struct Snapshot {
     pub document: Document,
     pub revision: String,
     pub defaults: BTreeMap<String, String>,
 }
-#[derive(Clone, Debug, Serialize)]
-pub struct Launch {
-    pub key: String,
-    pub kind: Option<String>,
-    pub program: String,
-    pub arguments: Vec<String>,
-}
 
-fn valid_key(key: &str) -> bool {
-    !key.is_empty()
-        && key.len() <= 128
-        && key
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
-}
-/// A command is argv, not a shell program. Quote paths/arguments containing spaces.
-/// Parsing never expands environment variables, command substitutions or pipelines.
-pub fn parse(instruction: &str) -> Result<(String, Vec<String>)> {
-    ensure!(
-        !instruction.is_empty()
-            && instruction.len() <= 8192
-            && !instruction.chars().any(char::is_control),
-        "Enter a single launch instruction up to 8 KiB"
-    );
-    let mut words = shell_words::split(instruction)
-        .context("Launch instruction has unclosed quotes")?
-        .into_iter();
-    let program = words
-        .next()
-        .filter(|s| !s.is_empty() && !s.starts_with('-'))
-        .context("Enter an Agent executable")?;
-    Ok((program, words.collect()))
-}
 fn read(root: &Path) -> Result<(Document, String)> {
     let path = root.join(FILE);
     let mut bytes = Vec::new();
@@ -133,7 +83,7 @@ fn read_snapshot() -> Result<Snapshot> {
     Ok(Snapshot {
         document,
         revision,
-        defaults: defaults::instructions(),
+        defaults: default_instructions(),
     })
 }
 pub fn load() -> Result<Snapshot> {
@@ -197,59 +147,4 @@ pub fn resolve(agent: &str) -> Result<Launch> {
 /// Resolve an optional stable scheme reference without changing global defaults.
 pub fn resolve_scheme(agent: &str, scheme_id: Option<&str>) -> Result<Launch> {
     resolve_document(&load()?.document, agent, scheme_id)
-}
-
-fn resolve_document(document: &Document, agent: &str, scheme_id: Option<&str>) -> Result<Launch> {
-    let key = key_for_kind(if agent == "default" {
-        &document.default_agent
-    } else {
-        agent
-    });
-    ensure!(valid_key(key), "Invalid Agent key");
-    let requested = scheme_id.filter(|id| !id.is_empty());
-    let defaults = defaults::instructions();
-    let instruction = if let Some(schemes) = document.schemes.get(key) {
-        let selected = requested.unwrap_or(&schemes.default_id);
-        &schemes
-            .items
-            .iter()
-            .find(|scheme| scheme.id == selected)
-            .context("Selected Agent launch scheme is no longer available; choose another scheme")?
-            .instruction
-    } else {
-        ensure!(
-            requested.map_or(true, |id| id == "default"),
-            "Selected Agent launch scheme is no longer available; choose another scheme"
-        );
-        defaults.get(key).map(String::as_str).unwrap_or(key)
-    };
-    let (mut program, arguments) = parse(instruction)?;
-    if let Some(suffix) = program.strip_prefix("~/") {
-        program = dirs::home_dir()
-            .context("Cannot resolve home directory")?
-            .join(suffix)
-            .to_string_lossy()
-            .into();
-    }
-    Ok(Launch {
-        key: key.into(),
-        kind: kind_for_key(key).map(str::to_string),
-        program,
-        arguments,
-    })
-}
-
-/// Detect changes between a managed runner's resolve and start calls.
-pub fn plan_fingerprint(launch: &Launch) -> Result<String> {
-    Ok(hex::encode(Sha256::digest(serde_json::to_vec(launch)?)))
-}
-
-pub fn verify_plan(launch: &Launch, expected: Option<&str>) -> Result<()> {
-    if let Some(expected) = expected {
-        ensure!(
-            plan_fingerprint(launch)? == expected,
-            "Agent launch scheme changed before startup; retry with the current settings"
-        );
-    }
-    Ok(())
 }
