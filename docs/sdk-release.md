@@ -1,6 +1,6 @@
 # AgentHub SDK 发布规范
 
-SDK 的版本源是 `packages/agent-hub-sdk/VERSION`，正式标签使用 `sdk-v<版本>`。桌面应用继续由根目录 `VERSION` 和 `v<版本>` 管理。SDK Release 在同一个 GitHub 仓库提供版本化下载地址。
+SDK 的版本源是 `packages/agent-hub-sdk/VERSION`，正式标签使用 `sdk-v<版本>`。桌面应用继续由根目录 `VERSION` 和 `v<版本>` 管理。下游默认通过 crates.io 引用 `agent-hub-sdk`，它使用同版本 GitHub Release 中经过校验的完整源码归档。
 
 ## 1. 升级 SDK 版本并固定发布提交
 
@@ -65,6 +65,21 @@ node packages/agent-hub-sdk/verify-release.mjs <download-directory> "$sdk_tag" "
 ```
 
 用正式 Release 的 HTTPS 归档地址和发行清单中的 `version`、`revision`、`sha256` 生成一个下游锁文件，以随发行提供的安装器完成下载、校验和安装。保留候选与正式运行链接、Release 链接、标签解引用提交和校验结果。下游接入方式见仓库 SDK README 或归档根目录的 `README.md`。
+
+## 5. 发布 crates.io 引用入口
+
+GitHub Release 下载验收完成后，将发行清单的 `version`、`revision` 和 `sha256` 写入 `packages/agent-hub-sdk/registry-release.json`，`source` 填写该归档的正式 HTTPS 地址。同步该目录下 Cargo 清单和锁文件中的包版本。SDK 归档、Cargo 包和锁文件使用同一 SDK 版本。
+
+对 Cargo 包执行编译、打包预检，并用包中的安装命令验证锁文件和完整 SDK 下载。提交注册表元数据后执行正式发布。发布凭据使用本机 Cargo 认证或 crates.io Trusted Publishing。
+
+```bash
+cargo test --locked --manifest-path packages/agent-hub-sdk/Cargo.toml
+cargo publish --dry-run --locked --manifest-path packages/agent-hub-sdk/Cargo.toml
+cargo publish --locked --manifest-path packages/agent-hub-sdk/Cargo.toml
+cargo install agent-hub-sdk --version "=${sdk_version}" --locked
+```
+
+最后验证安装的命令能输出匹配的锁文件并下载、解压归档。如注册表发布失败，对已经验收的版本续发。
 
 ## 失败续发
 

@@ -1,5 +1,14 @@
 # AgentHub SDK
 
+下游可以通过 crates.io 安装同版本的 SDK 构建入口。以下以 SDK 0.1.2 为例：
+
+```bash
+cargo install agent-hub-sdk --version '=0.1.2' --locked
+agent-hub-sdk build product.json .build/sdk-0.1.2
+```
+
+Cargo 包固定完整 SDK 的下载地址、版本、源码提交和 SHA-256。使用 `agent-hub-sdk lock` 可读取该锁文件，使用 `agent-hub-sdk install <目录>` 可只下载和解压。Rust 项目也可以依赖同版本的 `agent-hub-sdk`，通过 `RELEASE_LOCK_JSON` 读取相同的锁文件。安装和构建需要 Node.js。
+
 此源码包包含 React 工作台、Rust 宿主、CLI 和内置资源。解压后安装依赖，再从 SDK 目录传入自己的产品清单构建：
 
 ```bash
