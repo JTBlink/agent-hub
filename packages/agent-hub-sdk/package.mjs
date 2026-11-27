@@ -67,6 +67,15 @@ try {
     "utf8",
   ).trim();
   const appVersion = readFileSync(join(root, "VERSION"), "utf8").trim();
+  const sdkChangelog = new URL("CHANGELOG.md", sdkDirectory);
+  const versionHeading = `[${sdkVersion}]\n`;
+  const changes = readFileSync(sdkChangelog, "utf8")
+    .replaceAll("\r\n", "\n")
+    .split(/^## /m)
+    .find((section) => section.startsWith(versionHeading))
+    ?.slice(versionHeading.length)
+    .trim();
+  if (!changes) throw new Error(`Missing SDK changelog entry: ${sdkVersion}`);
   const notes = [
     `# AgentHub SDK ${sdkVersion}`,
     "",
@@ -77,11 +86,16 @@ try {
     "",
     "SDK 包含 React 工作台、Rust 宿主、CLI 和内置资源。产品可独立配置 GitHub、GitLab、Herdr 和云备份，并通过 `sidebarModules` 扩展侧栏和页面。",
     "",
-    "解压后查阅 `README.md`、`CHANGELOG.md` 和 `LICENSE`。",
+    "## 本版变更",
+    "",
+    changes,
+    "",
+    "解压后查阅 `README.md`、`SDK-CHANGELOG.md` 和 `LICENSE`。",
     "",
   ].join("\n");
   copyFileSync(join(root, "README.md"), join(root, "AGENTHUB.md"));
   copyFileSync(readme, join(root, "README.md"));
+  copyFileSync(sdkChangelog, join(root, "SDK-CHANGELOG.md"));
   writeFileSync(join(root, "SDK_VERSION"), sdkVersion + "\n");
   writeFileSync(join(root, "SDK_REVISION"), revision + "\n");
   writeFileSync(join(root, "RELEASE-NOTES.md"), notes);

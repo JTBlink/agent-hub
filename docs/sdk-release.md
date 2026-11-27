@@ -2,14 +2,23 @@
 
 SDK 的版本源是 `packages/agent-hub-sdk/VERSION`，正式标签使用 `sdk-v<版本>`。桌面应用继续由根目录 `VERSION` 和 `v<版本>` 管理。SDK Release 在同一个 GitHub 仓库提供版本化下载地址。
 
-## 1. 确认版本和发布提交
+## 1. 升级 SDK 版本并固定发布提交
 
-- 首次发布使用 SDK 版本文件中的稳定版本。后续发布以 SDK 远端标签为基准，按接口兼容性选择补丁、次版本或主版本。已经占用的标签继续对应原有提交。
+- 首次发布使用 SDK 版本文件中的稳定版本。后续只读取远端 `sdk-v*` 标签，按版本号比较。默认递增补丁版本，适用于兼容修复、构建改进和文档更新。兼容的新能力用 `--bump minor`，需要下游迁移的契约变更用 `--bump major`。
+- 选版工具默认预览，加 `--write` 才更新 SDK 的 `VERSION`。已经准备但尚未打标签的版本会被复用。最高远端标签如果尚无正式 Release，先按失败续发流程处理该版本。
+- 在 `packages/agent-hub-sdk/CHANGELOG.md` 增加目标版本小节，说明下游变化和迁移要求。归档会提供 `SDK-CHANGELOG.md`，Release 正文从目标版本小节生成。
 - 确认变更已经提交至远端 `main`，源目录干净，发行 README 和变更说明随源码提交。
 - 核对归档范围，公共 SDK 随包提供共享源码和模板，各产品的私有清单、品牌与扩展由各自仓库分发。
 
 ```bash
 git fetch origin main --tags
+node packages/agent-hub-sdk/bump-version.mjs
+node packages/agent-hub-sdk/bump-version.mjs --write
+```
+
+提交并推送版本、变更日志和本次 SDK 改动后，固定发布提交。
+
+```bash
 sdk_version="$(cat packages/agent-hub-sdk/VERSION)"
 sdk_tag="sdk-v${sdk_version}"
 sdk_commit="$(git rev-parse HEAD)"
@@ -38,7 +47,7 @@ gh run watch <candidate-run-id> --exit-status
 
 ```bash
 git tag -a "$sdk_tag" "$sdk_commit" -m "发布 AgentHub SDK $sdk_version"
-git push origin "refs/tags/$sdk_tag:refs/tags/$sdk_tag"
+git push origin "refs/tags/${sdk_tag}:refs/tags/${sdk_tag}"
 gh run list --workflow sdk-release.yml --commit "$sdk_commit" --event push
 gh run watch <release-run-id> --exit-status
 ```

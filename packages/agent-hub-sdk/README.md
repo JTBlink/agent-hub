@@ -104,6 +104,6 @@ node packages/agent-hub-sdk/package.mjs /path/to/agent-hub-sdk.tar.gz
 
 仓库的 **SDK Candidate** 工作流可从指定提交生成候选包。上传候选前会校验 SHA-256，从解压目录构建两份带不同侧栏扩展的产品，并检查两组能力配置的 Rust 宿主和 CLI。
 
-正式发布使用 `sdk-v<SDK 版本>` 标签。**SDK Release** 工作流取用同一源码提交的成功候选，重新验证归档、源码版本和配套脚本，再上传到对应的 GitHub Release。下游在锁文件中使用该 Release 的归档地址。SDK 发版使用独立的标签命名空间，桌面应用继续使用 `v<应用版本>`。
+正式发布使用 `sdk-v<SDK 版本>` 标签。**SDK Release** 工作流取用同一源码提交的成功候选，重新验证归档、源码版本和配套脚本，再上传到对应的 GitHub Release。下游在锁文件中使用该 Release 的归档地址，版本差异见归档的 `SDK-CHANGELOG.md`。SDK 发版使用独立的标签命名空间，桌面应用继续使用 `v<应用版本>`。
 
 维护者完整流程见解压目录中的 `docs/sdk-release.md`。
