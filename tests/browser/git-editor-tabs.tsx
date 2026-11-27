@@ -11,7 +11,7 @@ Object.assign(window, {
       if (command === "get_project_git_graph")
         return { commits: [], has_more: false };
       if (command === "get_project_git_commit_diff")
-        return "@@ -1 +1 @@\n-old\n+new\n";
+        return { content: "@@ -1 +1 @@\n-old\n+new\n" };
       throw new Error(`Unsupported fixture command: ${command}`);
     },
   },

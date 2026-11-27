@@ -230,6 +230,51 @@ it("explains identical YAML versions and lets the user open the file", async () 
   expect(host.textContent).not.toContain("git.identicalContent");
 });
 
+it("shows unchanged JSON on both sides of a historical rename", async () => {
+  const source = '{\n  "enabled": true\n}\n';
+  await act(async () =>
+    root.render(
+      <GitDiffViewer
+        patch="similarity index 100%\nrename from old.json\nrename to config.json\n"
+        unchangedText={source}
+        path="config.json"
+        staged={false}
+        historical
+      />,
+    ),
+  );
+  expect(editors().map((editor) => editor.state.sliceDoc())).toEqual([
+    source,
+    source,
+  ]);
+  await vi.waitFor(() => {
+    for (const editor of editors()) {
+      expect(
+        editor.dom.querySelector(".cm-lineNumbers")?.textContent,
+      ).toContain("2");
+      expect(
+        [...editor.contentDOM.querySelectorAll("span")].map(
+          (token) => token.textContent,
+        ),
+      ).toContain('"enabled"');
+    }
+  });
+  expect(host.textContent).not.toContain("git.noDiff");
+  expect(
+    host.querySelector(".diff-code-hunk, .diff-code-added, .diff-code-removed"),
+  ).toBeNull();
+  expect(
+    host.querySelector<HTMLButtonElement>('button[aria-label="git.nextChange"]')
+      ?.disabled,
+  ).toBe(true);
+  await act(async () =>
+    host
+      .querySelector<HTMLButtonElement>('button[aria-label="git.split"]')!
+      .click(),
+  );
+  expect(editors().map((editor) => editor.state.sliceDoc())).toEqual([source]);
+});
+
 it("keeps unified decorations and navigation valid for CRLF patches", async () => {
   const changes = "@@ -1,2 +1,2 @@\r\n context\r\n-old\r\n+new\r\n";
   await act(async () =>

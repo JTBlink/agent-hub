@@ -153,6 +153,11 @@ export const getProjectGitCommit = (
     sha,
     path,
   });
+export interface GitCommitFileView {
+  content: string;
+  unchanged_text?: string;
+}
+
 export const getProjectGitCommitDiff = (
   projectId: string,
   worktreePath: string | undefined,
@@ -160,7 +165,7 @@ export const getProjectGitCommitDiff = (
   path: string,
   view?: "revision" | "working",
 ) =>
-  invoke<string>("get_project_git_commit_diff", {
+  invoke<GitCommitFileView>("get_project_git_commit_diff", {
     projectId,
     worktreePath,
     sha,

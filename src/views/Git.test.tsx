@@ -603,9 +603,9 @@ it("opens committed file diffs separately from working changes", async () => {
     truncated: false,
     files: [{ path: "src/demo.ts", old_path: null, status: "added" }],
   });
-  vi.mocked(getProjectGitCommitDiff).mockResolvedValue(
-    "@@ -0,0 +1 @@\n+historical content\n",
-  );
+  vi.mocked(getProjectGitCommitDiff).mockResolvedValue({
+    content: "@@ -0,0 +1 @@\n+historical content\n",
+  });
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
@@ -1154,9 +1154,9 @@ it("opens historical files in separate tabs and preserves the selected Graph com
       { path: "src/two.ts", old_path: null, status: "modified" },
     ],
   });
-  vi.mocked(getProjectGitCommitDiff).mockResolvedValue(
-    "@@ -1 +1 @@\n-old\n+new\n",
-  );
+  vi.mocked(getProjectGitCommitDiff).mockResolvedValue({
+    content: "@@ -1 +1 @@\n-old\n+new\n",
+  });
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);

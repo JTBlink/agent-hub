@@ -9,7 +9,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { EditorView } from "@codemirror/view";
 import { collapseGitDiff } from "../../lib/collapseGitDiff";
-import { parseGitDiff } from "../../lib/gitDiff";
+import { parseGitDiff, unchangedGitDiff } from "../../lib/gitDiff";
 import { gitDiffNavigation } from "../../lib/gitDiffNavigation";
 import { ScrollOverview } from "../ScrollOverview";
 import { DiffCodePane } from "./DiffCodePane";
@@ -20,6 +20,7 @@ import { useDiffOverview } from "./useDiffOverview";
 
 export function GitDiffViewer({
   patch,
+  unchangedText,
   staged,
   historical = false,
   compareWorking = false,
@@ -27,6 +28,7 @@ export function GitDiffViewer({
   onOpenFile,
 }: {
   patch: string;
+  unchangedText?: string;
   staged: boolean;
   historical?: boolean;
   compareWorking?: boolean;
@@ -40,8 +42,11 @@ export function GitDiffViewer({
     [patch, collapsed],
   );
   const { rows, truncated } = useMemo(
-    () => parseGitDiff(displayPatch),
-    [displayPatch],
+    () =>
+      unchangedText === undefined
+        ? parseGitDiff(displayPatch)
+        : unchangedGitDiff(unchangedText),
+    [displayPatch, unchangedText],
   );
   const targets = useMemo(
     () => gitDiffNavigation(rows, displayPatch),
@@ -231,17 +236,29 @@ export function GitDiffViewer({
         </div>
       ) : (
         <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          <UnifiedDiffPane
-            patch={displayPatch}
-            path={path}
-            wrap={wrap}
-            whitespace={whitespace}
-            onViewReady={connectRight}
-          />
+          {unchangedText === undefined ? (
+            <UnifiedDiffPane
+              patch={displayPatch}
+              path={path}
+              wrap={wrap}
+              whitespace={whitespace}
+              onViewReady={connectRight}
+            />
+          ) : (
+            <DiffCodePane
+              rows={rows}
+              side="right"
+              path={path}
+              label={rightLabel}
+              onViewReady={connectRight}
+              wrap={wrap}
+              whitespace={whitespace}
+            />
+          )}
           {renderOverview()}
         </div>
       )}
-      {truncated && split && (
+      {truncated && (split || unchangedText !== undefined) && (
         <p role="status" className="shrink-0 p-3 text-xs text-muted">
           {t("git.diffTruncated")}
         </p>

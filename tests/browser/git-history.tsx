@@ -93,7 +93,11 @@ if (params.has("many-commits")) {
 export function Preview() {
   const [selected, setSelected] = useState<CommitFileSelection>();
   const patch = selected
-    ? (gitFixture("get_project_git_commit_diff", {}).value as string)
+    ? (
+        gitFixture("get_project_git_commit_diff", {}).value as {
+          content: string;
+        }
+      ).content
     : "";
   if (params.has("graph"))
     return (

@@ -153,7 +153,14 @@ fn commit_files(
     Ok((files, additions, deletions, truncated))
 }
 
-pub fn commit_diff(root: &Path, sha: &str, path: &str) -> Result<String> {
+#[derive(Serialize)]
+pub struct GitCommitFileView {
+    pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unchanged_text: Option<String>,
+}
+
+fn commit_diff(root: &Path, sha: &str, path: &str) -> Result<GitCommitFileView> {
     super::validate_file_path(path)?;
     let repo =
         git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
@@ -162,11 +169,50 @@ pub fn commit_diff(root: &Path, sha: &str, path: &str) -> Result<String> {
     options.context_lines(super::DIFF_CONTEXT_LINES);
     let mut diff = repo.diff_tree_to_tree(parent.as_ref(), Some(&tree), Some(&mut options))?;
     diff.find_similar(None)?;
-    super::render_diff_for_path(&diff, Some(path))
+    let content = super::render_diff_for_path(&diff, Some(path))?;
+    let unchanged_text = match diff
+        .deltas()
+        .find(|delta| super::matches_diff_path(delta, Path::new(path)))
+    {
+        Some(delta) => unchanged_blob_text(&repo, &delta)?,
+        None => None,
+    };
+    Ok(GitCommitFileView {
+        content,
+        unchanged_text,
+    })
+}
+
+fn unchanged_blob_text(
+    repo: &git2::Repository,
+    delta: &git2::DiffDelta<'_>,
+) -> Result<Option<String>> {
+    use git2::FileMode::{Blob, BlobExecutable, BlobGroupWritable};
+
+    let before = delta.old_file();
+    let after = delta.new_file();
+    // Exact renames and executable-bit changes have two versions but no text hunks.
+    if before.id() != after.id()
+        || !matches!(before.mode(), Blob | BlobExecutable | BlobGroupWritable)
+        || !matches!(after.mode(), Blob | BlobExecutable | BlobGroupWritable)
+        || delta.flags().contains(git2::DiffFlags::BINARY)
+    {
+        return Ok(None);
+    }
+    let blob = repo.find_blob(after.id())?;
+    if blob.size() > super::MAX_DIFF_BYTES || blob.is_binary() {
+        return Ok(None);
+    }
+    Ok(std::str::from_utf8(blob.content()).ok().map(str::to_owned))
 }
 
 /// Read an immutable file or compare its committed tree with the current checkout.
-pub fn commit_file_view(root: &Path, sha: &str, path: &str, view: Option<&str>) -> Result<String> {
+pub fn commit_file_view(
+    root: &Path,
+    sha: &str,
+    path: &str,
+    view: Option<&str>,
+) -> Result<GitCommitFileView> {
     if view.is_none() {
         return commit_diff(root, sha, path);
     }
@@ -174,7 +220,7 @@ pub fn commit_file_view(root: &Path, sha: &str, path: &str, view: Option<&str>) 
     let repo =
         git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
     let tree = repo.find_commit(oid(sha)?)?.tree()?;
-    match view {
+    let content = match view {
         Some("revision") => {
             let entry = tree.get_path(Path::new(path))?;
             let blob = repo.find_blob(entry.id())?;
@@ -184,7 +230,7 @@ pub fn commit_file_view(root: &Path, sha: &str, path: &str, view: Option<&str>) 
             if blob.is_binary() {
                 bail!("Binary files cannot be previewed as text");
             }
-            Ok(std::str::from_utf8(blob.content())?.to_owned())
+            std::str::from_utf8(blob.content())?.to_owned()
         }
         Some("working") => {
             let mut options = git2::DiffOptions::new();
@@ -193,10 +239,14 @@ pub fn commit_file_view(root: &Path, sha: &str, path: &str, view: Option<&str>) 
                 .include_untracked(true)
                 .show_untracked_content(true);
             let diff = repo.diff_tree_to_workdir_with_index(Some(&tree), Some(&mut options))?;
-            super::render_diff_for_path(&diff, Some(path))
+            super::render_diff_for_path(&diff, Some(path))?
         }
         _ => bail!("Unsupported commit file view"),
-    }
+    };
+    Ok(GitCommitFileView {
+        content,
+        unchanged_text: None,
+    })
 }
 
 #[derive(Serialize)]

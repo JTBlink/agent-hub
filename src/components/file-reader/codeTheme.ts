@@ -25,7 +25,7 @@ export const codeHighlightStyle = HighlightStyle.define([
     color: "var(--color-accent-light)",
   },
   {
-    tag: [tags.typeName, tags.className, tags.attributeName],
+    tag: [tags.typeName, tags.className, tags.attributeName, tags.propertyName],
     color: "var(--color-brand-violet)",
   },
   { tag: tags.comment, color: "var(--color-text-muted)", fontStyle: "italic" },

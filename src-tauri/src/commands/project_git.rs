@@ -179,7 +179,7 @@ pub async fn get_project_git_commit_diff(
     sha: String,
     path: String,
     view: Option<String>,
-) -> Result<String, AppError> {
+) -> Result<project_git::GitCommitFileView, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())

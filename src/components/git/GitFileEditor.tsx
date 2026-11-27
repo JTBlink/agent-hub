@@ -20,6 +20,7 @@ export function GitFileEditor({
   compareWorking,
   fileView,
   diff,
+  unchangedText,
   diffError,
   files,
   onFileViewChange,
@@ -33,6 +34,7 @@ export function GitFileEditor({
   compareWorking?: boolean;
   fileView: boolean;
   diff?: string;
+  unchangedText?: string;
   diffError?: string;
   files: GitFile[];
   onFileViewChange?: (value: boolean) => void;
@@ -96,6 +98,7 @@ export function GitFileEditor({
       ) : diff !== undefined ? (
         <GitDiffViewer
           patch={diff}
+          unchangedText={unchangedText}
           path={selection.path}
           staged={selection.staged}
           historical={!!commitSha}

@@ -3,7 +3,11 @@ import { useContext, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { GitEditorTabsContext } from "../../hooks/gitEditorVisibility";
 import type { GitEditors } from "../../hooks/useGitEditors";
-import { getProjectGitCommitDiff, type GitFile } from "../../lib/gitApi";
+import {
+  getProjectGitCommitDiff,
+  type GitCommitFileView,
+  type GitFile,
+} from "../../lib/gitApi";
 import { getErrorMessage } from "../../lib/error";
 import { GitGraph } from "./GitGraph";
 import { GitFileEditor } from "./GitFileEditor";
@@ -23,7 +27,7 @@ function CommitEditor({
   const { t } = useTranslation();
   const [result, setResult] = useState<{
     key: string;
-    content?: string;
+    file?: GitCommitFileView;
     error?: string;
   }>();
   const key = JSON.stringify([
@@ -41,8 +45,8 @@ function CommitEditor({
       file.path,
       file.view,
     ).then(
-      (content) => {
-        if (!cancelled) setResult({ key, content });
+      (file) => {
+        if (!cancelled) setResult({ key, file });
       },
       (cause) => {
         if (!cancelled)
@@ -61,6 +65,7 @@ function CommitEditor({
     key,
     t,
   ]);
+  const current = result?.key === key ? result : undefined;
   return (
     <GitFileEditor
       activeId={target.projectId}
@@ -71,8 +76,9 @@ function CommitEditor({
       compareWorking={file.view === "working"}
       fileView={file.view === "file"}
       files={[]}
-      diff={result?.key === key ? result.content : undefined}
-      diffError={result?.key === key ? result.error : undefined}
+      diff={current?.file?.content}
+      unchangedText={current?.file?.unchanged_text}
+      diffError={current?.error}
       onClose={onClose}
     />
   );

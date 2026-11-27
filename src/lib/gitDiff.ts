@@ -7,8 +7,21 @@ export type GitDiffRow =
   | { type: "hunk"; text: string }
   | { type: "line"; left?: GitDiffLine; right?: GitDiffLine };
 
+const MAX_PREVIEW_LINES = 3000;
+
+export function unchangedGitDiff(text: string, limit = MAX_PREVIEW_LINES) {
+  const lines = text.split(/\r?\n/, limit + 1);
+  const truncated = lines.length > limit;
+  if (truncated) lines.pop();
+  const rows = lines.map<GitDiffRow>((content, index) => {
+    const line = { content, number: index + 1, changed: false };
+    return { type: "line", left: line, right: line };
+  });
+  return { rows, truncated };
+}
+
 /** Align a Git patch directly, preserving hunk line numbers without re-diffing excerpts. */
-export function parseGitDiff(patch: string, limit = 3000) {
+export function parseGitDiff(patch: string, limit = MAX_PREVIEW_LINES) {
   const rows: GitDiffRow[] = [];
   let left = 0;
   let right = 0;

@@ -76,6 +76,7 @@ export function GitDiffToolbar({
       Icon: Map,
       action: onCollapse,
       pressed: collapsed,
+      disabled: !count,
     },
     { label: t("git.split"), Icon: Columns2, action: onSplit, pressed: split },
   ];

@@ -261,7 +261,7 @@ export function gitFixture(
     };
   }
   if (command === "get_project_git_commit_diff")
-    return { handled: true, value: patch };
+    return { handled: true, value: { content: patch } };
   if (command === "get_project_git_status")
     return { handled: true, value: structuredClone(snapshot) };
   if (command === "get_project_git_diff") {

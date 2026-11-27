@@ -12,7 +12,8 @@ pub use actions::{commit, discard, set_staged};
 pub(crate) use actions::{run_git, validate_branch_name};
 use anyhow::{bail, Result};
 pub use history::{
-    commit_details, commit_file_view, commit_history, GitCommitDetails, GitHistoryPage,
+    commit_details, commit_file_view, commit_history, GitCommitDetails, GitCommitFileView,
+    GitHistoryPage,
 };
 pub use references::{references, GitReferences};
 pub use remotes::{remotes, GitRemote};
@@ -156,16 +157,16 @@ fn render_diff(diff: &git2::Diff<'_>) -> Result<String> {
     render_diff_for_path(diff, None)
 }
 
+fn matches_diff_path(delta: &git2::DiffDelta<'_>, path: &Path) -> bool {
+    delta.new_file().path() == Some(path) || delta.old_file().path() == Some(path)
+}
+
 fn render_diff_for_path(diff: &git2::Diff<'_>, path: Option<&str>) -> Result<String> {
     let mut bytes = Vec::new();
     let mut oversized = false;
     diff.print(git2::DiffFormat::Patch, |delta, _, line| {
-        if let Some(path) = path {
-            if delta.new_file().path() != Some(Path::new(path))
-                && delta.old_file().path() != Some(Path::new(path))
-            {
-                return true;
-            }
+        if path.is_some_and(|path| !matches_diff_path(&delta, Path::new(path))) {
+            return true;
         }
         if bytes.len() + line.content().len() > MAX_DIFF_BYTES {
             oversized = true;

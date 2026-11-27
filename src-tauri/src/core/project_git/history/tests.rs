@@ -23,7 +23,9 @@ fn previews_include_context_far_from_changes() {
         1
     );
     let commit = save(&repo, "change");
-    let patch = commit_diff(dir.path(), &commit, "demo.txt").unwrap();
+    let patch = commit_diff(dir.path(), &commit, "demo.txt")
+        .unwrap()
+        .content;
     assert!(patch.contains(" line 0\n"));
     assert!(patch.contains(" line 29\n"));
     assert!(patch.contains("+updated second\n"));
@@ -74,6 +76,7 @@ fn reads_initial_and_parent_diffs_without_using_the_working_tree() {
     assert_eq!(initial.files[0].deletions, Some(0));
     assert!(commit_diff(temp.path(), &first, "demo.txt")
         .unwrap()
+        .content
         .contains("+first"));
     std::fs::write(temp.path().join("demo.txt"), "second\n").unwrap();
     let second = save(&repo, "Update");
@@ -83,7 +86,9 @@ fn reads_initial_and_parent_diffs_without_using_the_working_tree() {
     assert_eq!((details.additions, details.deletions), (1, 1));
     assert_eq!(details.files[0].additions, Some(1));
     assert_eq!(details.files[0].deletions, Some(1));
-    let patch = commit_diff(temp.path(), &second, "demo.txt").unwrap();
+    let change = commit_diff(temp.path(), &second, "demo.txt").unwrap();
+    assert_eq!(change.unchanged_text, None);
+    let patch = change.content;
     assert!(patch.contains("-first") && patch.contains("+second"));
     assert!(!patch.contains("uncommitted"));
     assert!(commit_details(temp.path(), "HEAD", None).is_err());
@@ -106,15 +111,23 @@ fn preserves_rename_metadata_and_patch_paths() {
     let temp = tempfile::tempdir().unwrap();
     let repo = git2::Repository::init(temp.path()).unwrap();
     std::fs::write(temp.path().join("demo.txt"), "unchanged content\n").unwrap();
-    let first = save(&repo, "Initial");
+    std::fs::write(temp.path().join("binary.dat"), b"binary\0content").unwrap();
+    let first = save_paths(&repo, "Initial", &["demo.txt", "binary.dat"]);
     std::fs::rename(
         temp.path().join("demo.txt"),
         temp.path().join("renamed.txt"),
     )
     .unwrap();
+    std::fs::rename(
+        temp.path().join("binary.dat"),
+        temp.path().join("renamed.dat"),
+    )
+    .unwrap();
     let mut index = repo.index().unwrap();
     index.remove_path(Path::new("demo.txt")).unwrap();
     index.add_path(Path::new("renamed.txt")).unwrap();
+    index.remove_path(Path::new("binary.dat")).unwrap();
+    index.add_path(Path::new("renamed.dat")).unwrap();
     index.write().unwrap();
     let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
     let signature = git2::Signature::now("Example", "user@example.invalid").unwrap();
@@ -136,9 +149,42 @@ fn preserves_rename_metadata_and_patch_paths() {
     assert_eq!(details.files.len(), 1);
     assert_eq!(details.files[0].status, "renamed");
     assert_eq!(details.files[0].old_path.as_deref(), Some("demo.txt"));
-    let patch = commit_diff(temp.path(), &sha, "renamed.txt").unwrap();
-    assert!(patch.contains("rename from demo.txt"));
-    assert!(patch.contains("rename to renamed.txt"));
+    std::fs::write(temp.path().join("renamed.txt"), "uncommitted\n").unwrap();
+    let view = commit_file_view(temp.path(), &sha, "renamed.txt", None).unwrap();
+    assert!(view.content.contains("rename from demo.txt"));
+    assert!(view.content.contains("rename to renamed.txt"));
+    assert!(!view.content.contains("@@"));
+    assert_eq!(view.unchanged_text.as_deref(), Some("unchanged content\n"));
+    let binary = commit_file_view(temp.path(), &sha, "renamed.dat", None).unwrap();
+    assert_eq!(binary.unchanged_text, None);
+}
+
+#[test]
+fn returns_source_for_an_executable_bit_change() {
+    let temp = tempfile::tempdir().unwrap();
+    let repo = git2::Repository::init(temp.path()).unwrap();
+    let source = "echo hello\n";
+    std::fs::write(temp.path().join("demo.txt"), source).unwrap();
+    let first = save(&repo, "Initial");
+    let parent = repo.find_commit(oid(&first).unwrap()).unwrap();
+    let mut tree = repo.treebuilder(Some(&parent.tree().unwrap())).unwrap();
+    let blob = parent.tree().unwrap().get_name("demo.txt").unwrap().id();
+    tree.insert("demo.txt", blob, 0o100755).unwrap();
+    let tree = repo.find_tree(tree.write().unwrap()).unwrap();
+    let signature = git2::Signature::now("Example", "user@example.invalid").unwrap();
+    let sha = repo
+        .commit(
+            None,
+            &signature,
+            &signature,
+            "Make executable",
+            &tree,
+            &[&parent],
+        )
+        .unwrap();
+    let view = commit_file_view(temp.path(), &sha.to_string(), "demo.txt", None).unwrap();
+    assert!(view.content.contains("new mode 100755"));
+    assert_eq!(view.unchanged_text.as_deref(), Some(source));
 }
 
 #[test]
@@ -251,10 +297,14 @@ fn commit_file_views_read_history_and_compare_current_worktree() {
     let sha = save(&repo, "initial");
     std::fs::write(dir.path().join("demo.txt"), "working\n").unwrap();
     assert_eq!(
-        commit_file_view(dir.path(), &sha, "demo.txt", Some("revision")).unwrap(),
+        commit_file_view(dir.path(), &sha, "demo.txt", Some("revision"))
+            .unwrap()
+            .content,
         "original\n"
     );
-    let diff = commit_file_view(dir.path(), &sha, "demo.txt", Some("working")).unwrap();
+    let diff = commit_file_view(dir.path(), &sha, "demo.txt", Some("working"))
+        .unwrap()
+        .content;
     assert!(diff.contains("-original"));
     assert!(diff.contains("+working"));
     assert!(commit_file_view(dir.path(), &sha, "../outside", Some("revision")).is_err());
