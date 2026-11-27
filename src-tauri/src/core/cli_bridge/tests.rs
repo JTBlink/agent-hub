@@ -185,9 +185,9 @@ fn native_launch_rejects_a_remaining_binary_after_its_stamp_was_invalidated() {
     central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
     let outcome = std::panic::catch_unwind(|| {
         std::fs::create_dir_all(bridge_dir()).unwrap();
-        fake_cli(&bridge_dir(), env!("CARGO_PKG_VERSION"));
+        fake_cli(&bridge_dir(), crate::product::VERSION);
         assert!(validated_path().is_err());
-        std::fs::write(stamp_path(), env!("CARGO_PKG_VERSION")).unwrap();
+        std::fs::write(stamp_path(), crate::product::VERSION).unwrap();
         std::fs::write(
             bridge_dir().join(".build-info.json"),
             serde_json::to_vec(&build_stamp()).unwrap(),
@@ -209,8 +209,8 @@ fn matching_version_does_not_trust_a_different_product_build() {
     central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
     let outcome = std::panic::catch_unwind(|| {
         std::fs::create_dir_all(bridge_dir()).unwrap();
-        fake_cli(&bridge_dir(), env!("CARGO_PKG_VERSION"));
-        std::fs::write(stamp_path(), env!("CARGO_PKG_VERSION")).unwrap();
+        fake_cli(&bridge_dir(), crate::product::VERSION);
+        std::fs::write(stamp_path(), crate::product::VERSION).unwrap();
         std::fs::write(
             bridge_dir().join(".build-info.json"),
             r#"{"product_id":"other","config_hash":"other"}"#,

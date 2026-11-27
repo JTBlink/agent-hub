@@ -2,6 +2,9 @@
 
 include!(concat!(env!("OUT_DIR"), "/features.rs"));
 
+/// Version embedded in the product bundle and companion CLI.
+pub const VERSION: &str = env!("AGENT_HUB_PRODUCT_VERSION");
+
 #[derive(Debug, serde::Serialize)]
 pub struct BuildInfo {
     pub product_id: &'static str,
@@ -18,7 +21,7 @@ pub fn current() -> BuildInfo {
         config_hash: env!("AGENT_HUB_PRODUCT_HASH"),
         base_commit: env!("AGENT_HUB_BASE_COMMIT"),
         features: COMPILED_FEATURES.to_vec(),
-        version: env!("CARGO_PKG_VERSION"),
+        version: VERSION,
     }
 }
 

@@ -4,7 +4,10 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { cleanupBuildCache } from "./build-cache.mjs";
-import { productArguments, loadProduct } from "./product/config.mjs";
+import {
+  productArguments,
+  loadProduct,
+} from "../../packages/agent-hub-sdk/build/config.mjs";
 import { installDevelopmentCli } from "./product/install-cli.mjs";
 
 export const ROOT_DIR = resolve(repositoryRoot);

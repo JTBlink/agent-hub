@@ -1,3 +1,4 @@
+import { cargoTargetDir } from "../shared/cargo-target.mjs";
 import { repositoryRoot } from "../shared/paths.mjs";
 import {
   closeSync,
@@ -18,9 +19,7 @@ const ROOT = repositoryRoot;
 const packagePattern = /^agent-hub-([a-f0-9]{16})$/;
 const objectPattern = /^(?:app_lib|agent_hub(?:_cli)?)(?:[.-]).*\.rcgu\.o$/;
 
-export function cargoTargetDir(root = ROOT, env = process.env) {
-  return resolve(root, env.CARGO_TARGET_DIR || "src-tauri/target");
-}
+export { cargoTargetDir };
 
 function entries(directory) {
   if (!existsSync(directory)) return [];

@@ -1,0 +1,56 @@
+{
+  "directories": [
+    "automations",
+    "crates",
+    "docs",
+    "docs-site",
+    "homepage",
+    "products",
+    "public",
+    "scripts",
+    "shared",
+    "skills",
+    "src",
+    "src-tauri",
+    "tests"
+  ],
+  "rootFiles": [
+    ".gitignore",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+    "VERSION",
+    "agent-hub.bat",
+    "agent-hub.sh",
+    "index.html",
+    "package-lock.json",
+    "package.json",
+    "postcss.config.js",
+    "tailwind.config.js",
+    "tsconfig.app.json",
+    "tsconfig.json",
+    "tsconfig.node.json",
+    "vite.config.ts",
+    "eslint.config.js"
+  ],
+  "requiredFiles": [
+    "VERSION",
+    "LICENSE",
+    "package-lock.json",
+    "products/features.json",
+    "src/main.tsx",
+    "src-tauri/Cargo.lock",
+    "src-tauri/src/lib.rs",
+    "src-tauri/src/bin/agent-hub-cli.rs",
+    "crates/agent-hub-core/Cargo.toml",
+    "shared/preview-file-types.json",
+    "automations/_shared/agent-entry.py"
+  ],
+  "sdkFiles": [
+    "packages/agent-hub-sdk/build/config.mjs",
+    "packages/agent-hub-sdk/build/frontend-build.mjs",
+    "packages/agent-hub-sdk/build/vite-plugin.d.mts",
+    "packages/agent-hub-sdk/build/vite-plugin.mjs",
+    "scripts/shared/cargo-target.mjs"
+  ]
+}

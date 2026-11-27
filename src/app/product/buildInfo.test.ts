@@ -5,7 +5,12 @@ import { verifyBuildInfo } from "./buildInfo";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@app/product", () => ({
-  productConfig: { id: "custom", hash: "expected", features: [] },
+  productConfig: {
+    id: "custom",
+    hash: "expected",
+    features: [],
+    version: "2.4.0",
+  },
 }));
 afterEach(() => {
   vi.clearAllMocks();
@@ -38,7 +43,22 @@ it("accepts matching desktop and frontend build identities", async () => {
   vi.mocked(invoke).mockResolvedValueOnce({
     product_id: "custom",
     config_hash: "expected",
+    version: "2.4.0",
     features: [],
   });
   await expect(verifyBuildInfo()).resolves.toBeUndefined();
+});
+
+it("rejects a desktop build belonging to another release of the same product", async () => {
+  Object.defineProperty(window, "__TAURI_INTERNALS__", {
+    configurable: true,
+    value: {},
+  });
+  vi.mocked(invoke).mockResolvedValueOnce({
+    product_id: "custom",
+    config_hash: "expected",
+    version: "2.3.0",
+    features: [],
+  });
+  await expect(verifyBuildInfo()).rejects.toThrow("do not match");
 });

@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/app/product/frontend-build.mjs",
+    "build": "node packages/agent-hub-sdk/build/frontend-build.mjs",
     "app:dev": "node scripts/app/build.mjs dev",
     "app:build": "node scripts/app/build.mjs build",
     "app:clean": "node scripts/app/build.mjs clean",

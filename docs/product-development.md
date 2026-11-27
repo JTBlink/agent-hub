@@ -41,7 +41,7 @@
 - `sidebar.defaultPanel`：默认面板 ID；其能力关闭后回退到可用面板。
 - `devPort`：可选开发端口。标准版默认 1420，个人版 1421，其他 ID 派生默认端口。
 
-新增产品优先在统一配置的 `products` 中增加对应 ID。外部独立产品清单仍可用 `features` 声明特性根集合；不要在公共构建入口外向 Cargo 单独追加参数，避免前后端与 CLI 错配。
+内置产品在统一配置的 `products` 中声明能力。仓库外的产品清单通过 `features` 显式选择特性。外部清单可以沿用 `agent-flow` 产品 ID，保留安装标识和本机数据目录。`standard` 和 `personal` 由内置清单保留。
 
 ```bash
 ./agent-hub.sh build                                  # 标准版 release
@@ -53,9 +53,38 @@
 npm run build -- --product personal                  # 只构建前端
 ```
 
-也可将 `--product` 指向产品 JSON 文件。产品选择、Cargo profile 和应用 `VERSION` 相互独立。生成的配置、入口与缓存由脚本管理，不手工编辑。
+也可将 `--product` 指向产品 JSON 文件。外部产品可通过清单的 `version` 设置桌面和 CLI 版本，省略时继承应用 `VERSION`。生成的配置、入口与缓存由脚本管理。
 
 ## 复用和升级 Rust 核心库
+
+完整桌面能力也可以通过 [AgentHub SDK](../packages/agent-hub-sdk/README.md) 交付。SDK 同时带上界面、Rust 宿主、CLI 和内置资源。独立产品可以通过 `sidebarModules` 注册自己的侧栏和页面。
+
+需要复用完整桌面功能时，在产品仓库固定一个 AgentHub 源码提交，使用其构建入口接收外部产品清单。此入口同时构建 React 工作台、Rust 宿主和配套 CLI，内置自动化资源也来自同一提交。产品清单可以选择全部可选集成：
+
+```json
+{
+  "id": "agent-flow",
+  "productName": "Agent Flow",
+  "features": ["cloud-sync", "github", "gitlab", "herdr"],
+  "sidebar": {
+    "primary": [
+      "projects",
+      "search",
+      "git",
+      "tasks",
+      "automation",
+      "preview",
+      "skills",
+      "discover",
+      "herdr"
+    ],
+    "bottom": ["dashboard", "backup", "settings"],
+    "defaultPanel": "skills"
+  }
+}
+```
+
+在固定版本的 AgentHub 检出目录安装前端依赖后，用 `npm run app:build -- --product /path/to/product.json` 构建。内部清单、品牌资源与专属代码由独立产品仓库维护。
 
 `crates/agent-hub-core` 的版本由它自己的 Cargo 清单维护。桌面与配套 CLI 通过同仓库路径依赖联调。完成 Registry 发布后，独立产品可以声明明确的库版本并提交自己的 `Cargo.lock`；升级时改依赖版本，重新验证实际调用与产品构建。
 
@@ -86,7 +115,7 @@ src-tauri/src/core/notes/   # 核心业务与相邻测试
 src-tauri/src/commands/notes.rs  # 参数、权限与错误适配
 ```
 
-公共工作台接口位于 `src/app/features/`，产品默认值与构建校验位于 `src/app/product/`；构建解析及静态入口生成位于 `scripts/app/product/`。不复制 App、Layout、Provider 或公共终端实现。
+公共工作台接口位于 `src/app/features/`，产品默认值与构建校验位于 `src/app/product/`；构建解析及静态入口生成位于 `packages/agent-hub-sdk/build/`。不复制 App、Layout、Provider 或公共终端实现。
 
 功能没有公共调用方时，不需要创建缺省适配、通用 trait 或单独 crate。共享契约不得反向导入功能实现，否则关闭特性后仍会把实现带入编译图。
 
@@ -143,13 +172,13 @@ export const notesModule: FeatureModule = {
 
 静态入口生成器按统一能力清单选择集成别名与平台模块，Herdr 面板贡献仍有明确的生成入口，不是自动发现插件系统。新增 Notes 时需要补齐以下位置：
 
-| 位置                                                    | 必须处理的内容                                               |
-| ------------------------------------------------------- | ------------------------------------------------------------ |
-| `scripts/app/product/config.mjs` 的 `modules`、`panels` | 登记侧栏／默认面板 ID，增加入口需要对应 Cargo 特性的校验     |
-| 同文件的 `prepareProduct()`                             | 根据实际特性生成 `features.ts`，仅导入已启用的 `notesModule` |
-| `src/app/features/default.ts`                           | 若默认标准版包含 Notes，登记普通开发入口                     |
-| `src/app/product/default.ts`                            | 同步默认特性集合、侧栏顺序和默认面板                         |
-| 产品 JSON                                               | 仅为需要 Notes 的产品选择特性和入口                          |
+| 位置                                                             | 必须处理的内容                                               |
+| ---------------------------------------------------------------- | ------------------------------------------------------------ |
+| `packages/agent-hub-sdk/build/config.mjs` 的 `modules`、`panels` | 登记侧栏／默认面板 ID，增加入口需要对应 Cargo 特性的校验     |
+| 同文件的 `prepareProduct()`                                      | 根据实际特性生成 `features.ts`，仅导入已启用的 `notesModule` |
+| `src/app/features/default.ts`                                    | 若默认标准版包含 Notes，登记普通开发入口                     |
+| `src/app/product/default.ts`                                     | 同步默认特性集合、侧栏顺序和默认面板                         |
+| 产品 JSON                                                        | 仅为需要 Notes 的产品选择特性和入口                          |
 
 有跨功能调用时，再增加 Notes 的实现／缺省 adapter 选择，并在 Vite 和 TypeScript 中使用相同别名。每增加一个别名，同步 `tsconfig.app.json`、生成的产品 tsconfig 和 Vite 产品配置；不能只改调用方。这也是避免 `Cannot find module '@app/…'` 的关键。
 

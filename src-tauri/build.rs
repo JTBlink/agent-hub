@@ -31,6 +31,14 @@ fn main() {
 }
 
 fn product_identity() {
+    println!("cargo:rerun-if-env-changed=AGENT_HUB_PRODUCT_VERSION");
+    let version = std::env::var("AGENT_HUB_PRODUCT_VERSION")
+        .unwrap_or_else(|_| env!("CARGO_PKG_VERSION").to_owned());
+    assert!(
+        !version.is_empty() && !version.chars().any(char::is_control),
+        "Invalid product version"
+    );
+    println!("cargo:rustc-env=AGENT_HUB_PRODUCT_VERSION={version}");
     for (name, fallback) in [
         ("AGENT_HUB_PRODUCT_ID", "standard"),
         ("AGENT_HUB_PRODUCT_HASH", "development"),

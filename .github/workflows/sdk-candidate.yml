@@ -1,0 +1,41 @@
+name: SDK Candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out candidate source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libayatana-appindicator3-dev librsvg2-dev libwebkit2gtk-4.1-dev
+      - name: Package and verify SDK
+        run: |
+          version="$(cat packages/agent-hub-sdk/VERSION)"
+          output="$RUNNER_TEMP/sdk-candidate"
+          mkdir -p "$output"
+          archive="$output/agent-hub-sdk-$version.tar.gz"
+          node packages/agent-hub-sdk/package.mjs "$archive"
+          node packages/agent-hub-sdk/smoke.mjs "$archive" --native
+      - name: Upload verified SDK candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-hub-sdk-candidate
+          path: ${{ runner.temp }}/sdk-candidate/
+          if-no-files-found: error
+          retention-days: 1

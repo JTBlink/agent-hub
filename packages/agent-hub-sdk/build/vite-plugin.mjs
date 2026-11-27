@@ -147,6 +147,7 @@ export function productViteConfig(root) {
             source: JSON.stringify(
               {
                 product_id: product.id,
+                version: product.version,
                 config_hash: selected
                   ? process.env.AGENT_HUB_PRODUCT_HASH
                   : "development",

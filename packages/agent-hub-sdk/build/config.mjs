@@ -1,9 +1,15 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  renameSync,
+} from "node:fs";
 import { resolve, isAbsolute, dirname, basename } from "node:path";
-import { repositoryRoot } from "../../shared/paths.mjs";
-import { cargoTargetDir } from "../build-cache.mjs";
+import { repositoryRoot } from "../../../scripts/shared/paths.mjs";
+import { cargoTargetDir } from "../../../scripts/shared/cargo-target.mjs";
 
 const ROOT = repositoryRoot;
 export const featureCatalog = JSON.parse(
@@ -78,11 +84,33 @@ export function resolveProduct(input, cargoFeatures) {
   )
     throw new Error("Invalid product name");
   if (
+    input.version !== undefined &&
+    (typeof input.version !== "string" ||
+      !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(input.version) ||
+      input.version.split(".").some((part) => Number(part) > 65535))
+  )
+    throw new Error(
+      "Product version must contain three integers from 0 to 65535",
+    );
+  if (
     input.iconDir !== undefined &&
     (typeof input.iconDir !== "string" || !input.iconDir.trim())
   )
     throw new Error("Invalid product icon directory");
   const selected = resolveFeatures(input.features, cargoFeatures);
+  const sidebarModules = input.sidebarModules ?? {};
+  if (
+    typeof sidebarModules !== "object" ||
+    Array.isArray(sidebarModules) ||
+    Object.entries(sidebarModules).some(
+      ([id, path]) =>
+        modules.has(id) ||
+        !/^[a-z][a-z0-9-]*$/.test(id) ||
+        typeof path !== "string" ||
+        !path.trim(),
+    )
+  )
+    throw new Error("Invalid custom sidebar modules");
   const sidebar = input.sidebar;
   if (
     !sidebar ||
@@ -92,7 +120,9 @@ export function resolveProduct(input, cargoFeatures) {
     throw new Error("Invalid product sidebar");
   const entries = [...sidebar.primary, ...sidebar.bottom];
   if (
-    entries.some((id) => !modules.has(id)) ||
+    entries.some(
+      (id) => !modules.has(id) && !Object.hasOwn(sidebarModules, id),
+    ) ||
     new Set(entries).size !== entries.length
   )
     throw new Error("Unknown or duplicate sidebar module");
@@ -107,16 +137,19 @@ export function resolveProduct(input, cargoFeatures) {
         `${featureDefinition.description}: sidebar requires the ${id} Cargo feature`,
       );
   if (
-    !panels.has(sidebar.defaultPanel) ||
+    (!panels.has(sidebar.defaultPanel) &&
+      !Object.hasOwn(sidebarModules, sidebar.defaultPanel)) ||
     !entries.includes(sidebar.defaultPanel)
   )
     throw new Error("Default sidebar panel must be an enabled panel");
   return {
     id: input.id,
+    ...(input.version === undefined ? {} : { version: input.version }),
     ...(input.productName === undefined
       ? {}
       : { productName: input.productName.trim() }),
     ...(input.iconDir === undefined ? {} : { iconDir: input.iconDir }),
+    ...(Object.keys(sidebarModules).length ? { sidebarModules } : {}),
     features: [...selected].sort(),
     devPort:
       input.devPort ??
@@ -209,7 +242,16 @@ export function loadProduct(
         !Array.isArray(input.sidebar.bottom)
       )
         throw new Error("Invalid product sidebar");
-      const features = featureCatalog.products[input.id] ?? input.features;
+      const builtin =
+        Object.hasOwn(featureCatalog.products, input.id) &&
+        configPath === resolve(ROOT, "products", `${input.id}.json`);
+      if (!builtin && ["standard", "personal"].includes(input.id))
+        throw new Error("External product uses a reserved product ID");
+      if (builtin && input.version !== undefined)
+        throw new Error("Built-in product versions come from VERSION");
+      const features = builtin
+        ? featureCatalog.products[input.id]
+        : input.features;
       const selected = resolveFeatures(features, graph);
       const disabledEntries = new Set(
         Object.entries(featureCatalog.features).flatMap(
@@ -254,12 +296,21 @@ export function loadProduct(
     config.id === "standard"
       ? baseTarget
       : resolve(dirname(baseTarget), `${basename(baseTarget)}-products`, key);
-  baseCommit ??= execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd: ROOT,
-    encoding: "utf8",
-  }).trim();
+  if (baseCommit === undefined) {
+    const packagedRevision = resolve(ROOT, "SDK_REVISION");
+    baseCommit = existsSync(packagedRevision)
+      ? readFileSync(packagedRevision, "utf8").trim()
+      : execFileSync("git", ["rev-parse", "HEAD"], {
+          cwd: ROOT,
+          encoding: "utf8",
+        }).trim();
+    if (!/^[0-9a-f]{40,64}$/.test(baseCommit))
+      throw new Error("Invalid AgentHub source revision");
+  }
   const product = {
     ...config,
+    version:
+      config.version ?? readFileSync(resolve(ROOT, "VERSION"), "utf8").trim(),
     hash,
     baseCommit,
     configPath,
@@ -276,6 +327,7 @@ export function loadProduct(
     AGENT_HUB_PRODUCT_ID: config.id,
     AGENT_HUB_PRODUCT_CONFIG: configPath,
     AGENT_HUB_PRODUCT_HASH: hash,
+    AGENT_HUB_PRODUCT_VERSION: product.version,
     AGENT_HUB_PRODUCT_FEATURES: config.features.join(","),
     AGENT_HUB_BASE_COMMIT: baseCommit,
     AGENT_HUB_PRODUCT_DIR: generatedDir,
@@ -316,6 +368,7 @@ export function prepareProduct(product) {
     sidebar: product.sidebar,
     hash: product.hash,
     baseCommit: product.baseCommit,
+    version: product.version,
   };
   writeGenerated(
     resolve(product.generatedDir, "product.ts"),
@@ -325,13 +378,32 @@ export function prepareProduct(product) {
     resolve(product.generatedDir, "build-info.json"),
     JSON.stringify(config, null, 2) + "\n",
   );
+  const extensions = Object.entries(product.sidebarModules ?? {});
+  const extensionImports = extensions.map(
+    ([, path], index) =>
+      `import extension${index} from ${JSON.stringify(resolve(ROOT, path))};\n`,
+  );
+  const extensionEntries = extensions.map(
+    ([id], index) => `[${JSON.stringify(id)}, extension${index}]`,
+  );
   writeGenerated(
     resolve(product.generatedDir, "features.ts"),
     `import type { FeatureModule } from ${JSON.stringify(resolve(ROOT, "src/app/features/types"))};\n` +
       (product.features.includes("herdr")
         ? `import { herdrModule } from ${JSON.stringify(resolve(ROOT, "src/features/herdr/module"))};\n`
         : "") +
-      `export const featureModules: readonly FeatureModule[] = [${product.features.includes("herdr") ? "herdrModule" : ""}];\n`,
+      extensionImports.join("") +
+      `export type { FeatureModule };\n` +
+      (extensions.length
+        ? `const extensions: readonly (readonly [string, FeatureModule])[] = [${extensionEntries.join(",")}];\n` +
+          `for (const [id, feature] of extensions) { if (feature.id !== id || feature.sidebar.id !== id) throw new Error("Custom sidebar module ID mismatch: " + id); }\n`
+        : "") +
+      `export const featureModules: readonly FeatureModule[] = [${[
+        ...(product.features.includes("herdr") ? ["herdrModule"] : []),
+        ...(extensions.length
+          ? ["...extensions.map(([, feature]) => feature)"]
+          : []),
+      ].join(",")}];\n`,
   );
   const platforms = Object.keys(featureCatalog.features).filter(
     (name) =>
@@ -387,6 +459,7 @@ export function prepareProduct(product) {
     resolve(product.generatedDir, "tauri.product.conf.json"),
     JSON.stringify(
       {
+        version: product.version,
         build: {
           frontendDist: product.frontendDist,
           beforeBuildCommand: "",

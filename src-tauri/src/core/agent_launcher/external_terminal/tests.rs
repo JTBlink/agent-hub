@@ -16,7 +16,7 @@ fn native_fallback_records_before_open_and_claims_the_command_only_once() {
         fs::set_permissions(&bridge, fs::Permissions::from_mode(0o700)).unwrap();
         fs::write(
             bridge.parent().unwrap().join(".version"),
-            env!("CARGO_PKG_VERSION"),
+            crate::product::VERSION,
         )
         .unwrap();
         fs::write(

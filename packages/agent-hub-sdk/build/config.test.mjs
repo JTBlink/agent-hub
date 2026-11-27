@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -45,6 +45,8 @@ describe("product build selection", () => {
     { ...base, features: ["unknown"] },
     { ...base, productName: " " },
     { ...base, productName: 42 },
+    { ...base, version: "2.4" },
+    { ...base, version: "2.4.65536" },
     {
       ...base,
       sidebar: { ...base.sidebar, primary: ["projects", "projects"] },
@@ -63,6 +65,34 @@ describe("product build selection", () => {
     });
     expect(() => productArguments(["--product"])).toThrow(/value/);
   });
+});
+
+it("carries the private product version into its build identity and bundle metadata", () => {
+  const directory = mkdtempSync(join(tmpdir(), "agenthub-product-version-"));
+  try {
+    const manifest = join(directory, "product.json");
+    writeFileSync(manifest, JSON.stringify({ ...base, version: "2.4.0" }));
+    const product = loadProduct(manifest);
+    prepareProduct({
+      ...product,
+      generatedDir: directory,
+      binariesDir: join(directory, "bin"),
+    });
+    expect(product.environment.AGENT_HUB_PRODUCT_VERSION).toBe("2.4.0");
+    expect(
+      JSON.parse(
+        readFileSync(join(directory, "tauri.product.conf.json"), "utf8"),
+      ).version,
+    ).toBe("2.4.0");
+    expect(
+      JSON.parse(readFileSync(join(directory, "build-info.json"), "utf8"))
+        .version,
+    ).toBe("2.4.0");
+    writeFileSync(manifest, JSON.stringify({ ...base, version: "2.4.1" }));
+    expect(loadProduct(manifest).hash).not.toBe(product.hash);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 it("loads product features from the central catalog and removes unavailable sidebar entries", () => {
@@ -125,4 +155,47 @@ it("builds Agent Flow with its own application identity and keeps standard outpu
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+it("lets an external Agent Flow manifest select all shared capabilities", () => {
+  const directory = mkdtempSync(join(tmpdir(), "agenthub-external-product-"));
+  try {
+    const manifest = join(directory, "product.json");
+    const builtin = loadProduct("agent-flow");
+    const features = [...featureCatalog.products.standard].sort();
+    writeFileSync(
+      manifest,
+      JSON.stringify({ ...base, id: "agent-flow", features }),
+    );
+    const external = loadProduct(manifest);
+    expect(external.id).toBe(builtin.id);
+    expect(external.features).toEqual(features);
+    expect(external.targetDir).not.toBe(builtin.targetDir);
+    writeFileSync(
+      manifest,
+      JSON.stringify({ ...base, id: "standard", features }),
+    );
+    expect(() => loadProduct(manifest)).toThrow(/reserved/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+it("registers a product-owned sidebar module and lets it be the default panel", () => {
+  const config = resolveProduct(
+    {
+      ...base,
+      sidebarModules: { review: "custom/review.tsx" },
+      sidebar: { primary: ["review"], bottom: [], defaultPanel: "review" },
+    },
+    cargoFeatures,
+  );
+  expect(config.sidebar.defaultPanel).toBe("review");
+  expect(config.sidebarModules).toEqual({ review: "custom/review.tsx" });
+  expect(() =>
+    resolveProduct(
+      { ...base, sidebarModules: { projects: "custom/review.tsx" } },
+      cargoFeatures,
+    ),
+  ).toThrow(/Invalid custom sidebar modules/);
 });

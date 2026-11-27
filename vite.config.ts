@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import react from "@vitejs/plugin-react";
-import { productViteConfig } from "./scripts/app/product/vite-plugin.mjs";
+import { productViteConfig } from "./packages/agent-hub-sdk/build/vite-plugin.mjs";
 import { helpContentPlugin } from "./scripts/docs/vite-plugin.mjs";
 
 const product = productViteConfig(import.meta.dirname);

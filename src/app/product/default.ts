@@ -4,6 +4,7 @@ export const productConfig = {
   id: "standard",
   features: featureCatalog.products.standard,
   hash: "development",
+  version: "",
   baseCommit: "",
   sidebar: {
     primary: [

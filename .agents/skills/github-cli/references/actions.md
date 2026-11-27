@@ -3,6 +3,7 @@
 ## 触发与职责
 
 - 发布用 `push.tags: ["v*"]`，候选构建和诊断用 `workflow_dispatch`。当前 `ci.yml` 仅手动触发；tag 的完整质量门禁在 `build-installers.yml` 中，避免重复执行。普通分支 push / PR 不自动运行，不在仅提交 push 后声称 CI 已执行。
+- SDK 源码归档使用独立的 `sdk-v*` 标签，版本以 `packages/agent-hub-sdk/VERSION` 为准。发布工作流下载同一提交的成功 SDK 候选并核对归档、版本、提交和附件。SDK Release 不成为桌面应用的最新 Release。
 - 修改触发策略时同步当前 CI/CD 文档、相关 workflow 合约测试及 changelog，不为普通重构擅自扩大发布权限或增加自动部署。
 - GitHub 同时承载 Issues、Milestones、CI/CD 与 Release；任务元数据自动化只更新 Issue 和里程碑，不触发安装包构建。
 

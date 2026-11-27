@@ -11,7 +11,10 @@ import {
 } from "node:fs";
 import { resolve, dirname, basename, relative, isAbsolute } from "node:path";
 import { main as buildCli } from "../run-rust-cli.mjs";
-import { loadProduct, productArguments } from "./config.mjs";
+import {
+  loadProduct,
+  productArguments,
+} from "../../../packages/agent-hub-sdk/build/config.mjs";
 
 /** Update the PATH-facing development link after a successful build. */
 export function linkDevelopmentCli(

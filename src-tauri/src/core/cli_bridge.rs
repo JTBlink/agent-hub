@@ -81,7 +81,7 @@ pub fn bridge_path() -> PathBuf {
 /// Refuse a copy invalidated by an interrupted publication, even if the binary remains.
 pub(crate) fn validated_path() -> Result<PathBuf> {
     let path = bridge_path();
-    if read_stamp().as_deref() != Some(env!("CARGO_PKG_VERSION"))
+    if read_stamp().as_deref() != Some(crate::product::VERSION)
         || !matching_build_stamp()
         || !super::tool_detection::executable(&path)
     {

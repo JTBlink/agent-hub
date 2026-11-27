@@ -8,6 +8,12 @@ const installers = readText(
   new URL("../../.github/workflows/build-installers.yml", import.meta.url),
 );
 const ci = readText(new URL("../../.github/workflows/ci.yml", import.meta.url));
+const sdkCandidate = readText(
+  new URL("../../.github/workflows/sdk-candidate.yml", import.meta.url),
+);
+const sdkRelease = readText(
+  new URL("../../.github/workflows/sdk-release.yml", import.meta.url),
+);
 const pages = readText(
   new URL("../../.github/workflows/deploy-pages.yml", import.meta.url),
 );
@@ -21,6 +27,52 @@ const websiteIndex = readFileSync(
 );
 
 describe("GitHub Actions workflow contract", () => {
+  it("verifies versioned SDK archives before uploading a read-only candidate", () => {
+    const workflow = parse(sdkCandidate);
+    expect(Object.keys(workflow.on)).toEqual(["workflow_dispatch"]);
+    expect(workflow.permissions).toEqual({ contents: "read" });
+    const { steps } = workflow.jobs.candidate;
+    expect(steps[0].with.ref).toBe("${{ github.sha }}");
+    const check = steps.findIndex((step) => step.run?.includes("smoke.mjs"));
+    const upload = steps.findIndex((step) =>
+      step.uses?.startsWith("actions/upload-artifact@"),
+    );
+    expect(check).toBeGreaterThan(0);
+    expect(steps[check].run).toContain("packages/agent-hub-sdk/VERSION");
+    expect(steps[check].run).toContain("--native");
+    expect(upload).toBeGreaterThan(check);
+    expect(steps[upload].with["if-no-files-found"]).toBe("error");
+  });
+  it("releases SDK assets from a successful candidate for the exact SDK tag commit", () => {
+    const { on, permissions, jobs } = parse(sdkRelease);
+    expect(on).toEqual({ push: { tags: ["sdk-v*"] } });
+    expect(permissions).toEqual({ contents: "read" });
+    expect(jobs.verify.permissions).toEqual({
+      contents: "read",
+      actions: "read",
+    });
+    expect(jobs.publish.permissions).toEqual({ contents: "write" });
+    expect(jobs.publish.needs).toBe("verify");
+    const source = jobs.verify.steps.find((step) => step.id === "candidate");
+    expect(source.run).toContain('test "$GITHUB_REF_NAME" = "sdk-v$version"');
+    expect(source.run).toContain(
+      '--event workflow_dispatch --commit "$revision" --status success',
+    );
+    const download = jobs.verify.steps.find((step) =>
+      step.uses?.startsWith("actions/download-artifact@"),
+    );
+    expect(download.with["run-id"]).toBe(
+      "${{ steps.candidate.outputs.run_id }}",
+    );
+    expect(
+      jobs.verify.steps.some((step) =>
+        step.run?.includes("verify-release.mjs"),
+      ),
+    ).toBe(true);
+    expect(jobs.publish.steps[0].with.name).toBe("sdk-release-assets");
+    expect(jobs.publish.steps[1].run).toContain("--verify-tag --latest=false");
+    expect(parse(installers).on.push.tags).toEqual(["v*"]);
+  });
   it("isolates different revisions of main without canceling active installer runs", () => {
     const workflow = parse(installers);
     const group = (

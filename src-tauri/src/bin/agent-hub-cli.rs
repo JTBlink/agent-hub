@@ -36,7 +36,7 @@ use serde::Serialize;
 #[command(
     name = "agent-hub-cli",
     about = "管理 AgentHub 技能、技能组、Agent、文件预览、Hosts 和 Git 备份",
-    version,
+    version = app_lib::product::VERSION,
     disable_help_subcommand = true,
     subcommand_help_heading = "命令",
     next_help_heading = "选项",
@@ -891,7 +891,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         return Ok(());
     }
     if matches!(cli.command, Commands::PublishCliBridge) {
-        let path = app_lib::core::cli_bridge::publish_current(env!("CARGO_PKG_VERSION"))?;
+        let path = app_lib::core::cli_bridge::publish_current(app_lib::product::VERSION)?;
         print_json(&serde_json::json!({"ok":true,"path":path}), cli.json);
         return Ok(());
     }

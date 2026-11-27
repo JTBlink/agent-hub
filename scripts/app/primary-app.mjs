@@ -11,7 +11,7 @@ import {
   prepareProduct,
   productArguments,
   cargoProductArguments,
-} from "./product/config.mjs";
+} from "../../packages/agent-hub-sdk/build/config.mjs";
 
 export function requestedTarget(args, host) {
   const option = args.find((arg) => arg.startsWith("--target="));
@@ -69,7 +69,12 @@ export function prepareCli(
           env: {
             ...(product?.environment ?? process.env),
             TAURI_CONFIG: JSON.stringify(
-              product ? { build: { frontendDist: product.frontendDist } } : {},
+              product
+                ? {
+                    version: product.version,
+                    build: { frontendDist: product.frontendDist },
+                  }
+                : {},
             ),
           },
         }),

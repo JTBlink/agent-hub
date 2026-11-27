@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { repositoryRoot as ROOT } from "../../shared/paths.mjs";
+import { repositoryRoot as ROOT } from "../../../scripts/shared/paths.mjs";
 import { loadProduct, prepareProduct, productArguments } from "./config.mjs";
 
 /** Build only the selected frontend import graph, preserving legacy standard dist. */

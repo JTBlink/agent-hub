@@ -4,6 +4,7 @@ import { productConfig } from "@app/product";
 interface BuildInfo {
   product_id: string;
   config_hash: string;
+  version: string;
   features: string[];
 }
 
@@ -14,6 +15,7 @@ export async function verifyBuildInfo(): Promise<void> {
   if (
     backend.product_id !== productConfig.id ||
     backend.config_hash !== productConfig.hash ||
+    (productConfig.version && backend.version !== productConfig.version) ||
     [...backend.features].sort().join(",") !==
       [...productConfig.features].sort().join(",")
   ) {
