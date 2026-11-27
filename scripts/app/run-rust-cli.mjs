@@ -10,7 +10,7 @@ import {
   prepareProduct,
   productArguments,
   cargoProductArguments,
-} from "../../packages/agent-hub-sdk/build/config.mjs";
+} from "../../packages/agent-hub-core/build/config.mjs";
 
 function canRun(command, args = ["--version"]) {
   const result = spawnSync(command, args, { stdio: "ignore" });

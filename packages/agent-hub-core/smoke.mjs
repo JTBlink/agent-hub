@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 const [, , input, ...options] = process.argv;
 if (!input?.endsWith(".tar.gz") || options.some((arg) => arg !== "--native"))
   throw new Error(
-    "Usage: node packages/agent-hub-sdk/smoke.mjs <archive.tar.gz> [--native]",
+    "Usage: node packages/agent-hub-core/smoke.mjs <archive.tar.gz> [--native]",
   );
 const archive = resolve(input);
 const digest = createHash("sha256").update(readFileSync(archive)).digest("hex");
@@ -32,7 +32,7 @@ if (metadata.file !== basename(archive) || metadata.sha256 !== digest)
 
 const stage = mkdtempSync(join(tmpdir(), "agenthub-sdk-smoke-"));
 try {
-  const sdk = join(stage, "agent-hub-sdk");
+  const sdk = join(stage, "agent-hub-core");
   const lock = join(stage, "sdk-lock.json");
   writeFileSync(
     lock,
@@ -59,7 +59,7 @@ try {
   const run = (binary, args) =>
     execFileSync(binary, args, { cwd: sdk, stdio: "inherit" });
   const { loadProduct } = await import(
-    pathToFileURL(join(sdk, "packages/agent-hub-sdk/build/config.mjs"))
+    pathToFileURL(join(sdk, "packages/agent-hub-core/build/config.mjs"))
   );
   const template = JSON.parse(
     readFileSync(join(sdk, "products/agent-flow.json"), "utf8"),

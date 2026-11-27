@@ -40,7 +40,7 @@ function readOptions(args) {
       bump = args[++index];
     else
       throw new Error(
-        "Usage: node packages/agent-hub-sdk/bump-version.mjs [--write] [--bump patch|minor|major]",
+        "Usage: node packages/agent-hub-core/bump-version.mjs [--write] [--bump patch|minor|major]",
       );
   }
   return { write, bump };
@@ -67,33 +67,20 @@ if (
     ]);
     const result = chooseSdkVersion(current, refs, bump);
     if (write && result.latestTag) {
-      const repository = run("gh", [
-        "repo",
-        "view",
-        "--json",
-        "nameWithOwner",
-        "--jq",
-        ".nameWithOwner",
-      ]).trim();
-      const release = JSON.parse(
-        run("gh", [
-          "release",
-          "view",
-          result.latestTag,
-          "--repo",
-          repository,
-          "--json",
-          "tagName,isDraft,isPrerelease",
-        ]),
-      );
-      if (
-        release.tagName !== result.latestTag ||
-        release.isDraft ||
-        release.isPrerelease
-      )
+      const publishedVersion = result.latestTag.slice("sdk-v".length);
+      try {
+        run("cargo", [
+          "info",
+          "--registry",
+          "crates-io",
+          `agent-hub-core@${publishedVersion}`,
+        ]);
+      } catch (error) {
         throw new Error(
-          "Resume the current SDK release before selecting another version",
+          "Verify the latest SDK tag in crates.io before preparing another version",
+          { cause: error },
         );
+      }
     }
     if (write && current !== result.version)
       writeFileSync(versionFile, result.version + "\n");

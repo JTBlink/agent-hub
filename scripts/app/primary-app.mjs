@@ -11,7 +11,7 @@ import {
   prepareProduct,
   productArguments,
   cargoProductArguments,
-} from "../../packages/agent-hub-sdk/build/config.mjs";
+} from "../../packages/agent-hub-core/build/config.mjs";
 
 export function requestedTarget(args, host) {
   const option = args.find((arg) => arg.startsWith("--target="));

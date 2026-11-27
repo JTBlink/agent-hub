@@ -145,7 +145,7 @@ jobs:
           cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Check shared Rust library
-        working-directory: crates/agent-hub-core
+        working-directory: packages/agent-hub-core
         run: |
           cargo fmt --check
           cargo clippy --locked --all-targets -- -D warnings

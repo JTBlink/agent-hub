@@ -17,7 +17,7 @@ import { repositoryRoot } from "../../scripts/shared/paths.mjs";
 it("accepts the tagged candidate and rejects previews and altered downstream scripts", () => {
   const stage = mkdtempSync(join(tmpdir(), "sdk-release-verification-"));
   try {
-    const source = join(stage, "agent-hub-sdk");
+    const source = join(stage, "agent-hub-core");
     const assets = join(stage, "release");
     mkdirSync(source);
     mkdirSync(assets);
@@ -30,7 +30,7 @@ it("accepts the tagged candidate and rejects previews and altered downstream scr
       "utf8",
     ).trim();
     const revision = "a".repeat(40);
-    const stem = `agent-hub-sdk-${version}`;
+    const stem = `agent-hub-core-${version}`;
     const tag = `sdk-v${version}`;
     const file = `${stem}.tar.gz`;
     const archive = join(assets, file);
@@ -42,7 +42,7 @@ it("accepts the tagged candidate and rejects previews and altered downstream scr
       new URL("README.md", import.meta.url),
       join(source, "README.md"),
     );
-    execFileSync("tar", ["-czf", archive, "-C", stage, "agent-hub-sdk"], {
+    execFileSync("tar", ["-czf", archive, "-C", stage, "agent-hub-core"], {
       env: { ...process.env, COPYFILE_DISABLE: "1" },
     });
     const sha256 = createHash("sha256")

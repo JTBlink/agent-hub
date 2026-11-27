@@ -7,7 +7,7 @@ import {
   loadProduct,
   productArguments,
   productBundleIdentifier,
-} from "../../packages/agent-hub-sdk/build/config.mjs";
+} from "../../packages/agent-hub-core/build/config.mjs";
 import { quitInstalledMacApp } from "./quit-installed-macos.mjs";
 
 export function processSnapshot(runner = spawnSync) {

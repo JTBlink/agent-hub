@@ -69,14 +69,14 @@ try {
   if (
     list("-tzf").some(
       (path) =>
-        !/^agent-hub-sdk(?:\/|$)/.test(path) ||
+        !/^agent-hub-core(?:\/|$)/.test(path) ||
         /(?:^|\/)\.\.(?:\/|$)|\\/.test(path),
     ) ||
     list("-tvzf").some((entry) => !/^[-d]/.test(entry))
   )
     throw new Error("Unexpected entry in SDK archive");
   execFileSync("tar", ["-xzf", archive, "-C", staged]);
-  const root = join(staged, "agent-hub-sdk");
+  const root = join(staged, "agent-hub-core");
   for (const [name, expected] of [
     ["SDK_VERSION", lock.version],
     ["SDK_REVISION", lock.revision],

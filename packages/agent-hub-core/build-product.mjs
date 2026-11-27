@@ -73,7 +73,7 @@ const invoke = (args) =>
         sdk,
         "node_modules",
         ".cache",
-        "agent-hub-sdk",
+        "agent-hub-core",
         "cli-bridge",
       ),
     },

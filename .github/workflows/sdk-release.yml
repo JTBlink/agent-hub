@@ -1,4 +1,4 @@
-name: SDK Release
+name: SDK Release Gate
 
 on:
   push:
@@ -18,8 +18,6 @@ jobs:
     permissions:
       contents: read
       actions: read
-    outputs:
-      version: ${{ steps.candidate.outputs.version }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -33,7 +31,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version="$(cat packages/agent-hub-sdk/VERSION)"
+          version="$(cat packages/agent-hub-core/VERSION)"
           test "$GITHUB_REF_NAME" = "sdk-v$version"
           revision="$(git rev-parse HEAD)"
           run_id="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow sdk-candidate.yml \
@@ -43,42 +41,15 @@ jobs:
             echo "A successful SDK Candidate for the tagged commit is required." >&2
             exit 1
           fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "revision=$revision" >> "$GITHUB_OUTPUT"
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v4
         with:
-          name: agent-hub-sdk-candidate
+          name: agent-hub-core-candidate
           path: sdk-assets
           github-token: ${{ github.token }}
           run-id: ${{ steps.candidate.outputs.run_id }}
       - name: Verify candidate files
         env:
           SDK_REVISION: ${{ steps.candidate.outputs.revision }}
-        run: node packages/agent-hub-sdk/verify-release.mjs sdk-assets "$GITHUB_REF_NAME" "$SDK_REVISION"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: sdk-release-assets
-          path: sdk-assets
-          if-no-files-found: error
-          retention-days: 1
-
-  publish:
-    needs: verify
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: sdk-release-assets
-          path: sdk-assets
-      - name: Publish SDK release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SDK_VERSION: ${{ needs.verify.outputs.version }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" sdk-assets/* --repo "$GITHUB_REPOSITORY" \
-            --verify-tag --latest=false --title "AgentHub SDK $SDK_VERSION" \
-            --notes-file "sdk-assets/agent-hub-sdk-$SDK_VERSION-RELEASE-NOTES.md"
+        run: node packages/agent-hub-core/verify-release.mjs sdk-assets "$GITHUB_REF_NAME" "$SDK_REVISION"

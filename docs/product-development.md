@@ -57,7 +57,7 @@ npm run build -- --product personal                  # 只构建前端
 
 ## 复用和升级 Rust 核心库
 
-完整桌面能力也可以通过 [AgentHub SDK](../packages/agent-hub-sdk/README.md) 交付。SDK 同时带上界面、Rust 宿主、CLI 和内置资源。独立产品可以通过 `sidebarModules` 注册自己的侧栏和页面。
+完整桌面能力也可以通过 [AgentHub SDK](../packages/agent-hub-core/README.md) 交付。SDK 同时带上界面、Rust 宿主、CLI 和内置资源。独立产品可以通过 `sidebarModules` 注册自己的侧栏和页面。
 
 需要复用完整桌面功能时，在产品仓库固定一个 AgentHub 源码提交，使用其构建入口接收外部产品清单。此入口同时构建 React 工作台、Rust 宿主和配套 CLI，内置自动化资源也来自同一提交。产品清单可以选择全部可选集成：
 
@@ -86,13 +86,13 @@ npm run build -- --product personal                  # 只构建前端
 
 在固定版本的 AgentHub 检出目录安装前端依赖后，用 `npm run app:build -- --product /path/to/product.json` 构建。内部清单、品牌资源与专属代码由独立产品仓库维护。
 
-`crates/agent-hub-core` 的版本由它自己的 Cargo 清单维护。桌面与配套 CLI 通过同仓库路径依赖联调。完成 Registry 发布后，独立产品可以声明明确的库版本并提交自己的 `Cargo.lock`；升级时改依赖版本，重新验证实际调用与产品构建。
+`packages/agent-hub-core` 的版本由它自己的 Cargo 清单维护。桌面与配套 CLI 通过同仓库路径依赖联调。完成 Registry 发布后，独立产品可以声明明确的库版本并提交自己的 `Cargo.lock`；升级时改依赖版本，重新验证实际调用与产品构建。
 
 当前可复用的入口是 `agent_hub_core::agent_launch`，包括兼容旧方案的配置校验、启动命令解析和启动计划指纹。配置文件读写与修订保护由现有宿主管理。核心能力从真实调用逐步迁入，执行、平台和备份仍使用现有应用实现。迁移可选集成时继续由产品清单驱动同名 Cargo 特性，云端备份、同步和恢复复用单一 `cloud-sync` 开关。
 
 ```bash
-cargo test --locked --manifest-path crates/agent-hub-core/Cargo.toml
-cargo package --locked --manifest-path crates/agent-hub-core/Cargo.toml
+cargo test --locked --manifest-path packages/agent-hub-core/Cargo.toml
+cargo package --locked --manifest-path packages/agent-hub-core/Cargo.toml
 ```
 
 测试覆盖库接口，打包校验确认源码归档能独立编译。以上命令适用于干净检出；验证本地未提交改动时可对 `cargo package` 追加 `--allow-dirty`。
@@ -115,7 +115,7 @@ src-tauri/src/core/notes/   # 核心业务与相邻测试
 src-tauri/src/commands/notes.rs  # 参数、权限与错误适配
 ```
 
-公共工作台接口位于 `src/app/features/`，产品默认值与构建校验位于 `src/app/product/`；构建解析及静态入口生成位于 `packages/agent-hub-sdk/build/`。不复制 App、Layout、Provider 或公共终端实现。
+公共工作台接口位于 `src/app/features/`，产品默认值与构建校验位于 `src/app/product/`；构建解析及静态入口生成位于 `packages/agent-hub-core/build/`。不复制 App、Layout、Provider 或公共终端实现。
 
 功能没有公共调用方时，不需要创建缺省适配、通用 trait 或单独 crate。共享契约不得反向导入功能实现，否则关闭特性后仍会把实现带入编译图。
 
@@ -174,7 +174,7 @@ export const notesModule: FeatureModule = {
 
 | 位置                                                             | 必须处理的内容                                               |
 | ---------------------------------------------------------------- | ------------------------------------------------------------ |
-| `packages/agent-hub-sdk/build/config.mjs` 的 `modules`、`panels` | 登记侧栏／默认面板 ID，增加入口需要对应 Cargo 特性的校验     |
+| `packages/agent-hub-core/build/config.mjs` 的 `modules`、`panels` | 登记侧栏／默认面板 ID，增加入口需要对应 Cargo 特性的校验     |
 | 同文件的 `prepareProduct()`                                      | 根据实际特性生成 `features.ts`，仅导入已启用的 `notesModule` |
 | `src/app/features/default.ts`                                    | 若默认标准版包含 Notes，登记普通开发入口                     |
 | `src/app/product/default.ts`                                     | 同步默认特性集合、侧栏顺序和默认面板                         |

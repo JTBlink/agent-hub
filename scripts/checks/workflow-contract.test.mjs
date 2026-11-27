@@ -38,12 +38,12 @@ describe("GitHub Actions workflow contract", () => {
       step.uses?.startsWith("actions/upload-artifact@"),
     );
     expect(check).toBeGreaterThan(0);
-    expect(steps[check].run).toContain("packages/agent-hub-sdk/VERSION");
+    expect(steps[check].run).toContain("packages/agent-hub-core/VERSION");
     expect(steps[check].run).toContain("--native");
     expect(upload).toBeGreaterThan(check);
     expect(steps[upload].with["if-no-files-found"]).toBe("error");
   });
-  it("releases SDK assets from a successful candidate for the exact SDK tag commit", () => {
+  it("gates crates.io publication using a successful candidate for the exact SDK tag commit", () => {
     const { on, permissions, jobs } = parse(sdkRelease);
     expect(on).toEqual({ push: { tags: ["sdk-v*"] } });
     expect(permissions).toEqual({ contents: "read" });
@@ -51,8 +51,6 @@ describe("GitHub Actions workflow contract", () => {
       contents: "read",
       actions: "read",
     });
-    expect(jobs.publish.permissions).toEqual({ contents: "write" });
-    expect(jobs.publish.needs).toBe("verify");
     const source = jobs.verify.steps.find((step) => step.id === "candidate");
     expect(source.run).toContain('test "$GITHUB_REF_NAME" = "sdk-v$version"');
     expect(source.run).toContain(
@@ -69,8 +67,7 @@ describe("GitHub Actions workflow contract", () => {
         step.run?.includes("verify-release.mjs"),
       ),
     ).toBe(true);
-    expect(jobs.publish.steps[0].with.name).toBe("sdk-release-assets");
-    expect(jobs.publish.steps[1].run).toContain("--verify-tag --latest=false");
+    expect(Object.keys(jobs)).toEqual(["verify"]);
     expect(parse(installers).on.push.tags).toEqual(["v*"]);
   });
   it("isolates different revisions of main without canceling active installer runs", () => {
@@ -271,7 +268,7 @@ describe("GitHub Actions workflow contract", () => {
     "validates the versioned Rust library package",
     (workflow) => {
       const checks = parse(workflow).jobs.quality.steps.find(
-        (step) => step["working-directory"] === "crates/agent-hub-core",
+        (step) => step["working-directory"] === "packages/agent-hub-core",
       );
       expect(checks?.run).toContain("cargo test --locked");
       expect(checks?.run).toContain("cargo package --locked");

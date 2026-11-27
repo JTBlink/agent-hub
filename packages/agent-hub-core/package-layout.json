@@ -1,7 +1,6 @@
 {
   "directories": [
     "automations",
-    "crates",
     "docs",
     "docs-site",
     "homepage",
@@ -12,7 +11,9 @@
     "skills",
     "src",
     "src-tauri",
-    "tests"
+    "tests",
+    "packages/agent-hub-core/src",
+    "packages/agent-hub-core/tests"
   ],
   "rootFiles": [
     ".gitignore",
@@ -42,15 +43,22 @@
     "src-tauri/Cargo.lock",
     "src-tauri/src/lib.rs",
     "src-tauri/src/bin/agent-hub-cli.rs",
-    "crates/agent-hub-core/Cargo.toml",
+    "packages/agent-hub-core/Cargo.toml",
     "shared/preview-file-types.json",
     "automations/_shared/agent-entry.py"
   ],
   "sdkFiles": [
-    "packages/agent-hub-sdk/build/config.mjs",
-    "packages/agent-hub-sdk/build/frontend-build.mjs",
-    "packages/agent-hub-sdk/build/vite-plugin.d.mts",
-    "packages/agent-hub-sdk/build/vite-plugin.mjs",
-    "scripts/shared/cargo-target.mjs"
+    "packages/agent-hub-core/build/config.mjs",
+    "packages/agent-hub-core/build/frontend-build.mjs",
+    "packages/agent-hub-core/build/vite-plugin.d.mts",
+    "packages/agent-hub-core/build/vite-plugin.mjs",
+    "scripts/shared/cargo-target.mjs",
+    "packages/agent-hub-core/Cargo.toml",
+    "packages/agent-hub-core/Cargo.lock",
+    "packages/agent-hub-core/LICENSE",
+    "packages/agent-hub-core/build.rs",
+    "packages/agent-hub-core/install.mjs",
+    "packages/agent-hub-core/build-product.mjs",
+    "packages/agent-hub-core/README.md"
   ]
 }

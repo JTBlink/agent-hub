@@ -1,5 +1,11 @@
 # AgentHub SDK 变更日志
 
+## [0.1.3]
+
+- 统一项目 SDK 与 Cargo 包名称为 agent-hub-core，保留 Agent 启动方案接口。
+- Cargo 安装入口从已验证的 Git 提交获取源码并校验归档。
+- SDK 默认发布到 crates.io，GitHub 工作流负责候选和标签校验。
+
 ## [0.1.2]
 
 - 更新 SDK 归档与发行清单的版本标识。共享源码和下游接口与 0.1.1 一致。

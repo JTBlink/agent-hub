@@ -1,18 +1,25 @@
-use agent_hub_sdk::{RELEASE_LOCK_JSON, VERSION};
+#![cfg(feature = "sdk-cli")]
+
+use agent_hub_core::{RELEASE_LOCK_JSON, VERSION};
 use std::process::Command;
 
 #[test]
 fn installed_command_reports_the_same_lock_and_sdk_version_as_the_library() {
-    let cli = env!("CARGO_BIN_EXE_agent-hub-sdk");
+    let cli = env!("CARGO_BIN_EXE_agent-hub-core");
     let lock = Command::new(cli).arg("lock").output().unwrap();
     assert!(lock.status.success());
     assert_eq!(lock.stdout, RELEASE_LOCK_JSON.as_bytes());
     assert!(RELEASE_LOCK_JSON.contains(&format!("\"version\": \"{VERSION}\"")));
-    assert!(RELEASE_LOCK_JSON.contains(&format!("/sdk-v{VERSION}/agent-hub-sdk-{VERSION}.tar.gz")));
+    let source: serde_json::Value = serde_json::from_str(RELEASE_LOCK_JSON).unwrap();
+    assert!(source["repository"]
+        .as_str()
+        .unwrap()
+        .starts_with("https://"));
+    assert_eq!(source["revision"].as_str().unwrap().len(), 40);
     let version = Command::new(cli).arg("--version").output().unwrap();
     assert!(version.status.success());
     assert_eq!(
         version.stdout,
-        format!("agent-hub-sdk {VERSION}\n").as_bytes()
+        format!("agent-hub-core {VERSION}\n").as_bytes()
     );
 }

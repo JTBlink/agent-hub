@@ -17,7 +17,7 @@ if (
     "Pass an SDK asset directory, matching sdk-v tag and source SHA",
   );
 
-const stem = `agent-hub-sdk-${version}`;
+const stem = `agent-hub-core-${version}`;
 const archive = `${stem}.tar.gz`;
 const assets = [
   archive,
@@ -59,7 +59,7 @@ const readArchive = (file) =>
   execFileSync("tar", [
     "-xOzf",
     join(directory, archive),
-    `agent-hub-sdk/${file}`,
+    `agent-hub-core/${file}`,
   ]);
 for (const [file, expected] of Object.entries({
   SDK_VERSION: version,

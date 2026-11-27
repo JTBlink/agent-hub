@@ -26,16 +26,16 @@ jobs:
           sudo apt-get install --yes libayatana-appindicator3-dev librsvg2-dev libwebkit2gtk-4.1-dev
       - name: Package and verify SDK
         run: |
-          version="$(cat packages/agent-hub-sdk/VERSION)"
+          version="$(cat packages/agent-hub-core/VERSION)"
           output="$RUNNER_TEMP/sdk-candidate"
           mkdir -p "$output"
-          archive="$output/agent-hub-sdk-$version.tar.gz"
-          node packages/agent-hub-sdk/package.mjs "$archive"
-          node packages/agent-hub-sdk/smoke.mjs "$archive" --native
+          archive="$output/agent-hub-core-$version.tar.gz"
+          node packages/agent-hub-core/package.mjs "$archive"
+          node packages/agent-hub-core/smoke.mjs "$archive" --native
       - name: Upload verified SDK candidate
         uses: actions/upload-artifact@v4
         with:
-          name: agent-hub-sdk-candidate
+          name: agent-hub-core-candidate
           path: ${{ runner.temp }}/sdk-candidate/
           if-no-files-found: error
           retention-days: 1

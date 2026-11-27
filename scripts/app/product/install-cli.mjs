@@ -14,7 +14,7 @@ import { main as buildCli } from "../run-rust-cli.mjs";
 import {
   loadProduct,
   productArguments,
-} from "../../../packages/agent-hub-sdk/build/config.mjs";
+} from "../../../packages/agent-hub-core/build/config.mjs";
 
 /** Update the PATH-facing development link after a successful build. */
 export function linkDevelopmentCli(

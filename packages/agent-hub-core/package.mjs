@@ -17,7 +17,7 @@ const sdkDirectory = new URL("./", import.meta.url);
 const layout = JSON.parse(
   readFileSync(new URL("package-layout.json", sdkDirectory), "utf8"),
 );
-const directories = new Set(layout.directories);
+const directories = layout.directories.map((path) => path + "/");
 const rootFiles = new Set(layout.rootFiles);
 
 const [output, mode] = process.argv.slice(2);
@@ -27,13 +27,13 @@ if (
   process.argv.length > 4
 )
   throw new Error(
-    "Usage: node packages/agent-hub-sdk/package.mjs <output.tar.gz> [--working-tree]",
+    "Usage: node packages/agent-hub-core/package.mjs <output.tar.gz> [--working-tree]",
   );
 const archive = resolve(output);
 const stem = archive.slice(0, -".tar.gz".length);
 const stage = mkdtempSync(join(tmpdir(), "agenthub-sdk-"));
 try {
-  const root = join(stage, "agent-hub-sdk");
+  const root = join(stage, "agent-hub-core");
   const git = (...args) =>
     execFileSync("git", args, { cwd: repositoryRoot, encoding: "utf8" });
   if (!mode && git("status", "--porcelain"))
@@ -46,7 +46,8 @@ try {
     .filter(
       (path) =>
         !deleted.has(path) &&
-        (rootFiles.has(path) || directories.has(path.split("/")[0])),
+        (rootFiles.has(path) ||
+          directories.some((prefix) => path.startsWith(prefix))),
     );
   const files = new Set([...tracked, ...layout.sdkFiles]);
   for (const path of layout.requiredFiles) {
@@ -99,7 +100,7 @@ try {
   writeFileSync(join(root, "SDK_VERSION"), sdkVersion + "\n");
   writeFileSync(join(root, "SDK_REVISION"), revision + "\n");
   writeFileSync(join(root, "RELEASE-NOTES.md"), notes);
-  execFileSync("tar", ["-czf", archive, "-C", stage, "agent-hub-sdk"], {
+  execFileSync("tar", ["-czf", archive, "-C", stage, "agent-hub-core"], {
     env: { ...process.env, COPYFILE_DISABLE: "1" },
   });
   const digest = createHash("sha256")

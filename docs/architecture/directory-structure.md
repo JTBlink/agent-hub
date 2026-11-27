@@ -4,12 +4,12 @@
 
 ## SDK 与产品目录
 
-`packages/agent-hub-sdk/` 维护完整工作台的归档入口、发行 README 和 `package-layout.json`。归档清单定义随包交付的目录与必需构建输入。React、Rust、CLI 和内置资源从各自的权威源码目录打包。公共产品通过 `products/` 中的清单组装。私有产品的清单、品牌和扩展代码由各自仓库维护，构建时按清单提供。
+`packages/agent-hub-core/` 维护完整工作台的归档入口、发行 README 和 `package-layout.json`。归档清单定义随包交付的目录与必需构建输入。React、Rust、CLI 和内置资源从各自的权威源码目录打包。公共产品通过 `products/` 中的清单组装。私有产品的清单、品牌和扩展代码由各自仓库维护，构建时按清单提供。
 
-归档根目录包含 `README.md`、`RELEASE-NOTES.md`、`CHANGELOG.md`、`LICENSE`、`VERSION`、`SDK_VERSION` 和 `SDK_REVISION`。归档外提供可直接查看的发行文档与 SHA-256 校验文件。构建与扩展方式见 [SDK README](../../packages/agent-hub-sdk/README.md)。
+归档根目录包含 `README.md`、`RELEASE-NOTES.md`、`CHANGELOG.md`、`LICENSE`、`VERSION`、`SDK_VERSION` 和 `SDK_REVISION`。归档外提供可直接查看的发行文档与 SHA-256 校验文件。构建与扩展方式见 [SDK README](../../packages/agent-hub-core/README.md)。
 
 ```text
-packages/agent-hub-sdk/     SDK 归档、发行说明和交付范围
+packages/agent-hub-core/     SDK 归档、发行说明和交付范围
   build/                   产品清单解析、能力组装、React 构建与扩展注册
 products/                  公共产品预设与共享能力清单
 src/、src-tauri/、crates/  共享界面与 Rust 实现
@@ -338,7 +338,7 @@ agent-hub/
 | `skills/`                        | 内置管理 Skill                     |
 | `docs/reference/skills-manager/` | 导入来源清单与原许可证             |
 
-`crates/agent-hub-core/` 是独立版本的 Rust 核心库，目前提供 Agent 启动方案逻辑。
+`packages/agent-hub-core/` 是独立版本的 Rust 核心库，目前提供 Agent 启动方案逻辑。
 
 默认本地布局：
 
@@ -379,7 +379,7 @@ agent-hub/
 
 ## 产品模块维护约定
 
-- `products/` 只声明产品选择；构建解析、生成文件和前端构建集中于 `packages/agent-hub-sdk/build/`，根启动脚本保持薄入口。
+- `products/` 只声明产品选择；构建解析、生成文件和前端构建集中于 `packages/agent-hub-core/build/`，根启动脚本保持薄入口。
 - 新功能实现及侧栏贡献放在 `src/features/<name>/`。公共工作台只消费贡献 interface，不接管模块业务状态。
 - 跨功能可选集成的共享契约与缺省适配放在 `src/integrations/<name>/`；公共类型不反向导入可选实现。
 - 编译身份及运行目录从 `src-tauri/src/product/` 派生；构建产物不存放到功能源码目录，也不进入 Git。

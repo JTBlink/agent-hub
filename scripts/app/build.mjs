@@ -7,7 +7,7 @@ import { cleanupBuildCache } from "./build-cache.mjs";
 import {
   productArguments,
   loadProduct,
-} from "../../packages/agent-hub-sdk/build/config.mjs";
+} from "../../packages/agent-hub-core/build/config.mjs";
 import { installDevelopmentCli } from "./product/install-cli.mjs";
 
 export const ROOT_DIR = resolve(repositoryRoot);

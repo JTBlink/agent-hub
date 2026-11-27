@@ -8,7 +8,7 @@
 | ---------------------- | ------------------------------------ | ------------------------------------------ |
 | `ci.yml`               | 仅 `workflow_dispatch`               | 格式、lint、测试与前端构建，不生成安装包   |
 | `sdk-candidate.yml`    | 仅 `workflow_dispatch`               | 验证并上传带校验文件的 SDK 源码候选包      |
-| `sdk-release.yml`      | `sdk-v*` tag push                    | 发布同一源码提交的已验证 SDK 候选包        |
+| `sdk-release.yml`      | `sdk-v*` tag push                    | 校验 SDK 标签与同一提交的候选包            |
 | `build-installers.yml` | `workflow_dispatch` 或 `v*` tag push | 手动运行生成平台候选；tag 运行创建 Release |
 | `deploy-pages.yml`     | `workflow_dispatch` 或 `v*` tag push | 部署主页和文档站                           |
 
