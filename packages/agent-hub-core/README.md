@@ -1,10 +1,10 @@
 # AgentHub Core SDK
 
-下游可以通过 crates.io 安装同版本的 SDK 构建入口。以下以 SDK 0.3.0 为例：
+下游可以通过 crates.io 安装同版本的 SDK 构建入口。以下以 SDK 0.4.0 为例：
 
 ```bash
-cargo install agent-hub-core --version '=0.3.0' --features sdk-cli --locked
-agent-hub-sdk build product.json .build/sdk-0.3.0
+cargo install agent-hub-core --version '=0.4.0' --features sdk-cli --locked
+agent-hub-sdk build product.json .build/sdk-0.4.0
 ```
 
 使用 `agent-hub-sdk lock` 查看锁定的源码提交，或用 `agent-hub-sdk install <目录>` 只解压 SDK。Rust 项目可依赖同版本的 `agent-hub-core` 使用启动方案 API。
