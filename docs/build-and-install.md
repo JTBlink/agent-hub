@@ -145,7 +145,7 @@ npm run cli:build -- --product personal                 # 编译个人版 CLI
 | Cargo 输出根目录             | `src-tauri/target/`                                        | `src-tauri/target-products/<产品与配置摘要>/` |
 | 前端、类型检查、sidecar 暂存 | `node_modules/.cache/agent-hub/products/<产品与配置摘要>/` | 同一父目录下的独立产品子目录                  |
 | 默认用户数据及技能内容       | `~/.agent-hub/`                                            | `~/.agent-hub-personal/`                      |
-| CLI bridge                   | `~/.agent-hub/bin/`                                        | `~/.agent-hub-personal/bin/`                    |
+| CLI bridge                   | `~/.agent-hub/bin/`                                        | `~/.agent-hub-personal/bin/`                  |
 
 定制产品可用 `cliName` 设置随包交付、bridge 发布及开发安装使用的命令名。Agent Flow 发布到 `~/.agent-hub-agent-flow/bin/agent-flow-cli`（Windows 文件名带 `.exe`）。发布路径由产品 ID 和 CLI 名称决定，同一产品重新构建会更新该路径的副本。运行 `npm run cli -- --product agent-flow --help` 可直接调用；使用 `npm run cli:install -- --product agent-flow` 安装后，可把命令输出的安装目录加入 PATH。应用为自动化提供 `AGENT_HUB_CLI` 绝对路径。外部脚本如果写死了旧路径，需要切换到产品的命令或安装路径。Cargo 内部目标名为 `agent-hub-cli`。
 
