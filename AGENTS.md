@@ -14,7 +14,7 @@
 - `src/i18n/`：国际化资源（中/英/繁体）。
 - `src-tauri/src/commands/`：Tauri IPC 命令层。
 - `src-tauri/src/core/`：核心业务（技能库、同步引擎、Git 备份、合并引擎、扫描器）。
-- `src-tauri/src/bin/`：agent-hub-cli 入口。
+- `src-tauri/src/cli/`：agent-hub-cli 入口。
 - `scripts/`：Node.js 构建、发布与版本管理脚本。
 - [agent-hub-skills](https://github.com/JTBlink/agent-hub-skills) 维护公开 Skills 和自动化任务。应用内置内容以 `products/default-content.json` 固定版本。
 - `.agents/skills/agent-hub-dev/`：随仓库共享的项目内部开发、UI、测试与提交规范。

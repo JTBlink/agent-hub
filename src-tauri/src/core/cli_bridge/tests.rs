@@ -9,7 +9,7 @@ use tempfile::tempdir;
 #[cfg(unix)]
 fn fake_cli(dir: &Path, reports: &str) -> PathBuf {
     use std::os::unix::fs::PermissionsExt;
-    let path = dir.join("agent-hub-cli");
+    let path = dir.join(BRIDGE_BIN_NAME);
     std::fs::write(
         &path,
         format!("#!/bin/sh\nif [ \"$2\" = build-info ]; then\n  echo '{}'\nelse\n  echo 'agent-hub-cli {reports}'\nfi\n", build_stamp()),
@@ -28,7 +28,7 @@ fn prepared_development_cli_survives_an_unconfigured_cargo_output_replacement() 
     let result = std::panic::catch_unwind(|| {
         let executable = tmp.path().join("cargo/agent-hub");
         std::fs::create_dir_all(executable.parent().unwrap()).unwrap();
-        let sibling = executable.with_file_name("agent-hub-cli");
+        let sibling = executable.with_file_name(BRIDGE_BIN_NAME);
         std::fs::write(&sibling, "unconfigured Cargo build").unwrap();
         let prepared = tmp.path().join("product");
         std::fs::create_dir_all(&prepared).unwrap();
@@ -203,7 +203,7 @@ fn native_launch_rejects_a_remaining_binary_after_its_stamp_was_invalidated() {
 
 #[cfg(unix)]
 #[test]
-fn matching_version_does_not_trust_a_different_product_build() {
+fn matching_version_does_not_trust_a_different_build_of_the_same_product() {
     let _lock = central_repo::test_base_dir_lock();
     let tmp = tempdir().unwrap();
     central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
@@ -211,14 +211,16 @@ fn matching_version_does_not_trust_a_different_product_build() {
         std::fs::create_dir_all(bridge_dir()).unwrap();
         fake_cli(&bridge_dir(), crate::product::VERSION);
         std::fs::write(stamp_path(), crate::product::VERSION).unwrap();
+        let mut other_build = build_stamp();
+        other_build["config_hash"] = serde_json::json!("different-build");
         std::fs::write(
             bridge_dir().join(".build-info.json"),
-            r#"{"product_id":"other","config_hash":"other"}"#,
+            serde_json::to_vec(&other_build).unwrap(),
         )
         .unwrap();
         assert!(
             validated_path().is_err(),
-            "version equality must not accept another product"
+            "version equality must not accept a different build configuration"
         );
     });
     central_repo::set_test_home_dir_override(None);

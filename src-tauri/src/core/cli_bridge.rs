@@ -39,9 +39,9 @@ use std::process::Command;
 use super::central_repo;
 
 const BRIDGE_BIN_NAME: &str = if cfg!(windows) {
-    "agent-hub-cli.exe"
+    concat!(env!("AGENT_HUB_PRODUCT_CLI_NAME"), ".exe")
 } else {
-    "agent-hub-cli"
+    crate::product::CLI_NAME
 };
 
 /// Where the bridge lives. Deliberately the home directory rather than
@@ -51,18 +51,7 @@ const BRIDGE_BIN_NAME: &str = if cfg!(windows) {
 pub fn bridge_dir() -> PathBuf {
     std::env::var_os("AGENT_HUB_BRIDGE_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            let root = central_repo::home_base_dir().join("bin");
-            let build = crate::product::current();
-            if build.product_id == "standard" {
-                root
-            } else {
-                // Product IDs are build inputs, never runtime path fragments.
-                let identity = format!("{}:{}", build.product_id, build.config_hash);
-                let namespace = hex::encode(Sha256::digest(identity.as_bytes()));
-                root.join("products").join(&namespace[..16])
-            }
-        })
+        .unwrap_or_else(|| central_repo::home_base_dir().join("bin"))
 }
 
 /// Whether `name` is one of the files the bridge keeps in [`bridge_dir`].
@@ -271,11 +260,12 @@ pub fn ensure_bridge(app_version: &str) {
     }
 }
 
-/// Publish the CLI next to this executable, including development build artifacts.
+/// Publish the running CLI, even when Cargo gave it the unbranded target name.
 pub fn publish_current(app_version: &str) -> Result<PathBuf> {
     // A CLI build always publishes its own companion, even when its parent
     // terminal inherited a desktop development session's pinned sidecar.
-    publish_current_from(app_version, None)
+    let executable = std::env::current_exe().context("could not locate the running CLI")?;
+    publish_current_from(app_version, Some(&executable))
 }
 
 fn publish_current_from(app_version: &str, development_cli: Option<&Path>) -> Result<PathBuf> {

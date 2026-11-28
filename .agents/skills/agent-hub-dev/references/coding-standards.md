@@ -20,7 +20,7 @@
 | `src/lib/`                   | 纯函数与共享 bindings；`tauri.ts` 为 IPC 入口 |
 | `src-tauri/src/commands/`    | 参数、权限与错误边界的薄适配                  |
 | `src-tauri/src/core/`        | 扫描、部署、SQLite、同步、备份与 Git 业务     |
-| `src-tauri/src/bin/`         | CLI 入口，复用 core                           |
+| `src-tauri/src/cli/`         | CLI 入口，复用 core                           |
 
 - **KISS / YAGNI / DRY**：选择满足当前需求的最简单实现，不为假设中的功能预建框架；复用稳定的领域规则，不因代码形似就把不同业务强行合并。第三次出现相同语义的重复实现时必须抽取；安全校验与路径规则从第一次起即复用。
 - 遵循 [ADR-0006](../../../../docs/adr/0006-file-size-and-reuse-conventions.md) 的拆分触发线：页面建议不超过 400 行，超过 600 行必须拆分；Rust 模块建议不超过 500 行，超过 800 行必须拆分。触及历史超大文件时优先抽出本次变更的职责，不要求一次性重构整文件。

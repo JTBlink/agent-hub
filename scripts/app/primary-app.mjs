@@ -7,10 +7,11 @@ import { linkDevelopmentCli } from "./product/install-cli.mjs";
 import { ROOT_DIR, run, runNpm } from "./build.mjs";
 import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
 import {
+  DEFAULT_CLI_NAME,
   loadProduct,
   prepareProduct,
   productArguments,
-  cargoProductArguments,
+  cargoCliArguments,
 } from "../../packages/agent-hub-core/build/config.mjs";
 
 export function requestedTarget(args, host) {
@@ -45,6 +46,7 @@ export function prepareCli(
     product?.binariesDir ?? resolve(ROOT_DIR, "src-tauri/binaries");
   const profile = release ? "release" : "debug";
   const suffix = target.includes("windows") ? ".exe" : "";
+  const cliName = product?.cliName ?? DEFAULT_CLI_NAME;
   filesystem.mkdirSync(output, { recursive: true });
   for (const architecture of rustTargets(target)) {
     const status = run(
@@ -60,7 +62,7 @@ export function prepareCli(
         targetDir,
         ...(useHostCache ? [] : ["--target", architecture]),
         ...(release ? ["--release"] : []),
-        ...(product ? cargoProductArguments(product) : []),
+        ...(product ? cargoCliArguments(product) : []),
       ],
       (command, args, options) =>
         runner(command, args, {
@@ -87,17 +89,17 @@ export function prepareCli(
         profile,
         `agent-hub-cli${suffix}`,
       ),
-      resolve(output, `agent-hub-cli-${architecture}${suffix}`),
+      resolve(output, `${cliName}-${architecture}${suffix}`),
     );
   }
   if (target === "universal-apple-darwin") {
-    const fatBinary = resolve(output, `agent-hub-cli-${target}`);
+    const fatBinary = resolve(output, `${cliName}-${target}`);
     const status = run(
       "lipo",
       [
         "-create",
         ...rustTargets(target).map((arch) =>
-          resolve(output, `agent-hub-cli-${arch}`),
+          resolve(output, `${cliName}-${arch}`),
         ),
         "-output",
         fatBinary,
@@ -116,6 +118,12 @@ export function prepareCli(
     filesystem.copyFileSync(
       resolve(targetDir, target, profile, `agent-hub-cli${suffix}`),
       resolve(targetDir, profile, `agent-hub-cli${suffix}`),
+    );
+  }
+  if (target === host && cliName !== DEFAULT_CLI_NAME) {
+    filesystem.copyFileSync(
+      resolve(targetDir, profile, `${DEFAULT_CLI_NAME}${suffix}`),
+      resolve(targetDir, profile, `${cliName}${suffix}`),
     );
   }
   try {
@@ -212,7 +220,7 @@ export function main(
       // watch session. Keep restarts bound to the verified product sidecar.
       product.environment.AGENT_HUB_DEV_CLI = resolve(
         product.binariesDir,
-        `agent-hub-cli-${target}${target.includes("windows") ? ".exe" : ""}`,
+        `${product.cliName}-${target}${target.includes("windows") ? ".exe" : ""}`,
       );
     }
     const separator = args.indexOf("--");

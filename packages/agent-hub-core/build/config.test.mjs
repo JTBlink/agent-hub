@@ -153,6 +153,9 @@ describe("product build selection", () => {
     { ...base, features: ["unknown"] },
     { ...base, productName: " " },
     { ...base, productName: 42 },
+    { ...base, cliName: "../sample-cli" },
+    { ...base, cliName: "agent-hub" },
+    { ...base, id: "standard", cliName: "sample-cli" },
     { ...base, version: "2.4" },
     { ...base, version: "2.4.65536" },
     {
@@ -179,7 +182,10 @@ it("carries the private product version into its build identity and bundle metad
   const directory = mkdtempSync(join(tmpdir(), "agenthub-product-version-"));
   try {
     const manifest = join(directory, "product.json");
-    writeFileSync(manifest, JSON.stringify({ ...base, version: "2.4.0" }));
+    writeFileSync(
+      manifest,
+      JSON.stringify({ ...base, version: "2.4.0", cliName: "sample-cli" }),
+    );
     const product = loadProduct(manifest);
     prepareProduct({
       ...product,
@@ -187,16 +193,22 @@ it("carries the private product version into its build identity and bundle metad
       binariesDir: join(directory, "bin"),
     });
     expect(product.environment.AGENT_HUB_PRODUCT_VERSION).toBe("2.4.0");
-    expect(
-      JSON.parse(
-        readFileSync(join(directory, "tauri.product.conf.json"), "utf8"),
-      ).version,
-    ).toBe("2.4.0");
+    expect(product.environment.AGENT_HUB_PRODUCT_CLI_NAME).toBe("sample-cli");
+    const tauri = JSON.parse(
+      readFileSync(join(directory, "tauri.product.conf.json"), "utf8"),
+    );
+    expect(tauri.version).toBe("2.4.0");
+    expect(tauri.bundle.externalBin).toEqual([
+      join(directory, "bin", "sample-cli"),
+    ]);
     expect(
       JSON.parse(readFileSync(join(directory, "build-info.json"), "utf8"))
         .version,
     ).toBe("2.4.0");
-    writeFileSync(manifest, JSON.stringify({ ...base, version: "2.4.1" }));
+    writeFileSync(
+      manifest,
+      JSON.stringify({ ...base, version: "2.4.1", cliName: "sample-cli" }),
+    );
     expect(loadProduct(manifest).hash).not.toBe(product.hash);
   } finally {
     rmSync(directory, { recursive: true, force: true });

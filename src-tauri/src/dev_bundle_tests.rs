@@ -4,7 +4,7 @@ use super::*;
 fn dev_bundle_keeps_product_identity_and_refreshes_the_executable() {
     let root = tempfile::tempdir().unwrap();
     let executable = root.path().join("agent-hub");
-    let cli = root.path().join("agent-hub-cli");
+    let cli = root.path().join(app_lib::product::CLI_NAME);
     std::fs::copy("/usr/bin/true", &executable).unwrap();
     let original = std::fs::read(&executable).unwrap();
     std::fs::copy("/usr/bin/true", &cli).unwrap();
@@ -24,7 +24,7 @@ fn dev_bundle_keeps_product_identity_and_refreshes_the_executable() {
         Some("invalid.example.app")
     );
     assert_eq!(
-        std::fs::read(bundled.with_file_name("agent-hub-cli")).unwrap(),
+        std::fs::read(bundled.with_file_name(app_lib::product::CLI_NAME)).unwrap(),
         original_cli
     );
     assert!(contents.join("Resources/icon.icns").is_file());

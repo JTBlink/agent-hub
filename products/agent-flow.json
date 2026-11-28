@@ -1,6 +1,7 @@
 {
   "id": "agent-flow",
   "productName": "Agent Flow",
+  "cliName": "agent-flow-cli",
   "layoutPreset": "layouts/agent-flow.json",
   "iconDir": "products/agent-flow/icons"
 }

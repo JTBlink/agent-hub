@@ -10,13 +10,14 @@ import {
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { DEFAULT_CLI_NAME } from "../../packages/agent-hub-core/build/config.mjs";
 
 export function builtCliPath({ targetDir, target, profile = "debug" }) {
   return resolve(
     targetDir,
     ...(target ? [target] : []),
     profile,
-    `agent-hub-cli${process.platform === "win32" ? ".exe" : ""}`,
+    `${DEFAULT_CLI_NAME}${process.platform === "win32" ? ".exe" : ""}`,
   );
 }
 
@@ -58,7 +59,7 @@ export function publishBuiltCli({
   const link = resolve(
     env.AGENT_HUB_CLI_BIN_DIR ||
       resolve(env.CARGO_HOME || resolve(homedir(), ".cargo"), "bin"),
-    `agent-hub-cli${process.platform === "win32" ? ".exe" : ""}`,
+    `${env.AGENT_HUB_PRODUCT_CLI_NAME ?? DEFAULT_CLI_NAME}${process.platform === "win32" ? ".exe" : ""}`,
   );
   let metadata;
   try {

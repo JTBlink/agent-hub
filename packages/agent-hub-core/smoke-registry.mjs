@@ -132,7 +132,7 @@ try {
     ["build", manifestPath, installed, "--frontend"],
     withoutGit,
   );
-  const { loadProduct } = await import(
+  const { cargoCliArguments, loadProduct } = await import(
     pathToFileURL(join(installed, "packages/agent-hub-core/build/config.mjs"))
   );
   const build = loadProduct(manifestPath);
@@ -165,9 +165,7 @@ try {
         "--lib",
         "--bin",
         "agent-hub-cli",
-        "--no-default-features",
-        "--features",
-        build.features.join(","),
+        ...cargoCliArguments(build),
       ],
       {
         cwd: installed,

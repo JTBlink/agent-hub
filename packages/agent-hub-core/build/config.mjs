@@ -14,6 +14,8 @@ import workbenchCatalog from "../../../products/workbench.json" with { type: "js
 import { resolveWorkbench } from "./workbench.mjs";
 
 const ROOT = repositoryRoot;
+export const DEFAULT_CLI_NAME = "agent-hub-cli";
+const COMPANION_CLI_FEATURE = "companion-cli";
 export const featureCatalog = JSON.parse(
   readFileSync(resolve(ROOT, "products/features.json"), "utf8"),
 );
@@ -58,7 +60,7 @@ function resolveFeatures(features, cargoFeatures) {
     throw new Error("Invalid product features");
   const selected = new Set();
   const visit = (name) => {
-    if (!(name in cargoFeatures))
+    if (name === COMPANION_CLI_FEATURE || !(name in cargoFeatures))
       throw new Error(`Unknown Cargo feature: ${name}`);
     if (selected.has(name)) return;
     selected.add(name);
@@ -104,6 +106,13 @@ export function resolveProduct(input, cargoFeatures) {
     (typeof input.productName !== "string" || !input.productName.trim())
   )
     throw new Error("Invalid product name");
+  if (
+    input.cliName !== undefined &&
+    (typeof input.cliName !== "string" ||
+      !/^[a-z][a-z0-9-]*-cli$/.test(input.cliName) ||
+      (input.id === "standard" && input.cliName !== DEFAULT_CLI_NAME))
+  )
+    throw new Error("Invalid product CLI name");
   if (
     input.version !== undefined &&
     (typeof input.version !== "string" ||
@@ -186,6 +195,7 @@ export function resolveProduct(input, cargoFeatures) {
     ...(input.productName === undefined
       ? {}
       : { productName: input.productName.trim() }),
+    ...(input.cliName === undefined ? {} : { cliName: input.cliName }),
     ...(input.iconDir === undefined ? {} : { iconDir: input.iconDir }),
     ...(pageOverrides?.discover ? { pageOverrides } : {}),
     ...(Object.keys(sidebarModules).length ? { sidebarModules } : {}),
@@ -390,6 +400,7 @@ export function loadProduct(
   const product = {
     ...config,
     cargoFeatures: graph,
+    cliName: config.cliName ?? DEFAULT_CLI_NAME,
     version:
       config.version ?? readFileSync(resolve(ROOT, "VERSION"), "utf8").trim(),
     hash,
@@ -410,6 +421,7 @@ export function loadProduct(
     AGENT_HUB_PRODUCT_CONFIG: configPath,
     AGENT_HUB_PRODUCT_HASH: hash,
     AGENT_HUB_PRODUCT_VERSION: product.version,
+    AGENT_HUB_PRODUCT_CLI_NAME: product.cliName,
     AGENT_HUB_PRODUCT_FEATURES: config.features.join(","),
     AGENT_HUB_BASE_COMMIT: baseCommit,
     AGENT_HUB_PRODUCT_DIR: generatedDir,
@@ -589,7 +601,7 @@ export function prepareProduct(product) {
             "icon.icns",
             "icon.ico",
           ].map((file) => resolve(product.iconDir, file)),
-          externalBin: [resolve(product.binariesDir, "agent-hub-cli")],
+          externalBin: [resolve(product.binariesDir, product.cliName)],
         },
       },
       null,
@@ -599,11 +611,10 @@ export function prepareProduct(product) {
   return product;
 }
 
-export function cargoProductArguments(product) {
+export function cargoCliArguments(product) {
   return [
     "--no-default-features",
-    ...(product.features.length
-      ? ["--features", product.features.join(",")]
-      : []),
+    "--features",
+    [...product.features, COMPANION_CLI_FEATURE].join(","),
   ];
 }

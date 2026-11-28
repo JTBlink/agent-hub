@@ -19,15 +19,28 @@ fn publishes_the_built_cli_to_an_explicit_bridge_and_verifies_it_before_stamping
     let binary = std::path::Path::new(report["path"].as_str().unwrap());
     assert_eq!(binary.parent(), Some(temporary.path()));
     assert_eq!(
+        binary.file_name().unwrap(),
+        format!(
+            "{}{}",
+            app_lib::product::CLI_NAME,
+            std::env::consts::EXE_SUFFIX
+        )
+        .as_str()
+    );
+    assert_eq!(
         std::fs::read_to_string(temporary.path().join(".version"))
             .unwrap()
             .trim(),
-        env!("CARGO_PKG_VERSION")
+        app_lib::product::VERSION
     );
     let version = Command::new(binary).arg("--version").output().unwrap();
     assert!(version.status.success());
     assert_eq!(
         String::from_utf8(version.stdout).unwrap().trim(),
-        format!("agent-hub-cli {}", env!("CARGO_PKG_VERSION"))
+        format!(
+            "{} {}",
+            app_lib::product::CLI_NAME,
+            app_lib::product::VERSION
+        )
     );
 }

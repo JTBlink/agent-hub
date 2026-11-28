@@ -41,7 +41,7 @@
     "src/main.tsx",
     "src-tauri/Cargo.lock",
     "src-tauri/src/lib.rs",
-    "src-tauri/src/bin/agent-hub-cli.rs",
+    "src-tauri/src/cli/agent-hub-cli.rs",
     "packages/agent-hub-core/Cargo.toml",
     "shared/preview-file-types.json",
     "products/default-content.json",

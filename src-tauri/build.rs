@@ -66,6 +66,22 @@ fn product_identity() {
         );
         println!("cargo:rustc-env={name}={value}");
     }
+    println!("cargo:rerun-if-env-changed=AGENT_HUB_PRODUCT_CLI_NAME");
+    let cli_name =
+        std::env::var("AGENT_HUB_PRODUCT_CLI_NAME").unwrap_or_else(|_| "agent-hub-cli".into());
+    assert!(
+        cli_name.strip_suffix("-cli").is_some_and(|prefix| {
+            prefix
+                .as_bytes()
+                .first()
+                .is_some_and(u8::is_ascii_lowercase)
+                && prefix
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+        }),
+        "Invalid product CLI name"
+    );
+    println!("cargo:rustc-env=AGENT_HUB_PRODUCT_CLI_NAME={cli_name}");
     println!("cargo:rerun-if-changed=../products/features.json");
     let feature_catalog: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string("../products/features.json").expect("feature catalog is required"),

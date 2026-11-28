@@ -58,7 +58,7 @@ try {
   }
   const run = (binary, args) =>
     execFileSync(binary, args, { cwd: sdk, stdio: "inherit" });
-  const { loadProduct } = await import(
+  const { cargoCliArguments, loadProduct } = await import(
     pathToFileURL(join(sdk, "packages/agent-hub-core/build/config.mjs"))
   );
   const template = JSON.parse(
@@ -126,9 +126,7 @@ try {
           "--locked",
           "--manifest-path",
           "src-tauri/Cargo.toml",
-          "--no-default-features",
-          "--features",
-          features.join(","),
+          ...cargoCliArguments(product),
           "--lib",
           "--bin",
           "agent-hub-cli",

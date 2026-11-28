@@ -76,12 +76,13 @@ fn prepare_bundle(
     }
     std::fs::copy(executable, &staged)?;
     std::fs::rename(staged, &bundled)?;
-    let cli = directory.join("agent-hub-cli");
-    let staged_cli = directory.join(".agent-hub-cli.staged");
+    let cli_name = app_lib::product::CLI_NAME;
+    let cli = directory.join(cli_name);
+    let staged_cli = directory.join(format!(".{cli_name}.staged"));
     if staged_cli.exists() {
         std::fs::remove_file(&staged_cli)?;
     }
-    std::fs::copy(executable.with_file_name("agent-hub-cli"), &staged_cli)?;
+    std::fs::copy(executable.with_file_name(cli_name), &staged_cli)?;
     if cli.symlink_metadata().is_ok() {
         std::fs::remove_file(&cli)?;
     }

@@ -4,7 +4,7 @@ agent-hub 使用单个 Tauri 2 桌面应用和 React 前端，业务实现来自
 
 前端 `src/App.tsx` 组合路由与 Provider，`views/` 提供总览、技能库、工作空间、项目、安装、备份和设置页面。可复用界面在 `components/`，状态和共享逻辑在 `context/`、`hooks/`、`lib/`。
 
-`src-tauri/src/commands/` 提供桌面命令，`core/` 管理技能仓库、SQLite、工具适配、Git 和同步。`src-tauri/src/bin/agent-hub-cli.rs` 与桌面端共享核心逻辑。`main.rs` 仅负责启动及包内 smoke 分支。
+`src-tauri/src/commands/` 提供桌面命令，`core/` 管理技能仓库、SQLite、工具适配、Git 和同步。`src-tauri/src/cli/agent-hub-cli.rs` 与桌面端共享核心逻辑。`main.rs` 仅负责启动及包内 smoke 分支。
 
 普通项目安装由 `core/project_library.rs` 管理：内容复制到项目 `.agents/skills`，依照既有适配器生成团队专属副本，使用 `.agent-hub/project-skills.json` 保存可移植身份、来源、内容指纹及团队目标。`manifest` 负责严格读取与跨平台内容比较，`transaction` 负责发布和本机恢复 journal；桌面与 CLI 共用这些操作。项目文件是权威状态，成员读取已有内容不需要本机数据库。专属入口启停保留其他入口，公共目录启停具有共享影响。设计见 [ADR-0010](../adr/0010-project-skills-library.md)。
 

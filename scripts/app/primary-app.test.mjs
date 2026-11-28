@@ -112,6 +112,31 @@ describe("primary application packaging", () => {
         ),
     ).toBe(true);
   });
+  it("stages the branded Windows sidecar from Cargo's fixed binary", () => {
+    const copies = [];
+    expect(
+      prepareCli(
+        "x86_64-pc-windows-msvc",
+        true,
+        () => ({ status: 0 }),
+        { mkdirSync() {}, copyFileSync: (...paths) => copies.push(paths) },
+        () => {},
+        undefined,
+        {
+          cliName: "sample-cli",
+          binariesDir: resolve("staging"),
+          targetDir: resolve("target"),
+          features: [],
+        },
+      ),
+    ).toBe(0);
+    expect(copies).toEqual([
+      [
+        resolve("target/x86_64-pc-windows-msvc/release/agent-hub-cli.exe"),
+        resolve("staging/sample-cli-x86_64-pc-windows-msvc.exe"),
+      ],
+    ]);
+  });
   it("does not start Tauri when the companion CLI fails to build", () => {
     const calls = [];
     const runner = (command, args) => {

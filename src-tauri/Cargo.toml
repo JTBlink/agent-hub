@@ -8,12 +8,19 @@ rust-version = "1.77.2"
 default-run = "agent-hub"
 
 [features]
-default = ["standard"]
+default = ["standard", "companion-cli"]
+companion-cli = []
 standard = ["herdr", "cloud-sync", "github", "gitlab"]
 herdr = []
 cloud-sync = []
 github = []
 gitlab = ["dep:glob", "dep:flate2", "dep:tar"]
+
+# Built separately and staged as a named sidecar by the product build.
+[[bin]]
+name = "agent-hub-cli"
+path = "src/cli/agent-hub-cli.rs"
+required-features = ["companion-cli"]
 
 [lib]
 name = "app_lib"

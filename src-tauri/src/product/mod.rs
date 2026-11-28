@@ -5,6 +5,9 @@ include!(concat!(env!("OUT_DIR"), "/features.rs"));
 /// Version embedded in the product bundle and companion CLI.
 pub const VERSION: &str = env!("AGENT_HUB_PRODUCT_VERSION");
 
+/// Command name presented by the companion CLI and used in the bundle.
+pub const CLI_NAME: &str = env!("AGENT_HUB_PRODUCT_CLI_NAME");
+
 #[derive(Debug, serde::Serialize)]
 pub struct BuildInfo {
     pub product_id: &'static str,

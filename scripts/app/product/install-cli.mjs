@@ -12,6 +12,7 @@ import {
 import { resolve, dirname, basename, relative, isAbsolute } from "node:path";
 import { main as buildCli } from "../run-rust-cli.mjs";
 import {
+  DEFAULT_CLI_NAME,
   loadProduct,
   productArguments,
 } from "../../../packages/agent-hub-core/build/config.mjs";
@@ -29,8 +30,10 @@ export function linkDevelopmentCli(
   const installDir =
     product.environment.AGENT_HUB_CLI_BIN_DIR ||
     resolve(env.CARGO_HOME || resolve(homedir(), ".cargo"), "bin");
-  const name = `agent-hub-cli${process.platform === "win32" ? ".exe" : ""}`;
-  const binary = resolve(product.targetDir, profile, name);
+  const suffix = process.platform === "win32" ? ".exe" : "";
+  const cargoBinary = `${DEFAULT_CLI_NAME}${suffix}`;
+  const name = `${product.cliName ?? DEFAULT_CLI_NAME}${suffix}`;
+  const binary = resolve(product.targetDir, profile, cargoBinary);
   const link = resolve(installDir, name);
   let metadata;
   try {
@@ -55,7 +58,7 @@ export function linkDevelopmentCli(
         scope.startsWith("../") ||
         scope.startsWith("..\\") ||
         isAbsolute(scope) ||
-        basename(previous) !== name)
+        basename(previous) !== cargoBinary)
     )
       throw new Error(
         "Refusing to replace a CLI link outside this product build directory",

@@ -30,13 +30,14 @@
 
 修改后重新编译相应产品。能力不是运行期用户偏好，设置页不能重新打开未编译的能力。关闭能力不会删除既有任务、平台绑定、备份目录、凭据或其他用户数据；重新启用后仍可按原协议读取。旧路由恢复到不可用页面时回到工作台，设置页不展示未编译的备份项。
 
-`products/standard.json`、`products/personal.json`、`products/agent-flow.json` 只声明产品身份、侧栏排列和开发端口；内置产品的能力选择由统一配置提供。侧栏中属于未启用能力的入口会自动过滤，不需要再到另一份文件关闭开关。
+`products/standard.json`、`products/personal.json`、`products/agent-flow.json` 声明产品身份、品牌、配套 CLI、侧栏排列和开发端口；内置产品的能力选择由统一配置提供。侧栏中属于未启用能力的入口会自动过滤，不需要再到另一份文件关闭开关。
 
 产品清单包含：
 
 - `id`：稳定产品身份，使用小写字母、数字和短横线，以小写字母开头。更改它会改变运行目录与应用身份。
 - `iconDir`：可选图标目录，包含平台图标、SVG 母版和 macOS 单色托盘图标；Agent Flow 使用 `products/agent-flow/icons`，同时替换开发预览与构建后的网页图标。
 - `productName`：可选安装包名称与窗口标题；Agent Flow 使用 `Agent Flow`。未配置时沿用默认产品名称。
+- `cliName`：可选配套 CLI 命令名，使用小写字母开头，仅包含小写字母、数字和短横线，以 `-cli` 结尾。Agent Flow 使用 `agent-flow-cli`，默认名称为 `agent-hub-cli`。
 - `sidebar.primary`、`sidebar.bottom`：上下两组入口及顺序，不得重复。统一能力配置决定哪些入口实际可用。
 - `sidebar.defaultPanel`：默认面板 ID；其能力关闭后回退到可用面板。
 

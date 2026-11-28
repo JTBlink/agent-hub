@@ -1,15 +1,16 @@
 import { repositoryRoot } from "../shared/paths.mjs";
-import { existsSync } from "node:fs";
+import { copyFileSync, existsSync, renameSync, rmSync } from "node:fs";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { builtCliPath, publishBuiltCli } from "./cli-publish.mjs";
 import { cleanupBuildCache } from "./build-cache.mjs";
 import {
+  DEFAULT_CLI_NAME,
   loadProduct,
   prepareProduct,
   productArguments,
-  cargoProductArguments,
+  cargoCliArguments,
 } from "../../packages/agent-hub-core/build/config.mjs";
 
 function canRun(command, args = ["--version"]) {
@@ -47,6 +48,14 @@ function resolveCargo() {
   return null;
 }
 
+function optionValue(args, name) {
+  const index = args.indexOf(name);
+  return (
+    args.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1) ??
+    (index >= 0 ? args[index + 1] : undefined)
+  );
+}
+
 /** Use one persistent target directory for builds, runs and Cargo installs. */
 export function cliBuildPlan(mode, extraArgs, env = process.env) {
   if (!["cli", "build", "install"].includes(mode)) return null;
@@ -65,23 +74,25 @@ export function cliBuildPlan(mode, extraArgs, env = process.env) {
     throw new Error("Select Cargo features through --product");
   const product = loadProduct(selected.selection, { env });
   // Arguments after `cli` belong to the application, not to Cargo.
-  const targetIndex = mode === "cli" ? -1 : extraArgs.indexOf("--target-dir");
-  const targetOption =
-    mode === "cli"
-      ? undefined
-      : extraArgs.find((arg) => arg.startsWith("--target-dir="));
   const targetDir = resolve(
     ROOT,
-    targetOption?.slice(13) ??
-      (targetIndex >= 0 ? extraArgs[targetIndex + 1] : undefined) ??
+    (mode === "cli" ? undefined : optionValue(extraArgs, "--target-dir")) ??
       product.targetDir,
   );
+  const installRoot =
+    mode === "install" && product.id !== "standard"
+      ? resolve(
+          ROOT,
+          optionValue(extraArgs, "--root") ??
+            resolve(product.generatedDir, "cli-install"),
+        )
+      : undefined;
   const baseArgs = [
     "--manifest-path",
     "src-tauri/Cargo.toml",
     "--bin",
     "agent-hub-cli",
-    ...cargoProductArguments(product),
+    ...cargoCliArguments(product),
   ];
   const args =
     mode === "cli"
@@ -96,16 +107,17 @@ export function cliBuildPlan(mode, extraArgs, env = process.env) {
             "agent-hub-cli",
             "--locked",
             "--force",
-            ...(product.id === "standard"
-              ? []
-              : ["--root", resolve(product.generatedDir, "cli-install")]),
-            ...cargoProductArguments(product),
+            ...(installRoot && optionValue(extraArgs, "--root") === undefined
+              ? ["--root", installRoot]
+              : []),
+            ...cargoCliArguments(product),
             ...extraArgs,
           ];
   return {
     args,
     targetDir,
     product,
+    installRoot,
     ...(mode === "cli" ? { runArgs: extraArgs } : {}),
   };
 }
@@ -154,19 +166,10 @@ export function main(
   }
   const status = result.status ?? 1;
   if (status === 0) {
-    const option = (name) => {
-      const index = extraArgs.indexOf(name);
-      return (
-        extraArgs
-          .find((arg) => arg.startsWith(`${name}=`))
-          ?.slice(name.length + 1) ??
-        (index >= 0 ? extraArgs[index + 1] : undefined)
-      );
-    };
     const requestedProfile =
       mode === "cli"
         ? "debug"
-        : (option("--profile") ??
+        : (optionValue(extraArgs, "--profile") ??
           (extraArgs.includes("--release") ||
           (mode === "install" && !extraArgs.includes("--debug"))
             ? "release"
@@ -174,12 +177,33 @@ export function main(
     const artifact = {
       targetDir: plan.targetDir,
       target:
-        (mode === "cli" ? undefined : option("--target")) ??
+        (mode === "cli" ? undefined : optionValue(extraArgs, "--target")) ??
         env.CARGO_BUILD_TARGET,
       profile: requestedProfile === "dev" ? "debug" : requestedProfile,
     };
     try {
       publish({ ...artifact, runner, env });
+      if (plan.installRoot && plan.product.cliName !== DEFAULT_CLI_NAME) {
+        // Cargo records its fixed target name. Keep that file for Cargo and
+        // expose the product command beside it.
+        const installDir = resolve(plan.installRoot, "bin");
+        const suffix =
+          (artifact.target?.includes("windows") ?? process.platform === "win32")
+            ? ".exe"
+            : "";
+        const dest = resolve(installDir, `${plan.product.cliName}${suffix}`);
+        const staged = `${dest}.staged-${process.pid}`;
+        try {
+          copyFileSync(
+            resolve(installDir, `${DEFAULT_CLI_NAME}${suffix}`),
+            staged,
+          );
+          renameSync(staged, dest);
+        } finally {
+          rmSync(staged, { force: true });
+        }
+        console.error(`Installed ${plan.product.id} CLI: ${dest}`);
+      }
     } catch (error) {
       console.error(error.message);
       return 1;

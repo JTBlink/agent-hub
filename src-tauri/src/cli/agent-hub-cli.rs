@@ -34,14 +34,15 @@ use serde::Serialize;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "agent-hub-cli",
+    name = app_lib::product::CLI_NAME,
+    bin_name = app_lib::product::CLI_NAME,
     about = "管理 AgentHub 技能、技能组、Agent、文件预览、Hosts 和 Git 备份",
     version = app_lib::product::VERSION,
     disable_help_subcommand = true,
     subcommand_help_heading = "命令",
     next_help_heading = "选项",
     help_template = "{about-with-newline}\n用法: {usage}\n\n{all-args}{after-help}",
-    after_help = "示例:\n  agent-hub-cli ./guide.md\n  agent-hub-cli open ./guide.md\n  agent-hub-cli skills list\n  agent-hub-cli skill-groups list\n  agent-hub-cli skill-groups deploy \"日常开发\" --agent codex\n  agent-hub-cli --json skills list"
+    after_help = concat!("示例:\n  ", env!("AGENT_HUB_PRODUCT_CLI_NAME"), " ./guide.md\n  ", env!("AGENT_HUB_PRODUCT_CLI_NAME"), " open ./guide.md\n  ", env!("AGENT_HUB_PRODUCT_CLI_NAME"), " skills list\n  ", env!("AGENT_HUB_PRODUCT_CLI_NAME"), " skill-groups list\n  ", env!("AGENT_HUB_PRODUCT_CLI_NAME"), " skill-groups deploy \"日常开发\" --agent codex\n  ", env!("AGENT_HUB_PRODUCT_CLI_NAME"), " --json skills list")
 )]
 struct Cli {
     /// 输出机器可读的 JSON。
@@ -328,7 +329,7 @@ enum SkillsCommand {
     },
     /// 原地重命名技能、中央目录和部署入口，保留 ID、标签和技能组。
     #[command(
-        long_about = "原地重命名已有技能，保留原 ID、标签、技能组和来源关系。\n移动中央目录、更新 SKILL.md 名称并刷新已有部署；不会创建来源副本。\n用法示例：agent-hub-cli skills rename old-skill new-skill"
+        long_about = concat!("原地重命名已有技能，保留原 ID、标签、技能组和来源关系。\n移动中央目录、更新 SKILL.md 名称并刷新已有部署；不会创建来源副本。\n用法示例：", env!("AGENT_HUB_PRODUCT_CLI_NAME"), " skills rename old-skill new-skill")
     )]
     Rename {
         /// 技能 ID、名称、目录名或中央路径。
@@ -860,7 +861,7 @@ fn main() {
     };
 
     if let Commands::Help { command } = &cli.command {
-        let args = std::iter::once("agent-hub-cli")
+        let args = std::iter::once(app_lib::product::CLI_NAME)
             .chain(command.iter().map(String::as_str))
             .chain(std::iter::once("-h"));
         if let Err(error) = cli_command().try_get_matches_from(args) {

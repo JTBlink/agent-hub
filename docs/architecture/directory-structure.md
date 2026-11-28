@@ -139,7 +139,7 @@ agent-hub/
 │   │   ├── product/                #   编译期身份、产品目录与平台标识
 │   │   ├── desktop/                #   启动、IPC 注册、生命周期和托盘，见 app-composition.md
 │   │   ├── smoke.rs                #   冒烟测试
-│   │   ├── bin/
+│   │   ├── cli/
 │   │   │   └── agent-hub-cli.rs    #   CLI 工具入口
 │   │   ├── commands/               #   Tauri 命令层（IPC 边界）
 │   │   │   ├── mod.rs
@@ -329,7 +329,7 @@ agent-hub/
 | `src/styles/brand.css`                                          | agent-hub 明暗主题与色调           |
 | `src-tauri/src/commands/`                                       | Tauri 命令边界                     |
 | `src-tauri/src/core/`                                           | 技能库、工具适配、存储和 Git 核心  |
-| `src-tauri/src/bin/`                                            | agent-hub-cli 入口                 |
+| `src-tauri/src/cli/`                                            | agent-hub-cli 入口                 |
 | `src-tauri/icons/`                                              | 默认深色图标、深浅变体与菜单栏模板 |
 | `public/`                                                       | 前端静态资源                       |
 | [agent-hub-skills](https://github.com/JTBlink/agent-hub-skills) | 可分发的 Skills 与自动化任务包     |

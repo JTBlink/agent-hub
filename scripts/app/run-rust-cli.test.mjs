@@ -1,3 +1,12 @@
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { cliBuildPlan, main } from "./run-rust-cli.mjs";
 import { cargoTargetDir } from "./build-cache.mjs";
@@ -153,10 +162,37 @@ it("uses the selected CLI feature set without publishing through the standard PA
     }),
   ).toBe(0);
   expect(compilation.args).toContain("--no-default-features");
-  expect(compilation.args).not.toContain("--features");
+  expect(compilation.args).toContain("companion-cli");
   expect(compilation.env.AGENT_HUB_PRODUCT_ID).toBe("personal");
   expect(publication.env.AGENT_HUB_PRODUCT_HASH).toBe(
     compilation.env.AGENT_HUB_PRODUCT_HASH,
   );
   expect(publication.env.AGENT_HUB_CLI_BIN_DIR).toContain("personal-");
+});
+
+it("installs the named Agent Flow command beside Cargo's managed executable", () => {
+  const root = mkdtempSync(join(tmpdir(), "agent-flow-cli-install-"));
+  const bin = join(root, "bin");
+  const suffix = process.platform === "win32" ? ".exe" : "";
+  try {
+    expect(
+      main(["install", "--product=agent-flow", "--root", root], {
+        cargo: "cargo",
+        env: {},
+        cleanup: () => {},
+        publish: () => {},
+        runner: (_command, args) => {
+          expect(args.filter((arg) => arg === "--root")).toHaveLength(1);
+          mkdirSync(bin);
+          writeFileSync(join(bin, `agent-hub-cli${suffix}`), "compiled");
+          return { status: 0 };
+        },
+      }),
+    ).toBe(0);
+    expect(readFileSync(join(bin, `agent-flow-cli${suffix}`), "utf8")).toBe(
+      "compiled",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
