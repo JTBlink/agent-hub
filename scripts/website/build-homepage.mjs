@@ -61,6 +61,10 @@ copyFileSync(
   resolve(assetsDirectory, "OFL-JetBrainsMono.txt"),
 );
 copyFileSync(
+  resolve(root, "public/icons/app-mark.svg"),
+  resolve(assetsDirectory, "app-mark.svg"),
+);
+copyFileSync(
   resolve(root, "src-tauri/icons/app-icon.svg"),
   resolve(assetsDirectory, "app-icon.svg"),
 );

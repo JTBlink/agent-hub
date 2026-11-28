@@ -22,10 +22,13 @@ it("builds a self-contained website with the current version and all local asset
     const document = new JSDOM(html).window.document;
     expect(
       document.querySelector('link[rel="icon"]').getAttribute("href"),
-    ).toBe("./assets/app-icon-32.png");
+    ).toBe("./assets/app-mark.svg");
     for (const image of document.querySelectorAll(".brand img")) {
-      expect(image.getAttribute("src")).toBe("./assets/app-icon-128.png");
+      expect(image.getAttribute("src")).toBe("./assets/app-mark.svg");
     }
+    expect(
+      readFileSync(join(dirname(outputPath), "assets/app-mark.svg")),
+    ).toEqual(readFileSync(join(root, "public/icons/app-mark.svg")));
     for (const [asset, source] of [
       ["app-icon-32.png", "32x32.png"],
       ["app-icon-128.png", "128x128.png"],

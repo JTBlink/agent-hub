@@ -1,76 +1,186 @@
-<figure id="preview-workspace" class="product-preview">
-  <a href="./assets/project-workspace.png" aria-label="查看项目工作区完整截图"
-    ><img
-      src="./assets/project-workspace.png"
-      alt="AgentHub 项目与工作树、文件目录、内嵌终端和 Agent 启动入口。"
-      width="1440"
-      height="900"
-      fetchpriority="high"
-  /></a>
-  <figcaption>
-    围绕当前项目切换工作树、浏览文件并启动终端与 Agent。截图使用合成数据。
-  </figcaption>
-</figure>
-<figure id="preview-git" class="product-preview" hidden>
-  <a href="./assets/git.png" aria-label="查看Git完整截图"
-    ><img
-      src="./assets/git.png"
-      alt="AgentHub Git 变更、提交记录、分支和标签。"
-      width="1440"
-      height="900"
-      loading="lazy"
-  /></a>
-  <figcaption>
-    在当前仓库查看变更、差异、提交记录与分支标签。截图使用合成数据。
-  </figcaption>
-</figure>
-<figure id="preview-tasks" class="product-preview" hidden>
-  <a href="./assets/tasks.png" aria-label="查看平台任务完整截图"
-    ><img
-      src="./assets/tasks.png"
-      alt="AgentHub GitHub 与 GitLab 任务、多项目筛选与平台账号入口。"
-      width="1440"
-      height="900"
-      loading="lazy"
-  /></a>
-  <figcaption>
-    按项目查看 Issue、PR / MR 和 CI，按需进入 Agent 操作预览。截图使用合成数据。
-  </figcaption>
-</figure>
-<figure id="preview-automation" class="product-preview" hidden>
-  <a href="./assets/automation.png" aria-label="查看自动化完整截图"
-    ><img
-      src="./assets/automation.png"
-      alt="AgentHub 本机定时任务、日程、执行状态与操作入口。"
-      width="1440"
-      height="900"
-      loading="lazy"
-  /></a>
-  <figcaption>
-    管理命令和 Agent 任务，编辑日程并查看执行记录。截图使用合成数据。
-  </figcaption>
-</figure>
-<figure id="preview-library" class="product-preview" hidden>
-  <a href="./assets/skill-library.png" aria-label="查看技能库完整截图"
-    ><img
-      src="./assets/skill-library.png"
-      alt="AgentHub 技能库的技能组、来源、标签与部署状态。"
-      width="1440"
-      height="900"
-      loading="lazy"
-  /></a>
-  <figcaption>
-    整理技能内容，按用途部署到 Agent 和项目工作空间。截图使用合成数据。
-  </figcaption>
-</figure>
-<figure id="preview-dashboard" class="product-preview" hidden>
-  <a href="./assets/dashboard.png" aria-label="查看工作台概览完整截图"
-    ><img
-      src="./assets/dashboard.png"
-      alt="AgentHub 工作台的项目、Agent 与近期技能。"
-      width="1440"
-      height="900"
-      loading="lazy"
-  /></a>
-  <figcaption>查看工作空间概览与近期更新。截图使用合成数据。</figcaption>
-</figure>
+<section id="preview" class="workbench" aria-label="产品预览">
+  <div class="stage-tab">
+    <span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M3 7V4h6l2 3h10v13H3V7Z" /></svg
+    >demo-web <span class="stage-label">示例项目</span>
+  </div>
+  <div class="product-stage">
+    <div
+      class="preview-controls"
+      role="group"
+      aria-label="切换产品界面预览"
+      hidden
+    >
+      <button
+        type="button"
+        class="preview-button selected"
+        data-preview="workspace"
+        aria-controls="preview-workspace"
+        aria-pressed="true"
+      >
+        <span
+          ><svg aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"
+            /></svg
+          >项目工作区</span
+        ><small>文件、编辑器与工作树</small></button
+      ><button
+        type="button"
+        class="preview-button"
+        data-preview="git"
+        aria-controls="preview-git"
+        aria-pressed="false"
+      >
+        <span
+          ><svg aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="6" cy="5" r="2" />
+            <circle cx="6" cy="19" r="2" />
+            <circle cx="18" cy="6" r="2" />
+            <path d="M6 7v10m12-9c0 6-12 3-12 9" /></svg
+          >Git</span
+        ><small>提交、分支与标签</small></button
+      ><button
+        type="button"
+        class="preview-button"
+        data-preview="tasks"
+        aria-controls="preview-tasks"
+        aria-pressed="false"
+      >
+        <span
+          ><svg aria-hidden="true" viewBox="0 0 24 24">
+            <rect x="4" y="4" width="16" height="16" rx="3" />
+            <path d="m8 11 2 2 5-5m-7 8h8" /></svg
+          >平台任务</span
+        ><small>Issue、PR 与 MR</small></button
+      ><button
+        type="button"
+        class="preview-button"
+        data-preview="automation"
+        aria-controls="preview-automation"
+        aria-pressed="false"
+      >
+        <span
+          ><svg aria-hidden="true" viewBox="0 0 24 24">
+            <rect x="4" y="5" width="16" height="15" rx="2" />
+            <path d="M8 3v4m8-4v4M4 9h16m-8 3v3l2 1" /></svg
+          >自动化</span
+        ><small>日程、脚本与记录</small></button
+      ><button
+        type="button"
+        class="preview-button"
+        data-preview="library"
+        aria-controls="preview-library"
+        aria-pressed="false"
+      >
+        <span
+          ><svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5" /></svg
+          >技能库</span
+        ><small>整理与部署 Skills</small></button
+      ><button
+        type="button"
+        class="preview-button"
+        data-preview="dashboard"
+        aria-controls="preview-dashboard"
+        aria-pressed="false"
+      >
+        <span
+          ><svg aria-hidden="true" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <path d="M3 9h18m-12 0v11m4-7h4m-4 3h4" /></svg
+          >工作台概览</span
+        ><small>查看已连接的工具</small>
+      </button>
+    </div>
+    <div class="preview-viewport">
+      <figure id="preview-workspace" class="product-preview">
+        <a
+          href="./assets/project-workspace.png"
+          data-screenshot="项目工作区"
+          aria-label="查看项目工作区完整截图"
+          ><img
+            src="./assets/project-workspace.png"
+            alt="AgentHub 项目工作区的文件树、Markdown 编辑器和当前分支。"
+            width="1440"
+            height="900"
+            fetchpriority="high"
+        /></a>
+        <figcaption>
+          在当前工作树浏览文件、编辑 Markdown，并查看所在分支。
+        </figcaption>
+      </figure>
+      <figure id="preview-git" class="product-preview" hidden>
+        <a
+          href="./assets/git.png"
+          data-screenshot="Git 提交图"
+          aria-label="查看 Git 完整截图"
+          ><img
+            src="./assets/git.png"
+            alt="AgentHub Git 提交图显示分支、标签和提交信息。"
+            width="1440"
+            height="900"
+            loading="lazy"
+        /></a>
+        <figcaption>沿着提交图查看当前仓库的分支、标签与提交记录。</figcaption>
+      </figure>
+      <figure id="preview-tasks" class="product-preview" hidden>
+        <a
+          href="./assets/tasks.png"
+          data-screenshot="平台任务"
+          aria-label="查看平台任务完整截图"
+          ><img
+            src="./assets/tasks.png"
+            alt="AgentHub 的 GitHub Issue 列表、仓库筛选和账号入口。"
+            width="1440"
+            height="900"
+            loading="lazy"
+        /></a>
+        <figcaption>按仓库筛选 Issue，查看标签、负责人和更新时间。</figcaption>
+      </figure>
+      <figure id="preview-automation" class="product-preview" hidden>
+        <a
+          href="./assets/automation.png"
+          data-screenshot="自动化"
+          aria-label="查看自动化完整截图"
+          ><img
+            src="./assets/automation.png"
+            alt="AgentHub 自动化任务列表显示日程、项目和下次运行时间。"
+            width="1440"
+            height="900"
+            loading="lazy"
+        /></a>
+        <figcaption>查看任务日程、所属项目和下次执行时间。</figcaption>
+      </figure>
+      <figure id="preview-library" class="product-preview" hidden>
+        <a
+          href="./assets/skill-library.png"
+          data-screenshot="技能库"
+          aria-label="查看技能库完整截图"
+          ><img
+            src="./assets/skill-library.png"
+            alt="AgentHub 技能库的技能组、来源、标签和目标工具。"
+            width="1440"
+            height="900"
+            loading="lazy"
+        /></a>
+        <figcaption>按技能组和标签筛选 Skills，查看适用的 Agent。</figcaption>
+      </figure>
+      <figure id="preview-dashboard" class="product-preview" hidden>
+        <a
+          href="./assets/dashboard.png"
+          data-screenshot="工作台概览"
+          aria-label="查看工作台概览完整截图"
+          ><img
+            src="./assets/dashboard.png"
+            alt="AgentHub 工作台的最近项目、工作区和技能统计。"
+            width="1440"
+            height="900"
+            loading="lazy"
+        /></a>
+        <figcaption>查看最近项目、工作区和技能使用概览。</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>

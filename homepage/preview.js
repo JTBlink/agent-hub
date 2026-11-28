@@ -25,7 +25,29 @@ if (controlGroup && controls.length) {
       if (!control) return;
       selectPreview(control);
       control.focus({ preventScroll: true });
-      document.querySelector(".workbench")?.scrollIntoView({ block: "center" });
+      document.querySelector(".workbench")?.scrollIntoView({ block: "start" });
+    });
+  }
+}
+
+const viewer = document.querySelector(".screenshot-viewer");
+if (typeof viewer?.showModal === "function") {
+  const title = viewer.querySelector("#screenshot-title");
+  const image = viewer.querySelector("img");
+  const original = viewer.querySelector(".screenshot-original");
+
+  for (const trigger of document.querySelectorAll("[data-screenshot]")) {
+    trigger.setAttribute("aria-haspopup", "dialog");
+    trigger.addEventListener("click", (event) => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+      event.preventDefault();
+      title.textContent = trigger.dataset.screenshot;
+      original.href = trigger.href;
+      image.alt = trigger.querySelector("img").alt;
+      image.src = trigger.href;
+      viewer.showModal();
     });
   }
 }

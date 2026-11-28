@@ -1,4 +1,4 @@
-/* Catppuccin workbench: Latte by day, Mocha by night; shared with the terminal. */
+/* Workbench colors shared by the editor, terminal, and application chrome. */
 @layer base {
   :root {
     --palette-accent: var(--palette-blue);
@@ -94,16 +94,16 @@
 
   .dark {
     /* Shared UI, status, tag and terminal colors (RGB enables opacity utilities). */
-    --palette-red: 243 139 168;
-    --palette-green: 166 227 161;
-    --palette-yellow: 249 226 175;
-    --palette-orange: 250 179 135;
-    --palette-blue: 137 180 250;
-    --palette-cyan: 137 220 235;
-    --palette-teal: 148 226 213;
-    --palette-violet: 203 166 247;
-    --palette-pink: 245 194 231;
-    --palette-neutral: 166 173 200;
+    --palette-red: 224 149 157;
+    --palette-green: 154 199 160;
+    --palette-yellow: 222 196 147;
+    --palette-orange: 222 169 132;
+    --palette-blue: 133 189 223;
+    --palette-cyan: 129 198 211;
+    --palette-teal: 139 201 185;
+    --palette-violet: 192 178 218;
+    --palette-pink: 216 171 200;
+    --palette-neutral: 155 174 187;
     --color-success: rgb(var(--palette-green));
     --color-warning: rgb(var(--palette-yellow));
     --color-info-bg: rgb(var(--palette-blue) / 10%);
@@ -119,59 +119,67 @@
     --color-scheme: dark;
     --color-editor-selection: rgb(var(--palette-blue) / 24%);
     --color-editor-selection-inactive: rgb(var(--palette-neutral) / 20%);
-    --color-bg: #1e1e2e;
-    --color-bg-secondary: #1b1b29;
-    --color-surface: #232332;
-    --color-surface-hover: #2a2a3c;
-    --color-surface-active: #35354b;
-    --color-border: #414158;
-    --color-border-subtle: #323245;
-    --color-border-faint: #29293a;
-    --color-text-primary: #cdd6f4;
-    --color-text-secondary: #bac2de;
-    --color-text-tertiary: #a6adc8;
-    --color-text-muted: #a6adc8;
-    --color-text-faint: #9399b2;
+    --color-bg: #18232d;
+    --color-bg-secondary: #141e27;
+    --color-surface: #202e3a;
+    --color-surface-hover: #273846;
+    --color-surface-active: #304553;
+    --color-border: #425663;
+    --color-border-subtle: #30424e;
+    --color-border-faint: #283945;
+    --color-text-primary: #dbe6eb;
+    --color-text-secondary: #bccdd7;
+    --color-text-tertiary: #a7bbc7;
+    --color-text-muted: #a7bbc7;
+    --color-text-faint: #a0b2be;
     --color-accent: rgb(var(--palette-accent));
     --color-accent-light: rgb(var(--palette-accent));
     --color-accent-dark: rgb(var(--palette-accent));
-    --color-on-accent: #11111b;
+    --color-on-accent: #14212a;
     --color-accent-bg: rgb(var(--palette-accent) / 10%);
     --color-accent-border: rgb(var(--palette-accent) / 28%);
     --color-brand-teal: rgb(var(--palette-teal));
     --color-brand-violet: rgb(var(--palette-violet));
     --color-danger: rgb(var(--palette-red));
     --color-danger-bg: rgb(var(--palette-red) / 12%);
-    /* Catppuccin Mocha, matching the terminal's WezTerm reference. */
+    /* Blue-gray surfaces and muted blue, cyan, and mint from the app mark. */
     --terminal-background: var(--color-bg);
     --terminal-foreground: var(--color-text-primary);
-    --terminal-cursor: #f5e0dc;
+    --terminal-cursor: rgb(var(--palette-cyan));
     --terminal-cursor-accent: var(--color-bg);
-    --terminal-selection: #585b70;
-    --terminal-selection-inactive: #45475a;
+    --terminal-selection: #3e5968;
+    --terminal-selection-inactive: #304451;
     --terminal-selection-foreground: var(--color-text-primary);
-    --terminal-black: #45475a;
+    --terminal-black: #8297a4;
     --terminal-red: rgb(var(--palette-red));
     --terminal-green: rgb(var(--palette-green));
     --terminal-yellow: rgb(var(--palette-yellow));
     --terminal-blue: rgb(var(--palette-blue));
     --terminal-magenta: rgb(var(--palette-pink));
-    --terminal-cyan: rgb(var(--palette-teal));
-    --terminal-white: #bac2de;
-    --terminal-bright-black: #7f849c;
+    --terminal-cyan: rgb(var(--palette-cyan));
+    --terminal-white: var(--color-text-secondary);
+    --terminal-bright-black: #98acba;
     --terminal-bright-red: rgb(var(--palette-red));
     --terminal-bright-green: rgb(var(--palette-green));
     --terminal-bright-yellow: rgb(var(--palette-yellow));
     --terminal-bright-blue: rgb(var(--palette-blue));
     --terminal-bright-magenta: rgb(var(--palette-pink));
-    --terminal-bright-cyan: rgb(var(--palette-teal));
-    --terminal-bright-white: #cdd6f4;
+    --terminal-bright-cyan: rgb(var(--palette-cyan));
+    --terminal-bright-white: var(--color-text-primary);
     --shadow-card: 0 4px 16px rgb(0 0 0 / 16%);
     --shadow-card-hover: 0 18px 50px rgb(0 0 0 / 25%);
   }
 
   :root.dark[data-product-palette="navy"] {
+    --palette-red: 243 139 168;
+    --palette-green: 166 227 161;
+    --palette-yellow: 249 226 175;
+    --palette-orange: 250 179 135;
     --palette-blue: 150 191 250;
+    --palette-cyan: 137 220 235;
+    --palette-teal: 148 226 213;
+    --palette-violet: 203 166 247;
+    --palette-pink: 245 194 231;
     --palette-neutral: 145 163 187;
     --color-bg: #151d2b;
     --color-bg-secondary: #101724;
@@ -191,8 +199,10 @@
     --terminal-selection: #394f6b;
     --terminal-selection-inactive: #304159;
     --terminal-black: #334258;
+    --terminal-cyan: rgb(var(--palette-teal));
     --terminal-white: var(--color-text-secondary);
     --terminal-bright-black: #8599b6;
+    --terminal-bright-cyan: rgb(var(--palette-teal));
     --terminal-bright-white: var(--color-text-primary);
   }
 }

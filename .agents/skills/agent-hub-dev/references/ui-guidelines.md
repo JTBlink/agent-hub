@@ -22,7 +22,7 @@
 | 危险操作         | `text-danger`、`bg-danger-bg`                                   |
 | 卡片阴影         | `shadow-card`、`shadow-card-hover`                              |
 
-- 界面与终端统一采用 Catppuccin：深色 Mocha 背景 `#1e1e2e`、侧栏 `#1b1b29`、卡片 `#232332`、主色 `#89b4fa`；浅色 Latte 背景 `#eff1f5`、主色 `#1e66f5`。正文、边框、选区与语义色使用 `brand.css` 的集中 token；实色主操作文字使用 `--color-on-accent`，深色下避免浅蓝底配白字。保留明暗及跟随系统能力。
+- AgentHub 深色主题从应用标志取低饱和蓝灰、青蓝和薄荷绿，工作区背景为 `#18232d`、侧栏为 `#141e27`、卡片为 `#202e3a`、主色为 `#85bddf`。浅色继续使用 Catppuccin Latte。正文、边框、代码高亮、终端和选区使用 `brand.css` 的集中 token，实色主操作文字使用 `--color-on-accent`。保持辅助文本与代码注释在实际背景上清晰可读。
 - `brand.css` 的 `--palette-*` 为明暗原始色板，`--color-*` 为界面语义，`--terminal-*` 为终端语义。滚动条、选区、差异视图和状态色也在该文件配置；旧 Tailwind 色阶仅映射为色板别名，不引入独立配色。新组件优先使用语义 token，实色标签同样使用 `--color-on-accent`。
 - 保留文字缩放。沿用现有字体、间距、圆角和图标风格；没有明确重设计需求时不引入第二套组件体系或新的全局视觉语言。
 

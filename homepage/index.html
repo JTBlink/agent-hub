@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#1e1e2e" />
-    <title>AgentHub — AI Native 编程工作台，为 AI Coding 而生</title>
+    <meta name="theme-color" content="#0a1522" />
+    <title>AgentHub — 给 AI 编程一个主场｜AI Native 编程工作台</title>
     <meta
       name="description"
       content="AgentHub 是面向开发者的免费开源 AI 编程工具与 AI Native 工作台。在项目中启动 Codex、Claude Code、OpenCode、Hermes，连接 Herdr 会话，管理 Git worktree、终端、代码审查、Skills 技能库与自动化定时任务。支持 macOS、Windows、Linux 和本地 Git 备份。"
@@ -15,13 +15,10 @@
     <meta property="og:locale" content="zh_CN" />
     <meta property="og:site_name" content="AgentHub" />
     <meta property="og:url" content="https://jtblink.github.io/agent-hub/" />
-    <meta
-      property="og:title"
-      content="AgentHub — 为 AI Coding 而生的 AI Native 工作台"
-    />
+    <meta property="og:title" content="给 AI 编程一个主场｜AgentHub" />
     <meta
       property="og:description"
-      content="面向开发者的 AI Coding 工作台。在项目中启动 Coding Agent，查看 Git 变更与代码审查，连接 Herdr，管理 worktree、Skills 和自动化任务。免费开源，本地优先。"
+      content="用 Codex、Claude Code 写代码，把项目、代码审查和定时任务放进同一个工作台。AgentHub 免费开源，支持 macOS、Windows 和 Linux。"
     />
     <meta
       property="og:image"
@@ -31,22 +28,19 @@
     <meta property="og:image:height" content="900" />
     <meta
       property="og:image:alt"
-      content="AgentHub 项目工作区：工作树、文件目录与 Agent 终端"
+      content="AgentHub 项目工作区的文件目录、编辑器与当前分支"
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta
-      name="twitter:title"
-      content="AgentHub — 为 AI Coding 而生的 AI Native 工作台"
-    />
+    <meta name="twitter:title" content="给 AI 编程一个主场｜AgentHub" />
     <meta
       name="twitter:description"
-      content="把 Coding Agent、终端、Git 代码审查与 Skills 放进同一个项目工作台。"
+      content="用 Codex、Claude Code 写代码，在同一个工作台管理项目、代码审查和定时任务。免费开源，本地优先。"
     />
     <meta
       name="twitter:image"
       content="https://jtblink.github.io/agent-hub/assets/project-workspace.png"
     />
-    <link rel="icon" href="./assets/app-icon-32.png" type="image/png" />
+    <link rel="icon" href="./assets/app-mark.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./assets/workbench-theme.css" />
     <link rel="stylesheet" href="./styles.css" />
     <script type="application/ld+json">
@@ -60,7 +54,7 @@
     <header class="site-header wrap">
       <a class="brand" href="#" aria-label="AgentHub 首页"
         ><img
-          src="./assets/app-icon-128.png"
+          src="./assets/app-mark.svg"
           alt=""
           width="36"
           height="36"
@@ -92,12 +86,9 @@
                 ><svg aria-hidden="true" viewBox="0 0 24 24">
                   <path d="m9 6 6 6-6 6" /></svg
               ></a>
-              <h1 id="hero-title">
-                为 AI Coding 而生的<br />AI Native 工作台。
-              </h1>
+              <h1 id="hero-title">给 AI 编程，<br />一个主场。</h1>
             </div>
             <div class="hero-copy">
-              <p>项目、worktree、Herdr 与自动化，在一处接续。</p>
               <p>
                 在同一项目里启动 Codex、Claude Code 等 Coding Agent，连接 Herdr
                 会话、切换 Git worktree，检查代码变更，让 Skills
@@ -109,90 +100,35 @@
                   <svg aria-hidden="true" viewBox="0 0 24 24">
                     <path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg></a
                 ><a class="text-link" href="docs/zh/quick-start.html"
-                  >阅读开发文档</a
+                  >快速开始</a
                 >
               </div>
               <p class="hero-meta">macOS / Windows / Linux · 免费开源</p>
-              <div class="hero-capabilities" aria-label="核心能力">
-                <a href="#worktrees">Git worktree</a
-                ><a href="#herdr">Herdr 集成</a
-                ><a href="#automation">自动化任务</a>
-              </div>
             </div>
           </div>
-          <div class="workbench">
-            <div class="stage-tab">
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M3 7V4h6l2 3h10v13H3V7Z" /></svg
-              >项目工作区 / demo-web
+          <div class="brand-visual">
+            <div class="brand-grid" aria-hidden="true"></div>
+            <div class="brand-halo" aria-hidden="true"></div>
+            <div class="brand-orbits" aria-hidden="true">
+              <span class="orbit orbit-blue"></span>
+              <span class="orbit orbit-cyan"></span>
+              <span class="orbit orbit-mint"></span>
             </div>
-            <div class="product-stage">
-              <div class="preview-viewport">__PRODUCT_PREVIEWS__</div>
-              <aside class="preview-sidebar">
-                <p class="preview-sidebar-title">在同一个工作台</p>
-                <div
-                  class="preview-controls"
-                  aria-label="切换产品界面预览"
-                  hidden
-                >
-                  <button
-                    type="button"
-                    class="preview-button selected"
-                    data-preview="workspace"
-                    aria-controls="preview-workspace"
-                    aria-pressed="true"
-                  >
-                    <span>项目工作区</span
-                    ><small>文件、终端与工作树</small></button
-                  ><button
-                    type="button"
-                    class="preview-button"
-                    data-preview="git"
-                    aria-controls="preview-git"
-                    aria-pressed="false"
-                  >
-                    <span>Git</span><small>变更、差异与提交</small></button
-                  ><button
-                    type="button"
-                    class="preview-button"
-                    data-preview="tasks"
-                    aria-controls="preview-tasks"
-                    aria-pressed="false"
-                  >
-                    <span>平台任务</span><small>Issue、PR 与 MR</small></button
-                  ><button
-                    type="button"
-                    class="preview-button"
-                    data-preview="automation"
-                    aria-controls="preview-automation"
-                    aria-pressed="false"
-                  >
-                    <span>自动化</span><small>日程、脚本与记录</small></button
-                  ><button
-                    type="button"
-                    class="preview-button"
-                    data-preview="library"
-                    aria-controls="preview-library"
-                    aria-pressed="false"
-                  >
-                    <span>技能库</span><small>整理与部署 Skills</small></button
-                  ><button
-                    type="button"
-                    class="preview-button"
-                    data-preview="dashboard"
-                    aria-controls="preview-dashboard"
-                    aria-pressed="false"
-                  >
-                    <span>工作台概览</span><small>查看已连接的工具</small>
-                  </button>
-                </div>
-                <p class="preview-hint">
-                  点击截图查看完整界面<br />界面使用示例数据
-                </p>
-              </aside>
-            </div>
+            <img
+              class="brand-core"
+              src="./assets/app-mark.svg"
+              alt=""
+              width="128"
+              height="128"
+            />
+            <nav class="hero-capabilities" aria-label="核心能力">
+              <a href="#worktrees">Git worktree</a>
+              <a href="#herdr">Herdr 集成</a>
+              <a href="#automation">自动化任务</a>
+            </nav>
           </div>
         </div>
+        __PRODUCT_PREVIEWS__
         <div class="agents">
           <p>连接你正在使用的<br />Coding Agent</p>
           <ul>
@@ -240,8 +176,8 @@
         aria-labelledby="features-title"
       >
         <div class="section-heading">
-          <h2 id="features-title">从写代码，<br />到审查每次变更。</h2>
-          <p>项目、Agent、Git 与 Skills，<br />组成你的 AI Native 开发环境。</p>
+          <h2 id="features-title">从写代码，到审查每次变更。</h2>
+          <p>项目、Agent、Git 与 Skills，组成你的 AI Native 开发环境。</p>
         </div>
         <div class="capabilities">
           <article class="project-feature" id="worktrees">
@@ -269,6 +205,14 @@
           </article>
           <article class="git-feature">
             <div class="feature-copy">
+              <div class="feature-symbol" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="6" cy="5" r="2" />
+                  <circle cx="6" cy="19" r="2" />
+                  <circle cx="18" cy="6" r="2" />
+                  <path d="M6 7v10m12-9c0 6-12 3-12 9" />
+                </svg>
+              </div>
               <h3>Git 变更与代码审查，<br />就在编码现场。</h3>
               <p>
                 查看 Git 变更、图片差异、提交图和分支。连接 GitHub / GitLab，把
@@ -277,11 +221,12 @@
             </div>
             <a
               class="feature-image"
+              data-screenshot="Git 提交图"
               href="./assets/git.png"
               aria-label="查看 Git 工作区完整截图"
               ><img
                 src="./assets/git.png"
-                alt="AgentHub Git 管理界面：文件变更、提交图与分支"
+                alt="AgentHub Git 提交图、分支标记和仓库文件目录"
                 width="1440"
                 height="900"
                 loading="lazy"
@@ -298,7 +243,7 @@
               在项目与工作树之间连接和复用 Herdr 工作区、Agent
               会话与终端面板。查看会话归属与状态，按需要选择工作区跟随。
             </p>
-            <div class="session-map" aria-label="工作树与 Herdr 会话的组织示意">
+            <div class="session-map">
               <div><code>main</code><span>Codex</span></div>
               <div><code>feat/login</code><span>Claude Code</span></div>
               <small>工作树与会话组织示意</small>
@@ -328,11 +273,12 @@
               </button>
               <a
                 class="automation-image"
+                data-screenshot="自动化执行记录"
                 href="./assets/automation-execution.png"
                 aria-label="查看自动化执行记录截图"
                 ><img
                   src="./assets/automation-execution.png"
-                  alt="AgentHub 自动化任务单次执行的状态、时间与输出记录"
+                  alt="AgentHub 自动化任务历次执行的时间与状态"
                   width="1440"
                   height="900"
                   loading="lazy"
@@ -455,12 +401,7 @@
       >
         <div class="download-panel">
           <div class="download-intro">
-            <img
-              src="./assets/app-icon-128.png"
-              alt=""
-              width="50"
-              height="50"
-            />
+            <img src="./assets/app-mark.svg" alt="" width="50" height="50" />
             <h2 id="download-title">
               为你的项目，<br />打开 AI Native 工作台。
             </h2>
@@ -522,11 +463,27 @@
         </div>
       </section>
     </main>
+    <dialog class="screenshot-viewer" aria-labelledby="screenshot-title">
+      <div class="screenshot-toolbar">
+        <h2 id="screenshot-title"></h2>
+        <a class="screenshot-original" target="_blank" rel="noopener"
+          >打开原图</a
+        >
+        <form method="dialog">
+          <button type="submit" aria-label="关闭截图" autofocus>
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </form>
+      </div>
+      <img alt="" width="1440" height="900" />
+    </dialog>
     <footer class="site-footer wrap">
       <div>
         <a class="brand" href="#"
           ><img
-            src="./assets/app-icon-128.png"
+            src="./assets/app-mark.svg"
             alt=""
             width="28"
             height="28"

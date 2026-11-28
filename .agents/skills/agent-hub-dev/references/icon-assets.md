@@ -57,7 +57,7 @@ npm run tauri -- icon src-tauri/icons/variants/light/1024x1024.png -o src-tauri/
 
 - macOS 菜单栏使用独立的 [`tray-template.svg`](../../../../src-tauri/icons/tray-template.svg) 轮廓母版。统一导出脚本生成 32 px 透明单色 PNG，运行时沿用系统模板图标的黑白适配。模板不包含深浅底板，不再使用旧节点标记。
 - 应用标题栏与 favicon 使用 `public/icons/32x32.png`；README 标题使用默认 `128x128.png`，避免依赖 SVG 位图内嵌在第三方渲染器中的支持。
-- 官网构建输出 `assets/app-icon-128.png` 与 `assets/app-icon-32.png`，供官网和帮助站的品牌标记与 favicon 共用，默认均为深色。
+- 官网品牌标记与 favicon 复用 `public/icons/app-mark.svg` 的透明标志。构建同时保留原有深色图标资源路径。
 - 产品截图通过合成数据预览重新拍摄，README 与官网共用 `docs/images/` 下的源图，不手工涂改截图中的标记。更新命令见[截图说明](../../../../docs/images/README.md)。
 
 ## 验收
