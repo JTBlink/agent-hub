@@ -64,6 +64,8 @@ try {
   const template = JSON.parse(
     readFileSync(join(sdk, "products/agent-flow.json"), "utf8"),
   );
+  const { sidebar } = loadProduct("agent-flow");
+  delete template.layoutPreset;
   run("npm", ["ci", "--no-audit", "--no-fund"]);
   mkdirSync(join(sdk, "custom"));
   const products = [
@@ -99,8 +101,8 @@ try {
         features,
         sidebarModules: { [panel]: modulePath },
         sidebar: {
-          ...template.sidebar,
-          primary: [...template.sidebar.primary, panel],
+          ...sidebar,
+          primary: [...sidebar.primary, panel],
         },
       }),
     );
