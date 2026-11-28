@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use app_lib::core::{central_repo, preview::automation::ControlEndpoint};
+use app_lib::core::preview::automation::{control_path, ControlEndpoint};
 use clap::{Args, Subcommand};
 use serde_json::{json, Value};
 use std::path::PathBuf;
@@ -83,7 +83,7 @@ pub enum PreviewCommand {
     },
 }
 pub(super) fn request(body: Value) -> Result<Value> {
-    let path = central_repo::home_base_dir().join("preview/control.json");
+    let path = control_path();
     let bytes = std::fs::read(path).context("Start AgentHub to use preview automation")?;
     if bytes.len() > 8192 {
         bail!("Invalid preview control configuration");

@@ -66,6 +66,21 @@ fn product_identity() {
         );
         println!("cargo:rustc-env={name}={value}");
     }
+    println!("cargo:rerun-if-env-changed=AGENT_HUB_DATA_ID");
+    let data_id = std::env::var("AGENT_HUB_DATA_ID")
+        .or_else(|_| std::env::var("AGENT_HUB_PRODUCT_ID"))
+        .unwrap_or_else(|_| "standard".into());
+    assert!(
+        data_id
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_lowercase)
+            && data_id
+                .bytes()
+                .all(|byte| { byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-' }),
+        "Invalid product data ID"
+    );
+    println!("cargo:rustc-env=AGENT_HUB_DATA_ID={data_id}");
     println!("cargo:rerun-if-env-changed=AGENT_HUB_PRODUCT_CLI_NAME");
     let cli_name =
         std::env::var("AGENT_HUB_PRODUCT_CLI_NAME").unwrap_or_else(|_| "agent-hub-cli".into());

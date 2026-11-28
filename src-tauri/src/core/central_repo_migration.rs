@@ -54,7 +54,11 @@ pub(super) fn copy_symlink(source: &Path, destination: &Path) -> Result<()> {
 
 /// Files the app recreates on its own. A target holding nothing else is not a
 /// library: it is what an earlier session or the CLI bridge left behind.
-const REGENERABLE_ROOT_FILES: &[&str] = &[".agent-hub.lock", "git-askpass.sh"];
+const REGENERABLE_ROOT_FILES: &[&str] = &[
+    ".agent-hub.lock",
+    super::super::skill_auto_updater::ROUND_LOCK,
+    "git-askpass.sh",
+];
 /// OS metadata, debris wherever it appears.
 const OS_METADATA_FILES: &[&str] = &[".DS_Store", "Thumbs.db", "desktop.ini"];
 

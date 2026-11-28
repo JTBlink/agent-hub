@@ -1,7 +1,10 @@
+use std::fs::OpenOptions;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
+use fs2::FileExt;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Runtime};
 
@@ -14,6 +17,7 @@ use crate::core::skill_store::SkillStore;
 const SETTING_INTERVAL: &str = "auto_update_check_interval";
 const SETTING_LAST_RUN: &str = "auto_update_last_run_at";
 const SETTING_APPLY: &str = "auto_update_apply";
+pub(super) const ROUND_LOCK: &str = ".skill-auto-update.lock";
 const EVENT_AUTO_UPDATED: &str = "skills-auto-updated";
 
 /// Initial delay before the first scheduler tick. Gives the app a chance to
@@ -49,14 +53,17 @@ pub fn start<R: Runtime>(app: AppHandle<R>, store: Arc<SkillStore>) {
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(INITIAL_DELAY).await;
         loop {
-            if let Some(interval) = read_interval(&store) {
-                if is_due(read_last_run(&store), interval) {
-                    match run_round(&app, &store).await {
-                        Ok(()) => record_round_completion(&app, &store),
-                        Err(err) => {
-                            log::warn!("skill auto-updater: round errored: {err}")
-                        }
-                    }
+            if round_due(&store) {
+                let store_for_task = store.clone();
+                match tauri::async_runtime::spawn_blocking(move || {
+                    run_due_round(&store_for_task, &crate::core::central_repo::home_base_dir())
+                })
+                .await
+                {
+                    Ok(Ok(Some(now))) => emit_round_completion(&app, now),
+                    Ok(Ok(None)) => {}
+                    Ok(Err(error)) => log::warn!("skill auto-updater: round errored: {error}"),
+                    Err(error) => log::warn!("skill auto-updater: worker failed: {error}"),
                 }
             }
             tokio::time::sleep(POLL_INTERVAL).await;
@@ -69,12 +76,15 @@ pub fn start<R: Runtime>(app: AppHandle<R>, store: Arc<SkillStore>) {
 /// payload so the frontend Settings listener can update its "last checked"
 /// label, and refresh the tray menu so the updates badge reflects new state.
 ///
-/// Called by both the background scheduler and the tray's manual
-/// "Check for skill updates" so the user-visible bookkeeping stays in sync
-/// regardless of which surface triggered the check.
+/// Used by the tray’s manual check. The scheduler persists the same timestamp
+/// while it still holds the background round lock.
 pub fn record_round_completion<R: Runtime>(app: &AppHandle<R>, store: &SkillStore) {
     let now = Utc::now();
     write_last_run(store, now);
+    emit_round_completion(app, now);
+}
+
+fn emit_round_completion<R: Runtime>(app: &AppHandle<R>, now: DateTime<Utc>) {
     let payload = AutoUpdatePayload {
         ran_at: now.to_rfc3339(),
     };
@@ -132,12 +142,34 @@ fn is_due(last_run: Option<DateTime<Utc>>, interval: Duration) -> bool {
     elapsed >= interval_chrono
 }
 
-async fn run_round<R: Runtime>(_app: &AppHandle<R>, store: &Arc<SkillStore>) -> Result<(), String> {
-    let store_for_task = store.clone();
-    tauri::async_runtime::spawn_blocking(move || run_round_blocking(&store_for_task))
-        .await
-        .map_err(|err| format!("join error: {err}"))??;
-    Ok(())
+fn round_due(store: &SkillStore) -> bool {
+    read_interval(store).is_some_and(|interval| is_due(read_last_run(store), interval))
+}
+
+fn run_due_round(store: &SkillStore, data_home: &Path) -> Result<Option<DateTime<Utc>>, String> {
+    // Each desktop has its own scheduler. The lease covers the due check,
+    // the entire round and the completion timestamp for this shared library.
+    let file = OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(data_home.join(ROUND_LOCK))
+        .map_err(|error| error.to_string())?;
+    match FileExt::try_lock_exclusive(&file) {
+        Ok(()) => {}
+        Err(error) if error.raw_os_error() == fs2::lock_contended_error().raw_os_error() => {
+            return Ok(None)
+        }
+        Err(error) => return Err(error.to_string()),
+    }
+    if !round_due(store) {
+        return Ok(None);
+    }
+    run_round_blocking(store)?;
+    let now = Utc::now();
+    write_last_run(store, now);
+    Ok(Some(now))
 }
 
 /// Whether the user has opted in to applying updates automatically (vs. only

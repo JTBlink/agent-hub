@@ -153,6 +153,8 @@ describe("product build selection", () => {
     { ...base, features: ["unknown"] },
     { ...base, productName: " " },
     { ...base, productName: 42 },
+    { ...base, dataId: "../standard" },
+    { ...base, id: "standard", dataId: "personal" },
     { ...base, cliName: "../sample-cli" },
     { ...base, cliName: "agent-hub" },
     { ...base, id: "standard", cliName: "sample-cli" },
@@ -245,12 +247,15 @@ it("selects GitHub setup only when both GitHub and cloud sync are compiled", () 
   ).toContain("features/github/cloudIntegration.ts");
 });
 
-it("builds Agent Flow with its own application identity and keeps standard outputs isolated", () => {
+it("builds a separately installable Agent Flow that uses the standard data identity", () => {
   const standard = loadProduct("standard");
   const product = loadProduct("agent-flow");
   expect(product.targetDir).not.toBe(standard.targetDir);
   expect(product.frontendDist).not.toBe(standard.frontendDist);
   expect(product.devPort).not.toBe(standard.devPort);
+  expect(standard.dataId).toBe("standard");
+  expect(product.dataId).toBe(standard.dataId);
+  expect(product.environment.AGENT_HUB_DATA_ID).toBe(standard.dataId);
   const directory = mkdtempSync(join(tmpdir(), "agenthub-product-"));
   try {
     prepareProduct({
@@ -289,6 +294,7 @@ it("lets an external Agent Flow manifest select all shared capabilities", () => 
     );
     const external = loadProduct(manifest);
     expect(external.id).toBe(builtin.id);
+    expect(external.dataId).toBe("agent-flow");
     expect(external.features).toEqual(features);
     expect(external.targetDir).not.toBe(builtin.targetDir);
     writeFileSync(

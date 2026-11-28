@@ -102,6 +102,13 @@ export function resolveProduct(input, cargoFeatures) {
   )
     throw new Error("Invalid product ID");
   if (
+    input.dataId !== undefined &&
+    (typeof input.dataId !== "string" ||
+      !/^[a-z][a-z0-9-]*$/.test(input.dataId) ||
+      (input.id === "standard" && input.dataId !== "standard"))
+  )
+    throw new Error("Invalid product data ID");
+  if (
     input.productName !== undefined &&
     (typeof input.productName !== "string" || !input.productName.trim())
   )
@@ -191,6 +198,7 @@ export function resolveProduct(input, cargoFeatures) {
     throw new Error("Default sidebar panel must be an enabled panel");
   return {
     id: input.id,
+    ...(input.dataId === undefined ? {} : { dataId: input.dataId }),
     ...(input.version === undefined ? {} : { version: input.version }),
     ...(input.productName === undefined
       ? {}
@@ -400,6 +408,7 @@ export function loadProduct(
   const product = {
     ...config,
     cargoFeatures: graph,
+    dataId: config.dataId ?? config.id,
     cliName: config.cliName ?? DEFAULT_CLI_NAME,
     version:
       config.version ?? readFileSync(resolve(ROOT, "VERSION"), "utf8").trim(),
@@ -418,6 +427,7 @@ export function loadProduct(
     AGENT_HUB_ICON_DIR: product.iconDir,
     AGENT_HUB_PRODUCT: selection,
     AGENT_HUB_PRODUCT_ID: config.id,
+    AGENT_HUB_DATA_ID: product.dataId,
     AGENT_HUB_PRODUCT_CONFIG: configPath,
     AGENT_HUB_PRODUCT_HASH: hash,
     AGENT_HUB_PRODUCT_VERSION: product.version,

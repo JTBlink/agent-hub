@@ -299,6 +299,7 @@ pub fn start_file_watcher<R: tauri::Runtime>(app: tauri::AppHandle<R>, store: Ar
             }
         };
 
+        let mut data_version = store.data_version().ok();
         let mut watched = HashSet::new();
         let mut last_sync = Instant::now() - WATCH_RESCAN_INTERVAL;
         let mut last_emit = Instant::now() - WATCH_EMIT_DEBOUNCE;
@@ -349,7 +350,12 @@ pub fn start_file_watcher<R: tauri::Runtime>(app: tauri::AppHandle<R>, store: Ar
                 }
             }
             if last_sync.elapsed() >= WATCH_RESCAN_INTERVAL {
-                let changed = sync_watch_set(&mut watcher, &mut watched, &store);
+                let external_write = store.data_version().is_ok_and(|version| {
+                    data_version
+                        .replace(version)
+                        .is_some_and(|previous| previous != version)
+                });
+                let changed = sync_watch_set(&mut watcher, &mut watched, &store) || external_write;
                 // No path information here, so a mute window classifies as
                 // Foreign: the change defers instead of vanishing.
                 match decide_emit(

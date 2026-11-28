@@ -51,7 +51,7 @@ const BRIDGE_BIN_NAME: &str = if cfg!(windows) {
 pub fn bridge_dir() -> PathBuf {
     std::env::var_os("AGENT_HUB_BRIDGE_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|| central_repo::home_base_dir().join("bin"))
+        .unwrap_or_else(|| central_repo::product_home_base_dir().join("bin"))
 }
 
 /// Whether `name` is one of the files the bridge keeps in [`bridge_dir`].

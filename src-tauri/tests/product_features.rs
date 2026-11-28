@@ -71,17 +71,17 @@ fn build_info_describes_actual_compilation_without_opening_user_data() {
 }
 
 #[test]
-fn supported_product_identity_preserves_standard_and_isolates_personal() {
+fn product_data_identity_controls_the_home_and_platform_namespace() {
     let product = app_lib::product::current();
     let profile = std::path::Path::new("profile");
     // These are product contracts, independent of feature set and build digest.
-    let (application_id, home) = match product.product_id {
+    let (application_id, home) = match product.data_id {
         "standard" => ("com.jtstudio.agenthub", "profile/.agent-hub"),
         "personal" => (
             "com.jtstudio.agenthub.personal",
             "profile/.agent-hub-personal",
         ),
-        _ => return, // Other independently defined products have their own contracts.
+        _ => return, // Private manifests can select their own data namespace.
     };
     assert_eq!(app_lib::product::application_id(), application_id);
     assert_eq!(

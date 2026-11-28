@@ -7,10 +7,13 @@ pub const VERSION: &str = env!("AGENT_HUB_PRODUCT_VERSION");
 
 /// Command name presented by the companion CLI and used in the bundle.
 pub const CLI_NAME: &str = env!("AGENT_HUB_PRODUCT_CLI_NAME");
+const PRODUCT_ID: &str = env!("AGENT_HUB_PRODUCT_ID");
+const DATA_ID: &str = env!("AGENT_HUB_DATA_ID");
 
 #[derive(Debug, serde::Serialize)]
 pub struct BuildInfo {
     pub product_id: &'static str,
+    pub data_id: &'static str,
     pub config_hash: &'static str,
     pub base_commit: &'static str,
     pub features: Vec<&'static str>,
@@ -20,7 +23,8 @@ pub struct BuildInfo {
 /// Describe compiled features, independently of runtime environment variables.
 pub fn current() -> BuildInfo {
     BuildInfo {
-        product_id: env!("AGENT_HUB_PRODUCT_ID"),
+        product_id: PRODUCT_ID,
+        data_id: DATA_ID,
         config_hash: env!("AGENT_HUB_PRODUCT_HASH"),
         base_commit: env!("AGENT_HUB_BASE_COMMIT"),
         features: COMPILED_FEATURES.to_vec(),
@@ -29,31 +33,34 @@ pub fn current() -> BuildInfo {
 }
 
 /// Stable identity for application-owned data and platform schedules.
-/// A feature-set update keeps this identity; separate products use separate IDs.
 pub fn application_id() -> String {
-    let product = current();
-    if product.product_id == "standard" {
+    if DATA_ID == "standard" {
         "com.jtstudio.agenthub".into()
     } else {
-        format!("com.jtstudio.agenthub.{}", product.product_id)
+        format!("com.jtstudio.agenthub.{DATA_ID}")
     }
 }
 
-/// Preserve the standard home while isolating independently built products.
 pub fn home_directory(home: &std::path::Path) -> std::path::PathBuf {
-    let product = current();
-    if product.product_id == "standard" {
+    home_for_id(home, DATA_ID)
+}
+
+pub(crate) fn product_home_directory(home: &std::path::Path) -> std::path::PathBuf {
+    home_for_id(home, PRODUCT_ID)
+}
+
+fn home_for_id(home: &std::path::Path, id: &str) -> std::path::PathBuf {
+    if id == "standard" {
         home.join(".agent-hub")
     } else {
-        home.join(format!(".agent-hub-{}", product.product_id))
+        home.join(format!(".agent-hub-{id}"))
     }
 }
 
 pub(crate) fn credential_service() -> String {
-    let product = current();
-    if product.product_id == "standard" {
+    if DATA_ID == "standard" {
         "agent-hub-git-backup".into()
     } else {
-        format!("agent-hub-git-backup-{}", product.product_id)
+        format!("agent-hub-git-backup-{DATA_ID}")
     }
 }

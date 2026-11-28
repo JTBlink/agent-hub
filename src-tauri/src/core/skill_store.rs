@@ -657,6 +657,14 @@ impl SkillStore {
         Ok(rows)
     }
 
+    /// Changes when another connection commits to this database.
+    pub(super) fn data_version(&self) -> rusqlite::Result<u64> {
+        self.conn
+            .lock()
+            .unwrap()
+            .pragma_query_value(None, "data_version", |row| row.get(0))
+    }
+
     // ── Settings ──
 
     pub fn proxy_url(&self) -> Option<String> {

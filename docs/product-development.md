@@ -37,6 +37,7 @@
 - `id`：稳定产品身份，使用小写字母、数字和短横线，以小写字母开头。更改它会改变运行目录与应用身份。
 - `iconDir`：可选图标目录，包含平台图标、SVG 母版和 macOS 单色托盘图标；Agent Flow 使用 `products/agent-flow/icons`，同时替换开发预览与构建后的网页图标。
 - `productName`：可选安装包名称与窗口标题；Agent Flow 使用 `Agent Flow`。未配置时沿用默认产品名称。
+- `dataId`：可选运行数据身份，默认取 `id`。Agent Flow 使用 `standard`，与 AgentHub 标准版共用技能库、数据库、设置、凭据和任务状态。安装与 CLI 发布目录仍按产品 `id` 区分。
 - `cliName`：可选配套 CLI 命令名，使用小写字母开头，仅包含小写字母、数字和短横线，以 `-cli` 结尾。Agent Flow 使用 `agent-flow-cli`，默认名称为 `agent-hub-cli`。
 - `sidebar.primary`、`sidebar.bottom`：上下两组入口及顺序，不得重复。统一能力配置决定哪些入口实际可用。
 - `sidebar.defaultPanel`：默认面板 ID；其能力关闭后回退到可用面板。
@@ -67,7 +68,7 @@
 - 开发时可编辑产品清单里的界面字段或当前预设文件。有效配置推送给当前窗口，校验失败时保留上一份有效配置。启动页在下次打开时生效。切换预设路径、编译特性、模块入口或产品身份后，重启开发构建。
 - `devPort`：可选开发端口。标准版默认 1420，个人版 1421，其他 ID 派生默认端口。
 
-内置产品在统一配置的 `products` 中声明能力。仓库外的产品清单通过 `features` 显式选择特性。外部清单可以沿用 `agent-flow` 产品 ID，保留安装标识和本机数据目录。`standard` 和 `personal` 由内置清单保留。
+内置产品在统一配置的 `products` 中声明能力。仓库外的产品清单通过 `features` 显式选择特性。外部清单可以沿用 `agent-flow` 产品 ID，保留安装标识。要共用标准版数据，还需声明 `"dataId": "standard"`。`standard` 和 `personal` 由内置清单保留。
 
 ```bash
 ./agent-hub.sh build                                  # 标准版 release
@@ -111,6 +112,7 @@ node scripts/update-default-content.mjs "$content_revision"
 ```json
 {
   "id": "agent-flow",
+  "dataId": "standard",
   "productName": "Agent Flow",
   "features": ["cloud-sync", "github", "gitlab", "herdr"],
   "sidebar": {
@@ -237,7 +239,7 @@ export const notesModule: FeatureModule = {
 
 标准版运行目录保持 `~/.agent-hub/`，个人版使用 `~/.agent-hub-personal/`，例如备份为 `~/.agent-hub-personal/backup`。其他独立产品采用 `~/.agent-hub-<产品ID>/`。所有业务路径从 Rust product／central_repo 模块派生，功能内部不拼接产品主目录。
 
-标准 Cargo 输出位于 `src-tauri/target/`，其他产品位于其同级 `target-products/<产品与配置摘要>/`。前端、sidecar 与类型缓存位于 `node_modules/.cache/agent-hub/products/` 的独立子目录；更新特性集合会改变构建摘要，不改变稳定产品数据身份。
+标准 Cargo 输出位于 `src-tauri/target/`，其他产品位于其同级 `target-products/<产品与配置摘要>/`。前端、sidecar 与类型缓存位于 `node_modules/.cache/agent-hub/products/` 的独立子目录；更新特性集合会改变构建摘要，运行数据身份由 `dataId` 决定。产品功能由各自清单决定，安装标识、桌面窗口、日志和 CLI 调用入口按产品区分。旧版独立数据目录保留，产品不会自动合并两套数据。
 
 早期本地测试曾使用 `~/.agent-hub-products/personal/`。新默认路径不自动合并该目录；已有内容应在停止旧实例后显式迁移，并检查数据库路径、任务执行回执和自定义库配置，不直接对运行中的数据库移动目录。旧目录不能因换名而自动删除。
 

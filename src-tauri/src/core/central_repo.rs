@@ -93,21 +93,23 @@ fn default_base_dir() -> PathBuf {
     home_base_dir()
 }
 
-/// `~/.agent-hub`, ignoring any configured relocation.
-///
-/// The library can be moved anywhere the user likes, but a few things must
-/// stay where another program can find them without being told — the CLI
-/// bridge an agent runs, above all. Those use this rather than [`base_dir`].
+/// Application data home, ignoring any configured library relocation.
 pub fn home_base_dir() -> PathBuf {
-    if let Some(path) = HOME_DIR_OVERRIDE
+    crate::product::home_directory(&user_home())
+}
+
+/// Product-owned runtime files such as the CLI bridge and diagnostic logs.
+pub fn product_home_base_dir() -> PathBuf {
+    crate::product::product_home_directory(&user_home())
+}
+
+fn user_home() -> PathBuf {
+    HOME_DIR_OVERRIDE
         .get_or_init(|| Mutex::new(None))
         .lock()
         .unwrap()
         .clone()
-    {
-        return crate::product::home_directory(&path);
-    }
-    crate::product::home_directory(&dirs::home_dir().expect("Cannot determine home directory"))
+        .unwrap_or_else(|| dirs::home_dir().expect("Cannot determine home directory"))
 }
 
 #[cfg(test)]
@@ -120,7 +122,7 @@ pub(crate) fn set_test_home_dir_override(path: Option<PathBuf>) {
 
 /// Logs stay with the application identity even when the skill library moves.
 pub fn log_dir() -> PathBuf {
-    home_base_dir().join("logs")
+    product_home_base_dir().join("logs")
 }
 
 fn config_file_path() -> PathBuf {
@@ -331,7 +333,7 @@ pub fn default_skills_dir() -> PathBuf {
 /// The pre-2026 default Skills root. It remains a migration source for
 /// links created before the library moved under `~/.agent-hub`.
 pub(crate) fn legacy_default_skills_dir() -> PathBuf {
-    if crate::product::current().product_id != "standard" {
+    if crate::product::current().data_id != "standard" {
         return default_skills_dir();
     }
     home_base_dir()

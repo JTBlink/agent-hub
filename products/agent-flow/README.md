@@ -26,4 +26,4 @@ npm run tauri -- icon products/agent-flow/icons/tray-template.svg -o node_module
 cp node_modules/.cache/agent-flow-tray/32x32.png products/agent-flow/icons/tray-template.png
 ```
 
-运行数据默认位于 `~/.agent-hub-agent-flow/`，独立应用标识为 `com.jtstudio.agenthub.agent-flow`。产品名称和图标不改变项目内的共享协议。
+运行数据与 AgentHub 标准版共用 `~/.agent-hub/`。安装标识为 `com.jtstudio.agenthub.agent-flow`，CLI 发布到 `~/.agent-hub-agent-flow/bin/agent-flow-cli`。产品名称和图标不改变项目内的共享协议。

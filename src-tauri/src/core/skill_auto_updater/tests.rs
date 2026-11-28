@@ -38,3 +38,27 @@ fn is_due_returns_false_when_interval_overflow() {
     let past = Utc::now() - chrono::Duration::hours(1);
     assert!(!is_due(Some(past), Duration::MAX));
 }
+
+#[test]
+fn automatic_rounds_share_the_lock_and_completion_timestamp() {
+    let directory = tempfile::tempdir().unwrap();
+    let database = directory.path().join("skills.db");
+    let first = SkillStore::new(&database).unwrap();
+    let second = SkillStore::new(&database).unwrap();
+    first.set_setting(SETTING_INTERVAL, "1h").unwrap();
+
+    let lock = OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(directory.path().join(ROUND_LOCK))
+        .unwrap();
+    FileExt::try_lock_exclusive(&lock).unwrap();
+    assert!(run_due_round(&second, directory.path()).unwrap().is_none());
+    assert!(read_last_run(&second).is_none());
+    drop(lock);
+
+    assert!(run_due_round(&first, directory.path()).unwrap().is_some());
+    assert!(read_last_run(&second).is_some());
+    assert!(run_due_round(&second, directory.path()).unwrap().is_none());
+}

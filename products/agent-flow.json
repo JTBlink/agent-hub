@@ -1,5 +1,6 @@
 {
   "id": "agent-flow",
+  "dataId": "standard",
   "productName": "Agent Flow",
   "cliName": "agent-flow-cli",
   "layoutPreset": "layouts/agent-flow.json",

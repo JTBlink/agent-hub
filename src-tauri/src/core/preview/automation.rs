@@ -45,16 +45,27 @@ pub struct Automation {
     path: PathBuf,
     token: String,
 }
+/// Product-specific route to the live desktop, independent of shared browser data.
+pub fn control_path() -> PathBuf {
+    crate::core::central_repo::product_home_base_dir().join("preview/control.json")
+}
+
 impl Automation {
     pub fn start(browsers: Arc<Browsers>) -> Result<Self, AppError> {
-        Self::start_inner(browsers, Weak::new())
+        let path = browsers.root.join("control.json");
+        Self::start_inner(browsers, Weak::new(), path)
     }
     pub fn start_for_preview(preview: &Arc<super::Preview>) -> Result<Self, AppError> {
-        Self::start_inner(preview.browsers.clone(), Arc::downgrade(preview))
+        Self::start_inner(
+            preview.browsers.clone(),
+            Arc::downgrade(preview),
+            control_path(),
+        )
     }
     fn start_inner(
         browsers: Arc<Browsers>,
         preview: Weak<super::Preview>,
+        path: PathBuf,
     ) -> Result<Self, AppError> {
         let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))?;
         listener.set_nonblocking(true)?;
@@ -63,14 +74,19 @@ impl Automation {
             url: format!("http://127.0.0.1:{}", listener.local_addr()?.port()),
             token: token.clone(),
         };
+        let control_dir = path.parent().expect("preview control path has a parent");
         std::fs::create_dir_all(&browsers.root)?;
+        std::fs::create_dir_all(control_dir)?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&browsers.root, std::fs::Permissions::from_mode(0o700))?;
+            let private = std::fs::Permissions::from_mode(0o700);
+            std::fs::set_permissions(&browsers.root, private.clone())?;
+            if control_dir != browsers.root {
+                std::fs::set_permissions(control_dir, private)?;
+            }
         }
-        let path = browsers.root.join("control.json");
-        let mut file = tempfile::NamedTempFile::new_in(&browsers.root)?;
+        let mut file = tempfile::NamedTempFile::new_in(control_dir)?;
         file.write_all(&serde_json::to_vec(&endpoint).map_err(AppError::io)?)?;
         file.persist(&path)
             .map_err(|error| AppError::io(error.error))?;
