@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { Link, MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
-import type { Project } from "../../../lib/tauri";
+import { getProjectMetadata, type Project } from "../../../lib/tauri";
 import { getSettings, setSettings } from "../../../lib/settingsApi";
 import * as api from "../api";
 import { SidebarHerdr } from "./SidebarHerdr";
@@ -26,6 +26,7 @@ vi.mock("../../../lib/settingsApi", () => ({
 }));
 vi.mock("../../../lib/tauri", async (original) => ({
   ...(await original<typeof import("../../../lib/tauri")>()),
+  getProjectMetadata: vi.fn(),
   getSettings: (await import("../../../lib/settingsApi")).getSettings,
   setSettings: (await import("../../../lib/settingsApi")).setSettings,
 }));
@@ -66,6 +67,8 @@ vi.mock("../api", async (original) => ({
 }));
 beforeEach(() => {
   vi.clearAllMocks();
+  app.refreshProjects.mockResolvedValue([]);
+  vi.mocked(getProjectMetadata).mockResolvedValue([]);
   app.missing = false;
   app.worktreesLoading = false;
   vi.mocked(getSettings).mockResolvedValue(null);
@@ -303,74 +306,99 @@ it("opens full-sidebar settings, saves opt-in, coalesces project changes and sto
   }
 });
 
-it("opens the checkout returned by Herdr and navigates with an explicit attachment", async () => {
-  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  vi.spyOn(document, "hasFocus").mockReturnValue(true);
-  localStorage.clear();
-  vi.mocked(api.getHerdrInventory).mockResolvedValue({
-    installed: true,
-    sessions: [{ name: "default", running: true, default: true }],
-  });
-  vi.mocked(api.getHerdrSnapshot).mockResolvedValue({
-    version: "0.9.3",
-    workspaces: [
-      {
+it.each([
+  { registered: true, projectState: "registered" },
+  { registered: false, projectState: "newly registered" },
+])(
+  "navigates to a $projectState Herdr project without waiting for a full scan",
+  async ({ registered }) => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    localStorage.clear();
+    const { makeProject } =
+      await import("../../../../tests/fixtures/workspace");
+    const project = {
+      ...makeProject(),
+      id: "opened-project",
+      path: "/projects/second",
+    };
+    if (registered) app.projects.push(project);
+    vi.mocked(getProjectMetadata).mockResolvedValue([project]);
+    app.refreshProjects.mockImplementation((opened?: Project) =>
+      opened ? Promise.resolve([opened]) : new Promise(() => undefined),
+    );
+    vi.mocked(api.getHerdrInventory).mockResolvedValue({
+      installed: true,
+      sessions: [{ name: "default", running: true, default: true }],
+    });
+    vi.mocked(api.getHerdrSnapshot).mockResolvedValue({
+      version: "0.9.3",
+      workspaces: [
+        {
+          workspace_id: "w1",
+          label: "Same label",
+          active_tab_id: "w1:t1",
+          directory: "/projects/second",
+          branch: "main",
+        },
+      ],
+      tabs: [],
+      panes: [],
+      agents: [],
+    });
+    vi.mocked(api.openHerdrWorkspace).mockResolvedValue({
+      project_id: "opened-project",
+      path: "/projects/second",
+      target: {
+        session: "default",
         workspace_id: "w1",
-        label: "Same label",
-        active_tab_id: "w1:t1",
-        directory: "/projects/second",
-        branch: "main",
+        pane_id: "w1:p1",
+        terminal_id: "pty-1",
+        revision: 1,
+        agent_session: null,
       },
-    ],
-    tabs: [],
-    panes: [],
-    agents: [],
-  });
-  vi.mocked(api.openHerdrWorkspace).mockResolvedValue({
-    project_id: "opened-project",
-    path: "/projects/second",
-    target: {
-      session: "default",
-      workspace_id: "w1",
-      pane_id: "w1:p1",
-      terminal_id: "pty-1",
-      revision: 1,
-      agent_session: null,
-    },
-  });
-  const host = document.createElement("div");
-  document.body.append(host);
-  const root = createRoot(host);
-  try {
-    await act(async () =>
-      root.render(
-        <MemoryRouter>
-          <SidebarHerdr active />
-          <Location />
-        </MemoryRouter>,
-      ),
-    );
-    const button = host.querySelector<HTMLButtonElement>(
-      '[data-herdr-workspace="w1"]',
-    );
-    expect(button).toBeTruthy();
-    await act(async () => button!.click());
-    expect(app.refreshProjects).toHaveBeenCalled();
-    expect(host.querySelector("output")?.textContent).toBe(
-      "/project/opened-project?worktree=%2Fprojects%2Fsecond",
-    );
-    expect(api.openHerdrWorkspace).toHaveBeenCalledWith(
-      "default",
-      "w1",
-      undefined,
-    );
-  } finally {
-    await act(async () => root.unmount());
-    host.remove();
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  }
-});
+    });
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(async () =>
+        root.render(
+          <MemoryRouter>
+            <SidebarHerdr active />
+            <Location />
+          </MemoryRouter>,
+        ),
+      );
+      const button = host.querySelector<HTMLButtonElement>(
+        '[data-herdr-workspace="w1"]',
+      );
+      expect(button).toBeTruthy();
+      await act(async () => button!.click());
+      expect(host.querySelector("output")?.textContent).toBe(
+        "/project/opened-project?worktree=%2Fprojects%2Fsecond",
+      );
+      expect(host.querySelector("output")?.dataset.attachment).toContain(
+        '"workspace_id":"w1"',
+      );
+      expect(getProjectMetadata).toHaveBeenCalledTimes(registered ? 0 : 1);
+      expect(app.refreshProjects.mock.calls).toEqual(
+        registered ? [] : [[project], []],
+      );
+      expect(api.openHerdrWorkspace).toHaveBeenCalledWith(
+        "default",
+        "w1",
+        undefined,
+      );
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      app.projects.length = 0;
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    }
+  },
+);
 
 it("opens the current checkout in the selected running session", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);

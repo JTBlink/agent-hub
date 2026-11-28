@@ -19,6 +19,7 @@ import {
   lastHerdrAttachment,
   readTerminalLayout,
 } from "../../../lib/terminalLayout";
+import { getProjectMetadata } from "../../../lib/tauri";
 import { worktreeUrl } from "../../../lib/worktreeApi";
 import { cn } from "../../../utils";
 import { ThemedSelect } from "../../../components/ThemedSelect";
@@ -145,13 +146,22 @@ export function SidebarHerdr({
   ) => {
     const scope = latest.current;
     if (!mounted.current) return;
-    await refreshProjects();
+    // Existing projects can route immediately. A newly registered project only
+    // needs its metadata in the shared context before the route resolves.
+    const known = projects.some((project) => project.id === value.project_id);
+    const project = known
+      ? undefined
+      : (await getProjectMetadata()).find(
+          (item) => item.id === value.project_id,
+        );
     if (
       !mounted.current ||
       scope.session !== latest.current.session ||
       scope.route !== latest.current.route
     )
       return;
+    if (!known && !project) throw new Error("Herdr project is unavailable");
+    if (project) void refreshProjects(project);
     setOpened(value);
     lastPanes.current.set(
       `${session}:${value.target.workspace_id}`,
@@ -161,6 +171,7 @@ export function SidebarHerdr({
       ...navigation,
       state: { preserveSidebar: true, herdrAttachment: value },
     });
+    if (project) void refreshProjects();
   };
   useHerdrProjectWorkspace({
     enabled:
