@@ -85,6 +85,7 @@ try {
       version: "1.2.0",
       features: ["gitlab", "herdr"],
       layoutPreset: "custom/workbench.json",
+      iconDir: "products/agent-flow/icons",
       sidebarModules: {
         review: {
           entry: "custom/review.tsx",
@@ -104,7 +105,12 @@ try {
         sidebarWidth: 320,
         startPage: "review",
       },
-      appearance: { accent: "teal", textSize: "large" },
+      appearance: {
+        accent: "teal",
+        textSize: "large",
+        theme: "dark",
+        palette: "navy",
+      },
       shortcuts: { commands: "Mod+Shift+P" },
       sidebar: {
         primary: ["projects", "herdr", "discover", "review"],
@@ -151,6 +157,11 @@ try {
     layout.layout.startPath !== "/custom/review" ||
     !layout.layout.toolbar.includes("module:review") ||
     layout.appearance.accent !== "teal" ||
+    layout.appearance.theme !== "dark" ||
+    layout.appearance.palette !== "navy" ||
+    !readFileSync(join(build.frontendDist, "icons/app-mark.svg")).equals(
+      readFileSync(join(installed, "products/agent-flow/icons/app-icon.svg")),
+    ) ||
     layout.shortcuts.commands !== "Mod+Shift+P"
   )
     throw new Error("Unexpected Agent Flow build identity or modules");

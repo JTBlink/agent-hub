@@ -7,8 +7,8 @@
 在自己的产品仓库维护 `product.json` 和 `custom/`，从 crates.io 安装固定版本的构建入口后运行以下命令。
 
 ```bash
-cargo install agent-hub-core --version '=0.4.0' --features sdk-cli --locked
-agent-hub-sdk build product.json .build/sdk-0.4.0
+cargo install agent-hub-core --version '=0.5.0' --features sdk-cli --locked
+agent-hub-sdk build product.json .build/sdk-0.5.0
 ```
 
 启用 `sdk-cli` 后，Cargo 自动获取同版本的 `agent-hub-desktop` 和 `agent-hub-fonts`。SDK 命令校验并解压 React 工作台、Rust 宿主、CLI 和内置资源，无需克隆 AgentHub 仓库。前端第三方依赖仍通过 npm 安装，可使用镜像或缓存。
@@ -28,7 +28,7 @@ npm run app:build -- --product /path/to/product.json
 
 ```toml
 [dependencies]
-agent-hub-core = "=0.4.0"
+agent-hub-core = "=0.5.0"
 ```
 
 通过 `agent_hub_core::agent_launch` 使用 Agent 启动方案，通过 `agent_hub_core::skill_source` 实现私有 Skill 来源。此方式只编译 Rust 库。构建完整桌面产品时使用上面的 `agent-hub-sdk build`。
