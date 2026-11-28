@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "agent-hub"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "aes-gcm",
  "agent-hub-core",
@@ -118,7 +118,7 @@ dependencies = [
 
 [[package]]
 name = "agent-hub-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "dirs 5.0.1",

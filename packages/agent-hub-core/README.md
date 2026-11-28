@@ -1,10 +1,10 @@
 # AgentHub Core SDK
 
-下游可以通过 crates.io 安装同版本的 SDK 构建入口。以下以 SDK 0.2.0 为例：
+下游可以通过 crates.io 安装同版本的 SDK 构建入口。以下以 SDK 0.3.0 为例：
 
 ```bash
-cargo install agent-hub-core --version '=0.2.0' --features sdk-cli --locked
-agent-hub-sdk build product.json .build/sdk-0.2.0
+cargo install agent-hub-core --version '=0.3.0' --features sdk-cli --locked
+agent-hub-sdk build product.json .build/sdk-0.3.0
 ```
 
 使用 `agent-hub-sdk lock` 查看锁定的源码提交，或用 `agent-hub-sdk install <目录>` 只解压 SDK。Rust 项目可依赖同版本的 `agent-hub-core` 使用启动方案 API。
@@ -161,6 +161,6 @@ node packages/agent-hub-core/package.mjs /path/to/agent-hub-core.tar.gz
 
 仓库的 **SDK Candidate** 工作流可从指定提交生成候选包。上传候选前会校验 SHA-256，从解压目录构建两份带不同侧栏扩展的产品，并检查两组能力配置的 Rust 宿主和 CLI。
 
-正式发布使用 `sdk-v<SDK 版本>` 标签。**SDK Release Gate** 工作流取用同一源码提交的成功候选，重新验证归档、源码版本和配套脚本。通过后将 `agent-hub-core` 发布到 crates.io。版本差异见归档的 `SDK-CHANGELOG.md`。
+正式发布使用 `sdk-v<SDK 版本>` 标签。**SDK Release** 工作流取用同一源码提交的成功候选，重新验证归档、源码版本和配套脚本。通过后依次将 `agent-hub-fonts`、`agent-hub-desktop` 和 `agent-hub-core` 发布到 crates.io。版本差异见归档的 `SDK-CHANGELOG.md`。
 
 维护者完整流程见解压目录中的 `docs/sdk-release.md`。

@@ -120,13 +120,13 @@ agent-hub-cli --json automations logs '<task-id>' --run '<run-id>'
 
 ## 引用 AgentHub Core SDK
 
-[`agent-hub-core`](https://crates.io/crates/agent-hub-core) 提供 Rust 启动方案 API，以及获取完整 SDK、构建定制桌面产品的命令。以下以 `0.2.0` 为例。
+[`agent-hub-core`](https://crates.io/crates/agent-hub-core) 提供 Rust 启动方案 API，以及获取完整 SDK、构建定制桌面产品的命令。以下以 `0.3.0` 为例。
 
 **在 Rust 项目中引用**，将版本写入 `Cargo.toml`：
 
 ```toml
 [dependencies]
-agent-hub-core = "=0.2.0"
+agent-hub-core = "=0.3.0"
 ```
 
 Rust 代码通过 `agent_hub_core::agent_launch` 校验和解析 Agent 启动方案。
@@ -134,11 +134,11 @@ Rust 代码通过 `agent_hub_core::agent_launch` 校验和解析 Agent 启动方
 **构建定制桌面产品**，先安装 SDK 命令：
 
 ```bash
-cargo install agent-hub-core --version '=0.2.0' --features sdk-cli --locked
-agent-hub-sdk build product.json .build/agent-hub-core-0.2.0
+cargo install agent-hub-core --version '=0.3.0' --features sdk-cli --locked
+agent-hub-sdk build product.json .build/agent-hub-core-0.3.0
 ```
 
-在产品仓库维护 `product.json`，并把品牌和侧栏扩展放在旁边的 `custom/`。构建命令会校验由 Cargo 提供的版本化 SDK 资源，并按产品清单选择功能、构建界面和配套 CLI。只下载和解压时，可使用 `agent-hub-sdk install .build/agent-hub-core-0.2.0`。安装需要 Node.js，桌面构建还需要对应平台的 Rust 与 Tauri 工具链。 [产品清单和扩展示例](packages/agent-hub-core/README.md)
+在产品仓库维护 `product.json`，并把品牌和侧栏扩展放在旁边的 `custom/`。构建命令会校验由 Cargo 提供的版本化 SDK 资源，并按产品清单选择功能、构建界面和配套 CLI。只下载和解压时，可使用 `agent-hub-sdk install .build/agent-hub-core-0.3.0`。安装需要 Node.js，桌面构建还需要对应平台的 Rust 与 Tauri 工具链。 [产品清单和扩展示例](packages/agent-hub-core/README.md)
 
 下载和使用公开 SDK 无需发布令牌。维护者可查看 [SDK 发布规范](docs/sdk-release.md)，了解如何配置一枚 crates.io 令牌并通过 SDK 标签自动发布全部三个包。
 
