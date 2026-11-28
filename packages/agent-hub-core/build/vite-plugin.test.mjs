@@ -95,6 +95,38 @@ it("publishes layout edits without a reload and retains the last valid preview",
   );
 });
 
+it("uses the product icons for both the title bar and favicon in dev and builds", () => {
+  const { root, path } = fixture();
+  const { iconDir } = loadProduct("agent-flow");
+  writeFileSync(
+    path,
+    JSON.stringify({ ...JSON.parse(readFileSync(path, "utf8")), iconDir }),
+  );
+  const selection = loadProduct(path);
+  directories.push(selection.generatedDir + "-development");
+  const output = join(root, "dist");
+  mkdirSync(join(output, "icons"), { recursive: true });
+  vi.stubEnv("AGENT_HUB_PRODUCT_OUTPUT_DIR", output);
+  const plugin = productViteConfig(root).plugins[0];
+  const use = vi.fn();
+  plugin.configureServer({
+    watcher: Object.assign(new EventEmitter(), { add: vi.fn() }),
+    ws: { on: vi.fn() },
+    middlewares: { use },
+  });
+  plugin.writeBundle();
+  for (const [url, source] of [
+    ["/icons/app-mark.svg", "app-icon.svg"],
+    ["/icons/32x32.png", "32x32.png"],
+  ]) {
+    const expected = readFileSync(join(iconDir, source));
+    const response = { setHeader: vi.fn(), end: vi.fn() };
+    use.mock.calls[0][0]({ url: url + "?preview" }, response, vi.fn());
+    expect(response.end).toHaveBeenCalledWith(expected);
+    expect(readFileSync(join(output, url))).toEqual(expected);
+  }
+});
+
 it("keeps lazy feature modules on the same application context as the workbench", async () => {
   const { root } = fixture();
   vi.stubEnv("AGENT_HUB_PRODUCT_HASH", "development");

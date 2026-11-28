@@ -77,7 +77,12 @@
       "sidebarWidth": 280,
       "startPage": "dashboard"
     },
-    "appearance": { "accent": "blue", "textSize": "default" },
+    "appearance": {
+      "accent": "blue",
+      "textSize": "default",
+      "theme": null,
+      "palette": null
+    },
     "shortcuts": {
       "commands": "Mod+K",
       "settings": "Mod+,",

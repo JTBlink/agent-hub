@@ -5,7 +5,12 @@
     "sidebarWidth": 320,
     "startPage": "tasks"
   },
-  "appearance": { "accent": "teal", "textSize": "default" },
+  "appearance": {
+    "accent": "blue",
+    "textSize": "default",
+    "theme": "dark",
+    "palette": "navy"
+  },
   "shortcuts": { "commands": "Mod+Shift+P" },
   "sidebar": {
     "primary": [

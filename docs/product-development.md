@@ -64,6 +64,7 @@
 - 工具栏支持 `workspace`、`commands`、`help`、`settings`、`refresh` 和 `module:<模块 ID>`。内置页面按钮导航，面板按钮复用侧栏。侧栏底部入口由 `sidebar.bottom` 排序。
 - `startPage` 选择从首页启动且无需恢复工作区时显示的页面。私有模块通过 `{ "entry": "custom/review.tsx", "requires": ["gitlab"], "route": "/custom/review" }` 声明入口、依赖与启动路由，并在模块的 `routes` 注册同一路径。`sidebarModules` 原有字符串写法仍可使用。
 - 主题色支持 `blue`、`teal`、`violet`，随明暗主题切换对应色值。用户已保存的字号和侧栏宽度优先于产品默认值。
+- `appearance.theme` 可设为 `dark`、`light` 或 `system`，作为产品的默认主题。可选 `appearance.palette: "navy"` 为深色界面和终端启用深蓝灰色板。共用数据目录的产品分别保存主题选择。
 - 快捷键 ID 为 `commands`、`settings`、`refresh`、`search`。`Mod` 对应 macOS 的 Command 和其他系统的 Control，可加 `Shift`。重复或占用系统编辑命令的绑定会被拒绝。
 - 开发时可编辑产品清单里的界面字段或当前预设文件。有效配置推送给当前窗口，校验失败时保留上一份有效配置。启动页在下次打开时生效。切换预设路径、编译特性、模块入口或产品身份后，重启开发构建。
 - `devPort`：可选开发端口。标准版默认 1420，个人版 1421，其他 ID 派生默认端口。

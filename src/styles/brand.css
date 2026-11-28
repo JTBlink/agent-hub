@@ -169,4 +169,30 @@
     --shadow-card: 0 4px 16px rgb(0 0 0 / 16%);
     --shadow-card-hover: 0 18px 50px rgb(0 0 0 / 25%);
   }
+
+  :root.dark[data-product-palette="navy"] {
+    --palette-blue: 150 191 250;
+    --palette-neutral: 145 163 187;
+    --color-bg: #151d2b;
+    --color-bg-secondary: #101724;
+    --color-surface: #1c2738;
+    --color-surface-hover: #25344a;
+    --color-surface-active: #2e405a;
+    --color-border: #394c66;
+    --color-border-subtle: #2b3a50;
+    --color-border-faint: #223148;
+    --color-text-primary: #dee8f8;
+    --color-text-secondary: #bacbe0;
+    --color-text-tertiary: #a1b3cc;
+    --color-text-muted: #98acc6;
+    --color-text-faint: #849ab5;
+    --color-on-accent: #101724;
+    --terminal-cursor: #96bffa;
+    --terminal-selection: #394f6b;
+    --terminal-selection-inactive: #304159;
+    --terminal-black: #334258;
+    --terminal-white: var(--color-text-secondary);
+    --terminal-bright-black: #8599b6;
+    --terminal-bright-white: var(--color-text-primary);
+  }
 }

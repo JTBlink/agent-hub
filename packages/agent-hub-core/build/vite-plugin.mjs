@@ -8,6 +8,13 @@ import {
   featureCatalog,
 } from "./config.mjs";
 
+const productIconFiles = new Map([
+  ["/icons/app-icon.svg", "app-icon.svg"],
+  ["/icons/app-mark.svg", "app-icon.svg"],
+  ["/icons/32x32.png", "32x32.png"],
+  ["/icons/128x128.png", "128x128.png"],
+]);
+
 /** Keep product selection out of the shared Vite/prototype configuration. */
 export function productViteConfig(root) {
   const product = loadProduct(
@@ -123,13 +130,9 @@ export function productViteConfig(root) {
           };
           server.watcher.on("change", update);
           server.watcher.on("add", update);
-          if (!product.productName) return;
+          if (!product.usesCustomIcons) return;
           server.middlewares.use((req, res, next) => {
-            const filename = {
-              "/icons/app-icon.svg": "app-icon.svg",
-              "/icons/32x32.png": "32x32.png",
-              "/icons/128x128.png": "128x128.png",
-            }[req.url?.split("?")[0]];
+            const filename = productIconFiles.get(req.url?.split("?")[0]);
             if (!filename) return next();
             res.setHeader(
               "Content-Type",
@@ -139,13 +142,13 @@ export function productViteConfig(root) {
           });
         },
         writeBundle() {
-          if (!product.productName) return;
+          if (!product.usesCustomIcons) return;
           const output =
             process.env.AGENT_HUB_PRODUCT_OUTPUT_DIR || resolve(root, "dist");
-          for (const filename of ["app-icon.svg", "32x32.png", "128x128.png"])
+          for (const [url, filename] of productIconFiles)
             copyFileSync(
               resolve(product.iconDir, filename),
-              resolve(output, "icons", filename),
+              resolve(output, url.slice(1)),
             );
         },
         transform(source, id) {

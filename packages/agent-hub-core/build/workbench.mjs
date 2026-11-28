@@ -77,9 +77,11 @@ export function resolveWorkbench(input, selected, featureCatalog) {
   );
   if (
     !["blue", "teal", "violet"].includes(appearance.accent) ||
-    !["small", "default", "large", "xlarge"].includes(appearance.textSize)
+    !["small", "default", "large", "xlarge"].includes(appearance.textSize) ||
+    ![null, "light", "dark", "system"].includes(appearance.theme) ||
+    ![null, "navy"].includes(appearance.palette)
   )
-    throw new Error("Invalid product accent or text size");
+    throw new Error("Invalid product accent, text size, theme or palette");
   const shortcuts = section(
     input.shortcuts,
     catalog.defaults.shortcuts,

@@ -75,7 +75,12 @@ describe("product build selection", () => {
         sidebarWidth: 336,
         startPage: "tasks",
       },
-      appearance: { accent: "teal", textSize: "large" },
+      appearance: {
+        accent: "teal",
+        textSize: "large",
+        palette: "navy",
+        theme: "dark",
+      },
       shortcuts: { commands: "Mod+Shift+P" },
     };
     const product = resolveProduct(manifest, cargoFeatures);
@@ -123,6 +128,8 @@ describe("product build selection", () => {
     { layout: { startPage: "backup" } },
     { layout: { startPage: "skills" } },
     { appearance: { accent: "url(anything)" } },
+    { appearance: { palette: "unknown" } },
+    { appearance: { theme: "unknown" } },
     { shortcuts: { commands: "Mod+O" } },
     { shortcuts: { commands: "Mod+R" } },
   ])("rejects unsafe or inconsistent workbench settings %#", (changes) => {

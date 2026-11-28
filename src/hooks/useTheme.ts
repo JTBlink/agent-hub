@@ -1,10 +1,22 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
+import { productConfig } from "@app/product";
+import { useWorkbench } from "../app/product/workbench";
 import * as api from "../lib/tauri";
 
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
 
-const STORAGE_KEY = "theme";
+const themeProduct: { id: string; dataId?: string } = productConfig;
+
+function isTheme(value: unknown): value is Theme {
+  return value === "light" || value === "dark" || value === "system";
+}
 
 function getSystemTheme(): ResolvedTheme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -23,12 +35,16 @@ function applyThemeClass(resolved: ResolvedTheme, mode: Theme) {
 }
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "light" || stored === "dark" || stored === "system")
-      return stored;
-    return "dark";
+  const { appearance } = useWorkbench();
+  const storageKey =
+    themeProduct.dataId && themeProduct.dataId !== themeProduct.id
+      ? `theme:${themeProduct.id}`
+      : "theme";
+  const [savedTheme, setSavedTheme] = useState<Theme | null>(() => {
+    const stored = localStorage.getItem(storageKey);
+    return isTheme(stored) ? stored : null;
   });
+  const theme = savedTheme ?? appearance.theme ?? "dark";
 
   const subscribe = useCallback(
     (onChange: () => void) => {
@@ -46,25 +62,28 @@ export function useTheme() {
   );
   const resolvedTheme: ResolvedTheme = theme === "system" ? systemTheme : theme;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     applyThemeClass(resolvedTheme, theme);
   }, [resolvedTheme, theme]);
 
   // Load from Tauri settings on mount
   useEffect(() => {
-    api.getSettings("theme").then((v) => {
-      if (v === "light" || v === "dark" || v === "system") {
-        setThemeState(v);
-        localStorage.setItem(STORAGE_KEY, v);
+    api.getSettings(storageKey).then((v) => {
+      if (isTheme(v)) {
+        setSavedTheme(v);
+        localStorage.setItem(storageKey, v);
       }
     });
-  }, []);
+  }, [storageKey]);
 
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    localStorage.setItem(STORAGE_KEY, next);
-    api.setSettings("theme", next);
-  }, []);
+  const setTheme = useCallback(
+    (next: Theme) => {
+      setSavedTheme(next);
+      localStorage.setItem(storageKey, next);
+      api.setSettings(storageKey, next);
+    },
+    [storageKey],
+  );
 
   return { theme, setTheme, resolvedTheme };
 }

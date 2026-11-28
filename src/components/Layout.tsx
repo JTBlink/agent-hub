@@ -1,6 +1,6 @@
 import { embeddedAgentDeliveryAdapter } from "../lib/previewAgentDelivery";
 import { PreviewHost } from "../features/preview/PreviewHost";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { TerminalStartupState } from "./terminal/useTerminalLayout";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -67,14 +67,16 @@ export function Layout() {
     if (welcomeReady && start && start !== "/")
       void navigate(start, { replace: true });
   }, [started, welcomeReady, layout.startPage, layout.startPath, navigate]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.productAccent = appearance.accent;
+    root.dataset.productPalette = appearance.palette ?? "";
     applyProductTextSize(appearance.textSize);
     return () => {
       delete root.dataset.productAccent;
+      delete root.dataset.productPalette;
     };
-  }, [appearance.accent, appearance.textSize]);
+  }, [appearance.accent, appearance.palette, appearance.textSize]);
   useEffect(() => {
     const unlisten = listenWorkspaceEvent<{ projectId: string; path: string }>(
       "workspace-open-directory",

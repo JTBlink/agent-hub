@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { productConfig } from "@app/product";
 import catalog from "../../../products/workbench.json";
+import type { Theme } from "../../hooks/useTheme";
 
 export type WorkbenchCommand = keyof typeof catalog.defaults.shortcuts;
 export type WorkbenchShortcuts = Readonly<Record<WorkbenchCommand, string>>;
@@ -20,7 +21,12 @@ interface Workbench {
     startPage: string;
     startPath?: string;
   };
-  appearance: { accent: string; textSize: string };
+  appearance: {
+    accent: string;
+    textSize: string;
+    theme?: Theme | null;
+    palette?: string | null;
+  };
   shortcuts: WorkbenchShortcuts;
 }
 

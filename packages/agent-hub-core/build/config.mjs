@@ -416,6 +416,7 @@ export function loadProduct(
     baseCommit,
     configPath,
     layoutPath,
+    usesCustomIcons: config.iconDir !== undefined,
     iconDir: resolve(ROOT, config.iconDir ?? "src-tauri/icons"),
     generatedDir,
     frontendDist,
@@ -468,6 +469,7 @@ export function prepareProduct(product) {
   mkdirSync(product.binariesDir, { recursive: true });
   const config = {
     id: product.id,
+    dataId: product.dataId,
     features: product.features,
     sidebar: product.sidebar,
     layout: product.layout,
