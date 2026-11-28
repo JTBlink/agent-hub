@@ -16,6 +16,8 @@ function fixture() {
   const root = mkdtempSync(join(tmpdir(), "agenthub-help-"));
   roots.push(root);
   mkdirSync(join(root, "docs/help/zh/guides"), { recursive: true });
+  mkdirSync(join(root, "public/icons"), { recursive: true });
+  writeFileSync(join(root, "public/icons/app-mark.svg"), "<svg/>");
   writeFileSync(join(root, "VERSION"), "0.1.4\n");
   writeFileSync(
     join(root, "CHANGELOG.md"),
@@ -92,6 +94,14 @@ it("publishes one Markdown article as both offline content and a stable website 
   expect(
     readFileSync(join(root, "docs-site/.generated/zh/first.md"), "utf8"),
   ).toContain("文档适用版本： 0.1.4");
+});
+
+it("publishes the shared logo as a standalone help-site asset", () => {
+  const root = fixture();
+  buildHelp(root);
+  expect(
+    readFileSync(join(root, "docs-site/.generated/public/app-mark.svg")),
+  ).toEqual(readFileSync(join(root, "public/icons/app-mark.svg")));
 });
 
 it("keeps article links, Chinese section anchors and local images usable when source files move", () => {

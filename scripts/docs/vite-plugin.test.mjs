@@ -15,6 +15,8 @@ import { helpContentPlugin } from "./vite-plugin.mjs";
 it("resolves the offline catalog on a direct Vite start with no generated files", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "agenthub-vite-help-")));
   mkdirSync(join(root, "docs/help/zh"), { recursive: true });
+  mkdirSync(join(root, "public/icons"), { recursive: true });
+  writeFileSync(join(root, "public/icons/app-mark.svg"), "<svg/>");
   mkdirSync(join(root, "src"));
   writeFileSync(join(root, "VERSION"), "0.1.4\n");
   writeFileSync(join(root, "CHANGELOG.md"), "# 更新日志\n\n## [Unreleased]\n");

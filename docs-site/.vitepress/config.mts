@@ -11,6 +11,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 const catalog: HelpCatalog = JSON.parse(
   readFileSync(new URL("../.generated/catalog.json", import.meta.url), "utf8"),
 );
+const logoFile = "app-mark.svg";
 const labels = {
   zh: {
     label: "简体中文",
@@ -69,8 +70,8 @@ export default defineConfig({
       "link",
       {
         rel: "icon",
-        type: "image/png",
-        href: new URL("../assets/app-icon-32.png", catalog.siteUrl).pathname,
+        type: "image/svg+xml",
+        href: new URL(logoFile, catalog.siteUrl).pathname,
       },
     ],
   ],
@@ -135,7 +136,7 @@ export default defineConfig({
   ),
   themeConfig: {
     siteTitle: "AgentHub",
-    logo: new URL("../assets/app-icon-128.png", catalog.siteUrl).pathname,
+    logo: `/${logoFile}`,
     search: {
       provider: "local",
       options: {

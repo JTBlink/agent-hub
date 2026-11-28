@@ -30,6 +30,10 @@ function writeWebsite(root, catalog, pages, assets, changelog) {
   const directory = join(root, "docs-site/.generated");
   rmSync(directory, { recursive: true, force: true });
   copyHelpAssets(root, join(directory, "assets"), assets);
+  write(
+    join(directory, "public/app-mark.svg"),
+    readFileSync(join(root, "public/icons/app-mark.svg")),
+  );
   write(join(directory, "catalog.json"), JSON.stringify(catalog));
   write(
     join(directory, "index.md"),
