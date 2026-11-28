@@ -122,8 +122,8 @@ it("uses the product icons for both the title bar and favicon in dev and builds"
     const expected = readFileSync(join(iconDir, source));
     const response = { setHeader: vi.fn(), end: vi.fn() };
     use.mock.calls[0][0]({ url: url + "?preview" }, response, vi.fn());
-    expect(response.end).toHaveBeenCalledWith(expected);
-    expect(readFileSync(join(output, url))).toEqual(expected);
+    expect(response.end.mock.calls[0][0].equals(expected)).toBe(true);
+    expect(readFileSync(join(output, url)).equals(expected)).toBe(true);
   }
 });
 
