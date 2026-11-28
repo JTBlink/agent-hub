@@ -92,7 +92,10 @@ impl Preview {
             return Err(AppError::cancelled("Preview is shutting down"));
         }
         if automation.is_none() {
-            *automation = Some(automation::Automation::start_for_preview(self)?);
+            *automation = Some(automation::Automation::start_for_preview(
+                self,
+                automation::control_path(),
+            )?);
         }
         Ok(())
     }

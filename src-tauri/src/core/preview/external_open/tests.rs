@@ -23,10 +23,10 @@ fn authenticated_file_requests_survive_ui_startup_and_coalesce_pending_duplicate
     let path = root.path().join("a guide.md");
     std::fs::write(&path, "# Guide").unwrap();
     let preview = preview(root.path());
-    let server = automation::Automation::start_for_preview(&preview).unwrap();
+    let control_file = root.path().join("browser/control.json");
+    let server = automation::Automation::start_for_preview(&preview, control_file.clone()).unwrap();
     let endpoint: automation::ControlEndpoint =
-        serde_json::from_slice(&std::fs::read(root.path().join("browser/control.json")).unwrap())
-            .unwrap();
+        serde_json::from_slice(&std::fs::read(control_file).unwrap()).unwrap();
     let body = json!({"kind":"open_file","path":path});
     let wrong = automation::ControlEndpoint {
         url: endpoint.url.clone(),

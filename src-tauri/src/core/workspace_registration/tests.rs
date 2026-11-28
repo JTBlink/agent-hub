@@ -50,11 +50,11 @@ fn reuses_project_for_a_known_git_worktree() {
 }
 
 #[test]
-fn sixteenth_workspace_evicts_old_history_and_alias_reopening_keeps_one_registration() {
+fn fifty_first_workspace_evicts_old_history_and_alias_reopening_keeps_one_registration() {
     let temp = tempfile::tempdir().unwrap();
     let store = SkillStore::new(&temp.path().join("store.db")).unwrap();
     let mut ids = Vec::new();
-    for index in 0..16 {
+    for index in 0..51 {
         let directory = temp.path().join(format!("project-{index}"));
         std::fs::create_dir(&directory).unwrap();
         let id = resolve_project(&store, &directory).unwrap();
@@ -68,7 +68,7 @@ fn sixteenth_workspace_evicts_old_history_and_alias_reopening_keeps_one_registra
             .iter()
             .filter(|p| p.visited_at != Some(0))
             .count(),
-        15
+        50
     );
     assert_eq!(
         store
@@ -78,15 +78,15 @@ fn sixteenth_workspace_evicts_old_history_and_alias_reopening_keeps_one_registra
             .visited_at,
         Some(0)
     );
-    let root = temp.path().join("project-15");
-    assert_eq!(resolve_project(&store, &root.join(".")).unwrap(), ids[15]);
+    let root = temp.path().join("project-50");
+    assert_eq!(resolve_project(&store, &root.join(".")).unwrap(), ids[50]);
     #[cfg(unix)]
     {
         let alias = temp.path().join("alias");
         std::os::unix::fs::symlink(&root, &alias).unwrap();
-        assert_eq!(resolve_project(&store, &alias).unwrap(), ids[15]);
+        assert_eq!(resolve_project(&store, &alias).unwrap(), ids[50]);
     }
-    assert_eq!(store.get_all_projects().unwrap().len(), 16);
+    assert_eq!(store.get_all_projects().unwrap().len(), 51);
     store.touch_project_visited(&ids[0]).unwrap();
     assert!(
         store

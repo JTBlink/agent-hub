@@ -55,11 +55,14 @@ impl Automation {
         let path = browsers.root.join("control.json");
         Self::start_inner(browsers, Weak::new(), path)
     }
-    pub fn start_for_preview(preview: &Arc<super::Preview>) -> Result<Self, AppError> {
+    pub(super) fn start_for_preview(
+        preview: &Arc<super::Preview>,
+        control_file: PathBuf,
+    ) -> Result<Self, AppError> {
         Self::start_inner(
             preview.browsers.clone(),
             Arc::downgrade(preview),
-            control_path(),
+            control_file,
         )
     }
     fn start_inner(

@@ -226,14 +226,14 @@ it("synchronizes visits from other windows without rescanning existing project s
   );
 });
 
-it("opens a sixteenth workspace and handles repeated history events without full skill scans", async () => {
-  const initial = Array.from({ length: 15 }, (_, index) => ({
+it("opens a fifty-first workspace and handles repeated history events without full skill scans", async () => {
+  const initial = Array.from({ length: 50 }, (_, index) => ({
     ...makeProject(),
     id: `project-${index}`,
     visited_at: index + 1,
   }));
   const projects = vi.spyOn(api, "getProjects").mockResolvedValue(initial);
-  const added = { ...makeProject(), id: "project-15", visited_at: 16 };
+  const added = { ...makeProject(), id: "project-50", visited_at: 51 };
   const metadata = vi
     .spyOn(api, "getProjectMetadata")
     .mockResolvedValue([
@@ -246,7 +246,7 @@ it("opens a sixteenth workspace and handles repeated history events without full
       p.id,
       p.id === "project-0" ? 0 : p.visited_at,
     ]),
-    [added.id, 16],
+    [added.id, 51],
   ];
   await act(async () => visitEvents.receive!({ payload }));
   await act(async () => visitEvents.receive!({ payload }));
@@ -256,6 +256,6 @@ it("opens a sixteenth workspace and handles repeated history events without full
     '["project-0",0]',
   );
   expect(container.querySelector("[data-visits]")?.textContent).toContain(
-    '["project-15",16]',
+    '["project-50",51]',
   );
 });
