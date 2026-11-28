@@ -1,0 +1,88 @@
+{
+  "modules": {
+    "projects": {
+      "panel": true,
+      "label": "sidebar.projects",
+      "icon": "files",
+      "group": "workspace"
+    },
+    "search": {
+      "panel": true,
+      "label": "workspaceSearch.title",
+      "icon": "search",
+      "group": "workspace"
+    },
+    "git": {
+      "path": "/git",
+      "label": "Git",
+      "icon": "source-control",
+      "group": "workspace"
+    },
+    "tasks": {
+      "path": "/tasks",
+      "label": "tasks.title",
+      "icon": "checklist",
+      "group": "work"
+    },
+    "automation": {
+      "path": "/automation",
+      "label": "automation.title",
+      "icon": "clock",
+      "group": "work"
+    },
+    "preview": {
+      "path": "/preview",
+      "label": "preview.title",
+      "icon": "globe",
+      "group": "work"
+    },
+    "skills": {
+      "panel": true,
+      "label": "sidebar.skillPanel",
+      "icon": "layers",
+      "group": "tools"
+    },
+    "discover": {
+      "path": "/discover",
+      "label": "discovery.title",
+      "icon": "extensions",
+      "group": "tools",
+      "override": true
+    },
+    "herdr": { "panel": true, "group": "tools" },
+    "dashboard": {
+      "path": "/",
+      "label": "sidebar.dashboard",
+      "icon": "layout",
+      "group": "tools"
+    },
+    "backup": {
+      "path": "/backup",
+      "label": "sidebar.backup",
+      "icon": "cloud",
+      "group": "tools"
+    },
+    "settings": {
+      "path": "/settings",
+      "label": "sidebar.settings",
+      "icon": "settings-gear",
+      "group": "tools"
+    }
+  },
+  "toolbarSlots": ["workspace", "commands", "help", "settings", "refresh"],
+  "defaults": {
+    "layout": {
+      "version": 1,
+      "toolbar": ["workspace", "commands", "help"],
+      "sidebarWidth": 280,
+      "startPage": "dashboard"
+    },
+    "appearance": { "accent": "blue", "textSize": "default" },
+    "shortcuts": {
+      "commands": "Mod+K",
+      "settings": "Mod+,",
+      "refresh": "Mod+R",
+      "search": "Mod+Shift+F"
+    }
+  }
+}

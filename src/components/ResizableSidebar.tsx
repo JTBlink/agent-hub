@@ -47,9 +47,9 @@ export function ResizableSidebar({
       const saved = Number(localStorage.getItem(storageKey));
       return Number.isFinite(saved) && saved > 0
         ? Math.max(minWidth, Math.min(maxWidth, saved))
-        : defaultWidth;
+        : null;
     } catch {
-      return defaultWidth;
+      return null;
     }
   });
   useEffect(() => {
@@ -71,7 +71,7 @@ export function ResizableSidebar({
   const [dragging, setDragging] = useState(false);
   const upper = Math.max(100, Math.min(maxWidth, available - reserveWidth));
   const lower = Math.min(minWidth, upper);
-  const width = Math.max(lower, Math.min(upper, requested));
+  const width = Math.max(lower, Math.min(upper, requested ?? defaultWidth));
   useEffect(() => {
     const measure = () => {
       const parent = constrainToParent

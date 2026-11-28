@@ -23,7 +23,114 @@ const base = {
   },
 };
 
+it("merges a reusable layout preset with product overrides", () => {
+  const directory = mkdtempSync(join(tmpdir(), "agenthub-workbench-preset-"));
+  try {
+    const manifest = join(directory, "product.json");
+    const preset = join(directory, "shared.json");
+    const { sidebar, ...identity } = base;
+    writeFileSync(
+      preset,
+      JSON.stringify({
+        sidebar,
+        layout: { sidebarWidth: 392, startPage: "tasks" },
+      }),
+    );
+    writeFileSync(
+      manifest,
+      JSON.stringify({
+        ...identity,
+        layoutPreset: "shared.json",
+        layout: { sidebarWidth: 312 },
+      }),
+    );
+    const product = loadProduct(manifest);
+    expect(product.layout).toMatchObject({
+      sidebarWidth: 312,
+      startPage: "tasks",
+    });
+    expect(product.layoutPath).toBe(preset);
+    writeFileSync(preset, JSON.stringify({ sidebar, features: ["herdr"] }));
+    expect(() => loadProduct(manifest)).toThrow(/only define workbench/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 describe("product build selection", () => {
+  it("resolves versioned workbench presets and validates custom module capabilities", () => {
+    const manifest = {
+      ...base,
+      features: ["herdr"],
+      sidebarModules: {
+        review: {
+          entry: "custom/review.tsx",
+          requires: ["herdr"],
+          route: "/custom/review",
+        },
+      },
+      layout: {
+        version: 1,
+        toolbar: ["settings", "commands", "module:review"],
+        sidebarWidth: 336,
+        startPage: "tasks",
+      },
+      appearance: { accent: "teal", textSize: "large" },
+      shortcuts: { commands: "Mod+Shift+P" },
+    };
+    const product = resolveProduct(manifest, cargoFeatures);
+    expect(product.layout).toEqual(manifest.layout);
+    expect(product.appearance).toEqual(manifest.appearance);
+    expect(product.shortcuts).toMatchObject({
+      commands: "Mod+Shift+P",
+      refresh: "Mod+R",
+    });
+    expect(() =>
+      resolveProduct({ ...manifest, features: [] }, cargoFeatures),
+    ).toThrow(/Invalid custom sidebar modules/);
+  });
+
+  it("uses the registered route for a private product start page", () => {
+    const product = resolveProduct(
+      {
+        ...base,
+        sidebarModules: {
+          review: { entry: "custom/review.tsx", route: "/custom/review" },
+        },
+        layout: { startPage: "review", toolbar: ["module:review"] },
+      },
+      cargoFeatures,
+    );
+    expect(product.layout.startPath).toBe("/custom/review");
+    expect(() =>
+      resolveProduct(
+        {
+          ...base,
+          sidebarModules: {
+            review: { entry: "custom/review.tsx", route: "/tasks" },
+          },
+        },
+        cargoFeatures,
+      ),
+    ).toThrow(/Invalid custom sidebar modules/);
+  });
+
+  it.each([
+    { layout: { version: 2 } },
+    { layout: { toolbar: ["help", "help"] } },
+    { layout: { toolbar: ["unregistered"] } },
+    { layout: { sidebarWidth: 601 } },
+    { layout: { startPage: "backup" } },
+    { layout: { startPage: "skills" } },
+    { appearance: { accent: "url(anything)" } },
+    { shortcuts: { commands: "Mod+O" } },
+    { shortcuts: { commands: "Mod+R" } },
+  ])("rejects unsafe or inconsistent workbench settings %#", (changes) => {
+    expect(() =>
+      resolveProduct({ ...base, ...changes }, cargoFeatures),
+    ).toThrow();
+  });
+
   it("resolves a Cargo feature closure without enabling defaults", () => {
     expect(resolveProduct(base, cargoFeatures).features).toEqual([]);
     expect(

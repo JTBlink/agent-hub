@@ -5,7 +5,18 @@ export const TEXT_SIZE_SCALE_MAP: Record<string, string> = {
   xlarge: "1.2",
 };
 
+let hasUserTextSize = false;
+
 export function applyTextSize(size: string) {
+  hasUserTextSize = true;
+  setTextScale(size);
+}
+
+export function applyProductTextSize(size: string) {
+  if (!hasUserTextSize) setTextScale(size);
+}
+
+function setTextScale(size: string) {
   const scale = TEXT_SIZE_SCALE_MAP[size] || TEXT_SIZE_SCALE_MAP.default;
   document.documentElement.style.zoom = scale;
   document.documentElement.style.setProperty("--app-scale", scale);

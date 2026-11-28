@@ -1,0 +1,25 @@
+{
+  "layout": {
+    "version": 1,
+    "toolbar": ["workspace", "commands", "refresh", "help"],
+    "sidebarWidth": 320,
+    "startPage": "tasks"
+  },
+  "appearance": { "accent": "teal", "textSize": "default" },
+  "shortcuts": { "commands": "Mod+Shift+P" },
+  "sidebar": {
+    "primary": [
+      "projects",
+      "search",
+      "git",
+      "tasks",
+      "automation",
+      "preview",
+      "skills",
+      "discover",
+      "herdr"
+    ],
+    "bottom": ["dashboard", "settings"],
+    "defaultPanel": "skills"
+  }
+}

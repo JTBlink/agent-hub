@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createServer } from "vite";
+import { EventEmitter } from "node:events";
 import { afterEach, expect, it, vi } from "vitest";
 import { loadProduct, prepareProduct } from "./config.mjs";
 import { productViteConfig } from "./vite-plugin.mjs";
@@ -41,6 +42,58 @@ function fixture() {
   directories.push(loadProduct(path).generatedDir);
   return { root, path };
 }
+
+it("publishes layout edits without a reload and retains the last valid preview", () => {
+  const { root, path } = fixture();
+  const plugin = productViteConfig(root).plugins[0];
+  const watcher = Object.assign(new EventEmitter(), { add: vi.fn() });
+  const ws = { on: vi.fn(), send: vi.fn() };
+  plugin.configureServer({
+    watcher,
+    ws,
+    config: { logger: { warn: vi.fn() } },
+  });
+  const manifest = JSON.parse(readFileSync(path, "utf8"));
+  expect(watcher.add).toHaveBeenCalledWith(path);
+  expect(plugin.handleHotUpdate({ file: path })).toEqual([]);
+  writeFileSync(
+    path,
+    JSON.stringify({ ...manifest, layout: { sidebarWidth: 360 } }),
+  );
+  watcher.emit("change", path);
+  expect(ws.send).toHaveBeenLastCalledWith(
+    "agent-hub:workbench",
+    expect.objectContaining({
+      layout: expect.objectContaining({ sidebarWidth: 360 }),
+    }),
+  );
+  writeFileSync(
+    path,
+    JSON.stringify({ ...manifest, layout: { sidebarWidth: -1 } }),
+  );
+  watcher.emit("change", path);
+  expect(ws.send).toHaveBeenLastCalledWith(
+    "agent-hub:workbench-error",
+    expect.stringMatching(/sidebar width/),
+  );
+  const client = { send: vi.fn() };
+  ws.on.mock.calls[0][1](undefined, client);
+  expect(client.send).toHaveBeenCalledWith(
+    "agent-hub:workbench",
+    expect.objectContaining({
+      layout: expect.objectContaining({ sidebarWidth: 360 }),
+    }),
+  );
+  writeFileSync(
+    path,
+    JSON.stringify({ ...manifest, productName: "Different" }),
+  );
+  watcher.emit("change", path);
+  expect(ws.send).toHaveBeenLastCalledWith(
+    "agent-hub:workbench-error",
+    expect.stringMatching(/Restart/),
+  );
+});
 
 it("keeps lazy feature modules on the same application context as the workbench", async () => {
   const { root } = fixture();

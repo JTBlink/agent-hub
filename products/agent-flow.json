@@ -1,20 +1,6 @@
 {
   "id": "agent-flow",
   "productName": "Agent Flow",
-  "sidebar": {
-    "primary": [
-      "projects",
-      "search",
-      "git",
-      "tasks",
-      "automation",
-      "preview",
-      "skills",
-      "discover",
-      "herdr"
-    ],
-    "bottom": ["dashboard", "backup", "settings"],
-    "defaultPanel": "skills"
-  },
+  "layoutPreset": "layouts/agent-flow.json",
   "iconDir": "products/agent-flow/icons"
 }

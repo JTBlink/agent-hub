@@ -10,13 +10,16 @@ import * as api from "../../lib/tauri";
 import { applyTextSize } from "../../lib/textScale";
 import { cn } from "../../utils";
 import { segmentedButtonClass } from "./settingsStyles";
+import { useWorkbench } from "../../app/product/workbench";
 
 export function AppearanceSettings() {
   const { t, i18n } = useTranslation();
+  const { appearance } = useWorkbench();
   const { theme, setTheme } = useThemeContext();
   const [closeAction, setCloseAction] = useState("");
   const [showTrayIcon, setShowTrayIcon] = useState(true);
-  const [textSize, setTextSize] = useState("default");
+  const [savedTextSize, setTextSize] = useState<string | null>(null);
+  const textSize = savedTextSize ?? appearance.textSize;
   const form = useSettingsForm(
     () =>
       Promise.all([

@@ -17,6 +17,7 @@ import { Help } from "../views/Help";
 import { Tasks } from "../views/Tasks";
 import { Git } from "../views/Git";
 import { Automation } from "../views/Automation";
+import { workbenchModules } from "./product/workbench";
 
 /** Compose shared pages and optional host pages under the same application layout. */
 export function createAppRoutes(
@@ -24,7 +25,7 @@ export function createAppRoutes(
 ): RouteObject[] {
   const children = createRoutesFromElements(
     <>
-      <Route path="/" element={<Dashboard />} />
+      <Route path={workbenchModules.dashboard.path} element={<Dashboard />} />
       <Route path="/my-skills" element={<MySkills />} />
       <Route
         path="/global-workspace"
@@ -42,16 +43,16 @@ export function createAppRoutes(
         path="/lobster-workspace/:agentKey"
         element={<WorkspaceView config={LOBSTER_WORKSPACE_CONFIG} />}
       />
-      <Route path="/discover" element={<Discover />} />
+      <Route path={workbenchModules.discover.path} element={<Discover />} />
       <Route path="/install" element={<Discover />} />
-      <Route path="/tasks" element={<Tasks />} />
-      <Route path="/git" element={<Git />} />
+      <Route path={workbenchModules.tasks.path} element={<Tasks />} />
+      <Route path={workbenchModules.git.path} element={<Git />} />
       <Route path="/terminal" element={null} />
-      <Route path="/preview" element={null} />
-      <Route path="/automation" element={<Automation />} />
+      <Route path={workbenchModules.preview.path} element={null} />
+      <Route path={workbenchModules.automation.path} element={<Automation />} />
       <Route path="/project/:id" element={null} />
       <Route path="/project/:id/skills" element={<ProjectSkills />} />
-      <Route path="/settings" element={<Settings />} />
+      <Route path={workbenchModules.settings.path} element={<Settings />} />
       <Route path="/help" element={<Help />} />
       <Route path="/help/:articleId" element={<Help />} />
     </>,

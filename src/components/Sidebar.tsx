@@ -26,12 +26,16 @@ import { SidebarActivityBar } from "./SidebarActivityBar";
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { useGitChangeCount } from "../hooks/useGitChangeCount";
 import { featureModules } from "@app/features";
-import { productConfig } from "@app/product";
+import {
+  matchesWorkbenchShortcut,
+  useWorkbench,
+} from "../app/product/workbench";
 
 const PANEL_STORAGE_KEY = "agent-hub:sidebar-panel-open";
 
 export function Sidebar() {
-  const defaultPanel: SidebarPanel = productConfig.sidebar.defaultPanel;
+  const { sidebar, layout, shortcuts } = useWorkbench();
+  const defaultPanel: SidebarPanel = sidebar.defaultPanel;
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,7 +64,7 @@ export function Sidebar() {
   useEffect(() => {
     setGitSidebarVisible?.(gitSidebarOpen);
   }, [gitSidebarOpen, setGitSidebarVisible]);
-  const [panelWidth, setPanelWidth] = useState(280);
+  const [panelWidth, setPanelWidth] = useState(layout.sidebarWidth);
   const [panelOpen, setPanelOpen] = useState(() => {
     try {
       return localStorage.getItem(PANEL_STORAGE_KEY) !== "false";
@@ -73,6 +77,7 @@ export function Sidebar() {
     panel: activeSidebarPanel(location.pathname) ?? defaultPanel,
     manual: false,
   });
+  const routePanel = activeSidebarPanel(location.pathname);
   if (panelSelection.routeKey !== location.key) {
     setPanelSelection({
       routeKey: location.key,
@@ -81,18 +86,26 @@ export function Sidebar() {
         (panelSelection.panel === "search" &&
           location.pathname.startsWith("/project/"))
           ? panelSelection.panel
-          : (activeSidebarPanel(location.pathname) ?? defaultPanel),
+          : (routePanel ?? defaultPanel),
       manual:
         preserveSidebar ||
         (panelSelection.panel === "search" &&
           location.pathname.startsWith("/project/")),
     });
+  } else if (
+    !panelSelection.manual &&
+    !routePanel &&
+    panelSelection.panel !== defaultPanel
+  ) {
+    setPanelSelection({ ...panelSelection, panel: defaultPanel });
   }
   const selectedPanel = panelSelection.panel;
   const [searchOpened, setSearchOpened] = useState(false);
   const [openedFeatures, setOpenedFeatures] = useState<string[]>([
     defaultPanel,
   ]);
+  if (!openedFeatures.includes(defaultPanel))
+    setOpenedFeatures([...openedFeatures, defaultPanel]);
   const selectedFeature = featureModules.find(
     (feature) => feature.sidebar.id === selectedPanel,
   );
@@ -172,9 +185,10 @@ export function Sidebar() {
   useEffect(() => {
     if (
       panelRequest &&
-      featureModules.some(
-        (feature) => feature.sidebar.id === panelRequest.panel,
-      )
+      (["projects", "search", "skills"].includes(panelRequest.panel) ||
+        featureModules.some(
+          (feature) => feature.sidebar.id === panelRequest.panel,
+        ))
     ) {
       selectRequestedPanel.current(panelRequest.panel, "open");
     }
@@ -206,9 +220,7 @@ export function Sidebar() {
     const openSearch = (event: Event) => {
       if (
         event instanceof KeyboardEvent &&
-        (!(event.metaKey || event.ctrlKey) ||
-          !event.shiftKey ||
-          event.key.toLowerCase() !== "f")
+        !matchesWorkbenchShortcut(event, shortcuts.search)
       )
         return;
       event.preventDefault();
@@ -232,7 +244,7 @@ export function Sidebar() {
       window.removeEventListener("keydown", openSearch);
       window.removeEventListener("workspace-search-open", openSearch);
     };
-  }, [location.key]);
+  }, [location.key, shortcuts.search]);
 
   return (
     <>
@@ -266,6 +278,7 @@ export function Sidebar() {
         />
         <ResizableSidebar
           storageKey="agent-hub:sidebar-width"
+          defaultWidth={layout.sidebarWidth}
           label={t(
             selectedFeature
               ? selectedFeature.sidebar.labelKey

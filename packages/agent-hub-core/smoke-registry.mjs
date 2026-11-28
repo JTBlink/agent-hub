@@ -84,8 +84,28 @@ try {
       productName: "Agent Flow",
       version: "1.2.0",
       features: ["gitlab", "herdr"],
-      sidebarModules: { review: "custom/review.tsx" },
+      layoutPreset: "custom/workbench.json",
+      sidebarModules: {
+        review: {
+          entry: "custom/review.tsx",
+          requires: ["gitlab"],
+          route: "/custom/review",
+        },
+      },
       pageOverrides: { discover: "custom/discover.tsx" },
+    }),
+  );
+  writeFileSync(
+    join(cwd, "custom/workbench.json"),
+    JSON.stringify({
+      layout: {
+        version: 1,
+        toolbar: ["workspace", "commands", "module:review"],
+        sidebarWidth: 320,
+        startPage: "review",
+      },
+      appearance: { accent: "teal", textSize: "large" },
+      shortcuts: { commands: "Mod+Shift+P" },
       sidebar: {
         primary: ["projects", "herdr", "discover", "review"],
         bottom: ["settings"],
@@ -99,7 +119,7 @@ try {
   );
   writeFileSync(
     join(cwd, "custom/review.tsx"),
-    'import type { FeatureModule } from "@app/features";\nexport default { id:"review",sidebar:{id:"review",kind:"panel",labelKey:"Review",icon:()=>null,component:()=> <p>Review</p>}} satisfies FeatureModule;\n',
+    'import type { FeatureModule } from "@app/features";\nexport default { id:"review",sidebar:{id:"review",kind:"panel",labelKey:"Review",icon:()=>null,component:()=> <p>Review</p>},routes:[{path:"/custom/review",element:<p>Review page</p>}]} satisfies FeatureModule;\n',
   );
   const installed = join(stage, "installed");
   const withoutGit = {
@@ -119,12 +139,19 @@ try {
   const report = JSON.parse(
     readFileSync(join(build.frontendDist, "product-build.json"), "utf8"),
   );
+  const layout = JSON.parse(
+    readFileSync(join(build.generatedDir, "build-info.json"), "utf8"),
+  );
   if (
     report.product_id !== "agent-flow" ||
     report.features.join(",") !== "gitlab,herdr" ||
     !report.modules.includes("custom/review.tsx") ||
     !report.modules.includes("custom/discover.tsx") ||
-    report.modules.includes("src/views/Discover.tsx")
+    report.modules.includes("src/views/Discover.tsx") ||
+    layout.layout.startPath !== "/custom/review" ||
+    !layout.layout.toolbar.includes("module:review") ||
+    layout.appearance.accent !== "teal" ||
+    layout.shortcuts.commands !== "Mod+Shift+P"
   )
     throw new Error("Unexpected Agent Flow build identity or modules");
   if (flags.includes("--native")) {

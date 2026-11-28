@@ -4,7 +4,11 @@ import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
 import { featureModules } from "@app/features";
-import { productConfig } from "@app/product";
+import {
+  useWorkbench,
+  workbenchModules,
+  type BuiltinModule,
+} from "../app/product/workbench";
 import { activeSidebarPanel, type SidebarPanel } from "../lib/sidebarSections";
 
 type ActivityIcon =
@@ -51,6 +55,7 @@ export function SidebarActivityBar({
   onSelectGit: () => void;
 }) {
   const { t } = useTranslation();
+  const { sidebar } = useWorkbench();
   const { pathname } = useLocation();
   const routePanel = activeSidebarPanel(pathname);
   const panelActive = routePanel !== null || (panelOpen && manualSelection);
@@ -156,40 +161,22 @@ export function SidebarActivityBar({
     );
   };
 
-  const items: Record<string, () => ReactNode> = {
-    projects: () => renderPanel("projects", t("sidebar.projects"), "files"),
-    search: () => renderPanel("search", t("workspaceSearch.title"), "search"),
-    git: () =>
-      renderLink({ name: "Git", path: "/git", icon: "source-control" }),
-    tasks: () =>
-      renderLink({ name: t("tasks.title"), path: "/tasks", icon: "checklist" }),
-    automation: () =>
-      renderLink({
-        name: t("automation.title"),
-        path: "/automation",
-        icon: "clock",
-      }),
-    preview: () =>
-      renderLink({ name: t("preview.title"), path: "/preview", icon: "globe" }),
-    skills: () => renderPanel("skills", t("sidebar.skillPanel"), "layers"),
-    discover: () =>
-      renderLink({
-        name: t("discovery.title"),
-        path: "/discover",
-        icon: "extensions",
-      }),
-    dashboard: () =>
-      renderLink({ name: t("sidebar.dashboard"), path: "/", icon: "layout" }),
-    backup: () =>
-      renderLink({ name: t("sidebar.backup"), path: "/backup", icon: "cloud" }),
-    settings: () =>
-      renderLink({
-        name: t("sidebar.settings"),
-        path: "/settings",
-        icon: "settings-gear",
-        update: true,
-      }),
-  };
+  const items: Record<string, () => ReactNode> = Object.create(null);
+  for (const [id, module] of Object.entries(workbenchModules)) {
+    if (!("label" in module)) continue;
+    const name = t(module.label);
+    const icon = module.icon as ActivityIcon;
+    items[id] =
+      "path" in module
+        ? () =>
+            renderLink({
+              name,
+              path: module.path,
+              icon,
+              update: id === "settings",
+            })
+        : () => renderPanel(id, name, icon);
+  }
   for (const feature of featureModules) {
     items[feature.id] = () =>
       renderPanel(
@@ -206,13 +193,11 @@ export function SidebarActivityBar({
       </span>
     ) : null;
   };
-  const primary = productConfig.sidebar.primary.filter((id) => items[id]);
+  const primary = sidebar.primary.filter((id) => Object.hasOwn(items, id));
   const section = (id: string) =>
-    ["projects", "search", "git"].includes(id)
-      ? "workspace"
-      : ["tasks", "automation", "preview"].includes(id)
-        ? "work"
-        : "tools";
+    Object.hasOwn(workbenchModules, id)
+      ? workbenchModules[id as BuiltinModule].group
+      : "tools";
   return (
     <nav
       aria-label={t("sidebar.navigation")}
@@ -230,7 +215,7 @@ export function SidebarActivityBar({
       </div>
       <div className="shrink-0">
         <div aria-hidden="true" className="activity-bar-divider" />
-        {productConfig.sidebar.bottom.map(renderItem)}
+        {sidebar.bottom.map(renderItem)}
       </div>
     </nav>
   );

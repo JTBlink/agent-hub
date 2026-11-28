@@ -2,6 +2,11 @@ import type { TFunction } from "i18next";
 import { Menu, type MenuOptions } from "@tauri-apps/api/menu";
 import type { Project } from "./tauri";
 import { recentProjects } from "./recentProjects";
+import {
+  nativeWorkbenchShortcut,
+  type WorkbenchShortcuts,
+} from "../app/product/workbench";
+import workbench from "../../products/workbench.json";
 
 interface Actions {
   openProject: () => void;
@@ -22,6 +27,7 @@ export function applicationMenuOptions(
   actions: Actions,
   mac: boolean,
   scope = "",
+  shortcuts: WorkbenchShortcuts = workbench.defaults.shortcuts,
 ): MenuOptions {
   const menuId = (id: string) => (scope ? `${scope}:${id}` : id);
   const recent = recentProjects(projects);
@@ -46,7 +52,7 @@ export function applicationMenuOptions(
                 separator,
                 {
                   text: t("sidebar.settings"),
-                  accelerator: "CmdOrCtrl+,",
+                  accelerator: nativeWorkbenchShortcut(shortcuts.settings),
                   action: () => actions.navigate("/settings"),
                 },
                 separator,
@@ -115,13 +121,13 @@ export function applicationMenuOptions(
         items: [
           {
             text: t("workspaceSearch.query"),
-            accelerator: "CmdOrCtrl+Shift+F",
+            accelerator: nativeWorkbenchShortcut(shortcuts.search),
             action: () =>
               window.dispatchEvent(new Event("workspace-search-open")),
           },
           {
             text: t("titleBar.searchCommands"),
-            accelerator: "CmdOrCtrl+K",
+            accelerator: nativeWorkbenchShortcut(shortcuts.commands),
             action: actions.commands,
           },
           separator,

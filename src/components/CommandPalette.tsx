@@ -6,6 +6,11 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  matchesWorkbenchShortcut,
+  useWorkbench,
+  workbenchShortcutLabel,
+} from "../app/product/workbench";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -67,6 +72,7 @@ export function CommandPalette({
   } = useApp();
 
   const [query, setQuery] = useState("");
+  const { shortcuts } = useWorkbench();
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -89,7 +95,7 @@ export function CommandPalette({
           target.tagName === "TEXTAREA" ||
           target.isContentEditable);
 
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if (matchesWorkbenchShortcut(e, shortcuts.commands)) {
         if (typing && !open) return;
         e.preventDefault();
         onOpenChange(!open);
@@ -100,7 +106,7 @@ export function CommandPalette({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, close, onOpenChange]);
+  }, [open, close, onOpenChange, shortcuts.commands]);
 
   useEffect(() => {
     if (open) {
@@ -225,7 +231,7 @@ export function CommandPalette({
         kind: "action",
         label: t("sidebar.settings"),
         icon: <SettingsIcon className="h-3.5 w-3.5" />,
-        shortcut: "⌘,",
+        shortcut: workbenchShortcutLabel(shortcuts.settings),
         run: () => navigate("/settings"),
       },
     ];
@@ -258,6 +264,7 @@ export function CommandPalette({
     setViewedSkillGroupId,
     openSkillDetailById,
     navigate,
+    shortcuts.settings,
     t,
   ]);
   const visibleGroups: PaletteGroup[] = file.path

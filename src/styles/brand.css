@@ -1,6 +1,7 @@
 /* Catppuccin workbench: Latte by day, Mocha by night; shared with the terminal. */
 @layer base {
   :root {
+    --palette-accent: var(--palette-blue);
     --palette-white: 255 255 255;
     --palette-black: 0 0 0;
     --shadow-switch-knob: 0 1px 2px rgb(var(--palette-black) / 25%);
@@ -45,12 +46,12 @@
     --color-text-tertiary: #6c6f85;
     --color-text-muted: #6c6f85;
     --color-text-faint: #6c6f85;
-    --color-accent: rgb(var(--palette-blue));
-    --color-accent-light: rgb(var(--palette-blue));
-    --color-accent-dark: rgb(var(--palette-blue));
+    --color-accent: rgb(var(--palette-accent));
+    --color-accent-light: rgb(var(--palette-accent));
+    --color-accent-dark: rgb(var(--palette-accent));
     --color-on-accent: #ffffff;
-    --color-accent-bg: rgb(var(--palette-blue) / 10%);
-    --color-accent-border: rgb(var(--palette-blue) / 28%);
+    --color-accent-bg: rgb(var(--palette-accent) / 10%);
+    --color-accent-border: rgb(var(--palette-accent) / 28%);
     --color-brand-teal: rgb(var(--palette-teal));
     --color-brand-violet: rgb(var(--palette-violet));
     --color-danger: rgb(var(--palette-red));
@@ -81,6 +82,14 @@
     --terminal-bright-white: #4c4f69;
     --shadow-card: 0 2px 8px rgb(0 0 0 / 5%);
     --shadow-card-hover: 0 8px 24px rgb(0 0 0 / 10%);
+  }
+
+  :root[data-product-accent="teal"] {
+    --palette-accent: var(--palette-teal);
+  }
+
+  :root[data-product-accent="violet"] {
+    --palette-accent: var(--palette-violet);
   }
 
   .dark {
@@ -123,12 +132,12 @@
     --color-text-tertiary: #a6adc8;
     --color-text-muted: #a6adc8;
     --color-text-faint: #9399b2;
-    --color-accent: rgb(var(--palette-blue));
-    --color-accent-light: rgb(var(--palette-blue));
-    --color-accent-dark: rgb(var(--palette-blue));
+    --color-accent: rgb(var(--palette-accent));
+    --color-accent-light: rgb(var(--palette-accent));
+    --color-accent-dark: rgb(var(--palette-accent));
     --color-on-accent: #11111b;
-    --color-accent-bg: rgb(var(--palette-blue) / 10%);
-    --color-accent-border: rgb(var(--palette-blue) / 28%);
+    --color-accent-bg: rgb(var(--palette-accent) / 10%);
+    --color-accent-border: rgb(var(--palette-accent) / 28%);
     --color-brand-teal: rgb(var(--palette-teal));
     --color-brand-violet: rgb(var(--palette-violet));
     --color-danger: rgb(var(--palette-red));

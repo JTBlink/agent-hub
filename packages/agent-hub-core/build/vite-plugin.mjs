@@ -26,6 +26,9 @@ export function productViteConfig(root) {
   prepareProduct(product);
   const herdr = product.features.includes("herdr");
   const integrationAliases = featureAliases(root, product.features);
+  const previewPaths = new Set(
+    [product.configPath, product.layoutPath].filter(Boolean),
+  );
   return {
     resolve: {
       alias: {
@@ -54,6 +57,9 @@ export function productViteConfig(root) {
       {
         name: "product-module-selection",
         enforce: "pre",
+        handleHotUpdate({ file }) {
+          if (previewPaths.has(file)) return [];
+        },
         transformIndexHtml(html) {
           return product.productName
             ? html.replace(
@@ -63,6 +69,60 @@ export function productViteConfig(root) {
             : html;
         },
         configureServer(server) {
+          const keys = new Set([
+            "sidebar",
+            "layout",
+            "appearance",
+            "shortcuts",
+          ]);
+          const buildFields = () =>
+            JSON.stringify(
+              Object.entries(
+                JSON.parse(readFileSync(product.configPath, "utf8")),
+              )
+                .filter(([key]) => !keys.has(key))
+                .sort(([left], [right]) => left.localeCompare(right)),
+            );
+          const built = buildFields();
+          const runtimeFields = ({
+            sidebar,
+            layout,
+            appearance,
+            shortcuts,
+          }) => ({
+            sidebar,
+            layout,
+            appearance,
+            shortcuts,
+          });
+          let preview = runtimeFields(product);
+          for (const path of previewPaths) server.watcher.add(path);
+          server.ws.on("agent-hub:workbench-request", (_data, client) =>
+            client.send("agent-hub:workbench", preview),
+          );
+          const update = (path) => {
+            if (!previewPaths.has(resolve(path))) return;
+            try {
+              if (buildFields() !== built)
+                throw new Error(
+                  "Build-time product settings changed. Restart the development build.",
+                );
+              preview = runtimeFields(
+                loadProduct(product.configPath, {
+                  baseCommit: product.baseCommit,
+                  cargoFeatures: product.cargoFeatures,
+                }),
+              );
+              server.ws.send("agent-hub:workbench", preview);
+            } catch (error) {
+              server.config.logger.warn(
+                `Product layout preview: ${error.message}`,
+              );
+              server.ws.send("agent-hub:workbench-error", error.message);
+            }
+          };
+          server.watcher.on("change", update);
+          server.watcher.on("add", update);
           if (!product.productName) return;
           server.middlewares.use((req, res, next) => {
             const filename = {

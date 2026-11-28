@@ -10,6 +10,8 @@ import {
 import { resolve, isAbsolute, dirname, basename } from "node:path";
 import { repositoryRoot } from "../../../scripts/shared/paths.mjs";
 import { cargoTargetDir } from "../../../scripts/shared/cargo-target.mjs";
+import workbenchCatalog from "../../../products/workbench.json" with { type: "json" };
+import { resolveWorkbench } from "./workbench.mjs";
 
 const ROOT = repositoryRoot;
 export const featureCatalog = JSON.parse(
@@ -41,21 +43,12 @@ export function discoverPagePath(root, product) {
   );
 }
 
-const modules = new Set([
-  "projects",
-  "search",
-  "git",
-  "tasks",
-  "automation",
-  "preview",
-  "skills",
-  "discover",
-  "herdr",
-  "dashboard",
-  "backup",
-  "settings",
-]);
-const panels = new Set(["projects", "search", "skills", "herdr"]);
+const modules = new Set(Object.keys(workbenchCatalog.modules));
+const panels = new Set(
+  Object.keys(workbenchCatalog.modules).filter(
+    (id) => workbenchCatalog.modules[id].panel,
+  ),
+);
 
 function resolveFeatures(features, cargoFeatures) {
   if (
@@ -76,6 +69,26 @@ function resolveFeatures(features, cargoFeatures) {
   };
   features.forEach(visit);
   return selected;
+}
+
+function moduleEntry(module) {
+  return typeof module === "string" ? module : module?.entry;
+}
+
+function validModule(id, module, selected) {
+  const entry = moduleEntry(module);
+  return (
+    typeof entry === "string" &&
+    !!entry.trim() &&
+    (typeof module === "string" ||
+      (Object.keys(module).every(
+        (key) => key === "entry" || key === "requires" || key === "route",
+      ) &&
+        (module.route === undefined || module.route === `/custom/${id}`) &&
+        (module.requires === undefined ||
+          (Array.isArray(module.requires) &&
+            module.requires.every((id) => selected.has(id))))))
+  );
 }
 
 /** Resolve the same additive feature graph Cargo uses; defaults are never implicit. */
@@ -114,7 +127,8 @@ export function resolveProduct(input, cargoFeatures) {
       Array.isArray(pageOverrides) ||
       Object.entries(pageOverrides).some(
         ([id, path]) =>
-          id !== "discover" ||
+          !Object.hasOwn(workbenchCatalog.modules, id) ||
+          !workbenchCatalog.modules[id].override ||
           typeof path !== "string" ||
           !/^custom\/(?:[\w.-]+\/)*[\w.-]+\.tsx?$/.test(path) ||
           path.split("/").some((part) => part === "." || part === ".."),
@@ -128,11 +142,10 @@ export function resolveProduct(input, cargoFeatures) {
     typeof sidebarModules !== "object" ||
     Array.isArray(sidebarModules) ||
     Object.entries(sidebarModules).some(
-      ([id, path]) =>
+      ([id, module]) =>
         modules.has(id) ||
         !/^[a-z][a-z0-9-]*$/.test(id) ||
-        typeof path !== "string" ||
-        !path.trim(),
+        !validModule(id, module, selected),
     )
   )
     throw new Error("Invalid custom sidebar modules");
@@ -176,6 +189,7 @@ export function resolveProduct(input, cargoFeatures) {
     ...(input.iconDir === undefined ? {} : { iconDir: input.iconDir }),
     ...(pageOverrides?.discover ? { pageOverrides } : {}),
     ...(Object.keys(sidebarModules).length ? { sidebarModules } : {}),
+    ...resolveWorkbench(input, selected, featureCatalog),
     features: [...selected].sort(),
     devPort:
       input.devPort ??
@@ -241,6 +255,44 @@ function cargoFeatureGraph() {
   return packageInfo.features;
 }
 
+function readProductManifest(configPath) {
+  const input = JSON.parse(readFileSync(configPath, "utf8"));
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Invalid product configuration");
+  if (input.layoutPreset === undefined) return { input };
+  const name = input.layoutPreset;
+  if (
+    typeof name !== "string" ||
+    !/^(?:[\w.-]+\/)*[\w.-]+\.json$/.test(name) ||
+    name.split("/").some((part) => part === "." || part === "..")
+  )
+    throw new Error("Product layout preset must be a relative JSON file");
+  const layoutPath = resolve(dirname(configPath), name);
+  const preset = JSON.parse(readFileSync(layoutPath, "utf8"));
+  const fields = ["sidebar", "layout", "appearance", "shortcuts"];
+  if (
+    !preset ||
+    typeof preset !== "object" ||
+    Array.isArray(preset) ||
+    Object.keys(preset).some((key) => !fields.includes(key))
+  )
+    throw new Error("Layout preset may only define workbench settings");
+  for (const field of fields) {
+    if (!Object.hasOwn(preset, field)) continue;
+    const values = [preset[field], input[field]].filter(
+      (value) => value !== undefined,
+    );
+    if (
+      values.some(
+        (value) => !value || typeof value !== "object" || Array.isArray(value),
+      )
+    )
+      throw new Error(`Invalid preset ${field}`);
+    input[field] = { ...values[0], ...values[1] };
+  }
+  return { input, layoutPath };
+}
+
 export function loadProduct(
   selection = "standard",
   { env = process.env, cargoFeatures, baseCommit } = {},
@@ -252,6 +304,7 @@ export function loadProduct(
       ? resolve(ROOT, selection)
       : resolve(ROOT, "products", `${selection}.json`);
   const graph = cargoFeatures ?? cargoFeatureGraph();
+  const { input, layoutPath } = readProductManifest(configPath);
   for (const name of Object.keys(featureCatalog.features))
     if (!(name in graph))
       throw new Error(
@@ -259,9 +312,6 @@ export function loadProduct(
       );
   const config = resolveProduct(
     (() => {
-      const input = JSON.parse(readFileSync(configPath, "utf8"));
-      if (!input || typeof input !== "object")
-        throw new Error("Invalid product configuration");
       if (
         !input.sidebar ||
         !Array.isArray(input.sidebar.primary) ||
@@ -297,7 +347,11 @@ export function loadProduct(
       if (disabledEntries.has(sidebar.defaultPanel))
         sidebar.defaultPanel =
           sidebar.primary.find((entry) => panels.has(entry)) ?? "skills";
-      return { ...input, features, sidebar };
+      return {
+        ...input,
+        features,
+        sidebar: input.layout ? input.sidebar : sidebar,
+      };
     })(),
     graph,
   );
@@ -335,11 +389,13 @@ export function loadProduct(
   }
   const product = {
     ...config,
+    cargoFeatures: graph,
     version:
       config.version ?? readFileSync(resolve(ROOT, "VERSION"), "utf8").trim(),
     hash,
     baseCommit,
     configPath,
+    layoutPath,
     iconDir: resolve(ROOT, config.iconDir ?? "src-tauri/icons"),
     generatedDir,
     frontendDist,
@@ -392,6 +448,9 @@ export function prepareProduct(product) {
     id: product.id,
     features: product.features,
     sidebar: product.sidebar,
+    layout: product.layout,
+    appearance: product.appearance,
+    shortcuts: product.shortcuts,
     hash: product.hash,
     baseCommit: product.baseCommit,
     version: product.version,
@@ -406,11 +465,12 @@ export function prepareProduct(product) {
   );
   const extensions = Object.entries(product.sidebarModules ?? {});
   const extensionImports = extensions.map(
-    ([, path], index) =>
-      `import extension${index} from ${JSON.stringify(resolve(ROOT, path))};\n`,
+    ([, module], index) =>
+      `import extension${index} from ${JSON.stringify(resolve(ROOT, moduleEntry(module)))};\n`,
   );
   const extensionEntries = extensions.map(
-    ([id], index) => `[${JSON.stringify(id)}, extension${index}]`,
+    ([id, module], index) =>
+      `[${JSON.stringify(id)}, extension${index}, ${JSON.stringify(module.route ?? null)}]`,
   );
   writeGenerated(
     resolve(product.generatedDir, "features.ts"),
@@ -421,8 +481,8 @@ export function prepareProduct(product) {
       extensionImports.join("") +
       `export type { FeatureModule };\n` +
       (extensions.length
-        ? `const extensions: readonly (readonly [string, FeatureModule])[] = [${extensionEntries.join(",")}];\n` +
-          `for (const [id, feature] of extensions) { if (feature.id !== id || feature.sidebar.id !== id) throw new Error("Custom sidebar module ID mismatch: " + id); }\n`
+        ? `const extensions: readonly (readonly [string, FeatureModule, string | null])[] = [${extensionEntries.join(",")}];\n` +
+          `for (const [id, feature, route] of extensions) { if (feature.id !== id || feature.sidebar.id !== id) throw new Error("Custom sidebar module ID mismatch: " + id); if (route && !feature.routes?.some((item) => item.path === route)) throw new Error("Custom module route is missing: " + route); }\n`
         : "") +
       `export const featureModules: readonly FeatureModule[] = [${[
         ...(product.features.includes("herdr") ? ["herdrModule"] : []),

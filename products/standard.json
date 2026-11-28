@@ -1,5 +1,11 @@
 {
   "id": "standard",
+  "layout": {
+    "version": 1,
+    "toolbar": ["workspace", "commands", "help"],
+    "sidebarWidth": 280,
+    "startPage": "dashboard"
+  },
   "sidebar": {
     "primary": [
       "projects",

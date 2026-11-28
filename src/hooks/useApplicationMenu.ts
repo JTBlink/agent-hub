@@ -18,12 +18,14 @@ import {
   type Project,
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
+import { useWorkbench } from "../app/product/workbench";
 
 export function useApplicationMenu(
   onCommands: () => void,
   onManageWorkspaces: () => void,
 ) {
   const { t } = useTranslation();
+  const { shortcuts } = useWorkbench();
   const { projects } = useApp();
   const navigate = useNavigate();
   const { openProject } = useOpenProject();
@@ -94,6 +96,7 @@ export function useApplicationMenu(
           actions,
           navigator.userAgent.includes("Mac"),
           getCurrentWindow().label,
+          shortcuts,
         ),
       );
       if (disposed) {
@@ -121,6 +124,6 @@ export function useApplicationMenu(
       void focus.then((unlisten) => unlisten()).catch(console.error);
       void installed?.close().catch(console.error);
     };
-  }, [projects, t]);
+  }, [projects, t, shortcuts]);
   return recent;
 }

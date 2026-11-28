@@ -39,6 +39,31 @@
 - `productName`：可选安装包名称与窗口标题；Agent Flow 使用 `Agent Flow`。未配置时沿用默认产品名称。
 - `sidebar.primary`、`sidebar.bottom`：上下两组入口及顺序，不得重复。统一能力配置决定哪些入口实际可用。
 - `sidebar.defaultPanel`：默认面板 ID；其能力关闭后回退到可用面板。
+
+### 工作台预设
+
+产品可在 `product.json` 中声明 `layoutPreset`，路径相对产品清单。预设只包含 `sidebar`、`layout`、`appearance` 和 `shortcuts`，同一属性以产品清单为准。外部产品可以把预设存到 `custom/`。Agent Flow 使用 [独立预设](../products/layouts/agent-flow.json)。
+
+界面组装沿用 AgentHub 的公共工作台和已编译模块。布局文件通过稳定 ID 选择模块的位置，这一分工参考了 Herdr App 的布局与扩展设计。[Herdr 官方布局与扩展](https://github.com/herdrdev/herdr-app/blob/4c14b47be28c917022991184ea4cfdb70646aaa7/defaults/AGENTS.md)
+
+```json
+{
+  "layout": {
+    "version": 1,
+    "toolbar": ["workspace", "commands", "module:review", "help"],
+    "sidebarWidth": 320,
+    "startPage": "discover"
+  },
+  "appearance": { "accent": "teal", "textSize": "large" },
+  "shortcuts": { "commands": "Mod+Shift+P" }
+}
+```
+
+- 工具栏支持 `workspace`、`commands`、`help`、`settings`、`refresh` 和 `module:<模块 ID>`。内置页面按钮导航，面板按钮复用侧栏。侧栏底部入口由 `sidebar.bottom` 排序。
+- `startPage` 选择从首页启动且无需恢复工作区时显示的页面。私有模块通过 `{ "entry": "custom/review.tsx", "requires": ["gitlab"], "route": "/custom/review" }` 声明入口、依赖与启动路由，并在模块的 `routes` 注册同一路径。`sidebarModules` 原有字符串写法仍可使用。
+- 主题色支持 `blue`、`teal`、`violet`，随明暗主题切换对应色值。用户已保存的字号和侧栏宽度优先于产品默认值。
+- 快捷键 ID 为 `commands`、`settings`、`refresh`、`search`。`Mod` 对应 macOS 的 Command 和其他系统的 Control，可加 `Shift`。重复或占用系统编辑命令的绑定会被拒绝。
+- 开发时可编辑产品清单里的界面字段或当前预设文件。有效配置推送给当前窗口，校验失败时保留上一份有效配置。启动页在下次打开时生效。切换预设路径、编译特性、模块入口或产品身份后，重启开发构建。
 - `devPort`：可选开发端口。标准版默认 1420，个人版 1421，其他 ID 派生默认端口。
 
 内置产品在统一配置的 `products` 中声明能力。仓库外的产品清单通过 `features` 显式选择特性。外部清单可以沿用 `agent-flow` 产品 ID，保留安装标识和本机数据目录。`standard` 和 `personal` 由内置清单保留。

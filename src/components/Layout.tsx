@@ -1,6 +1,6 @@
 import { embeddedAgentDeliveryAdapter } from "../lib/previewAgentDelivery";
 import { PreviewHost } from "../features/preview/PreviewHost";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { TerminalStartupState } from "./terminal/useTerminalLayout";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -27,7 +27,15 @@ import { listenWorkspaceEvent } from "../lib/workspaceWindow";
 import { worktreeUrl } from "../lib/worktreeApi";
 import type { SidebarPanelRequest } from "../lib/sidebarSections";
 
+import {
+  matchesWorkbenchShortcut,
+  useWorkbench,
+  workbenchPath,
+} from "../app/product/workbench";
+import { applyProductTextSize } from "../lib/textScale";
+
 export function Layout() {
+  const { layout, appearance, shortcuts } = useWorkbench();
   const { t } = useTranslation();
   const { appError, refreshAppData, refreshProjects, loading, projects } =
     useApp();
@@ -51,6 +59,22 @@ export function Layout() {
     currentTerminal?.worktreePath ??
     projects.find((project) => project.id === currentTerminal?.projectId)?.path;
   const navigate = useNavigate();
+  const choseStartPage = useRef(false);
+  useEffect(() => {
+    if (choseStartPage.current || !started) return;
+    choseStartPage.current = true;
+    const start = layout.startPath ?? workbenchPath(layout.startPage);
+    if (welcomeReady && start && start !== "/")
+      void navigate(start, { replace: true });
+  }, [started, welcomeReady, layout.startPage, layout.startPath, navigate]);
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.productAccent = appearance.accent;
+    applyProductTextSize(appearance.textSize);
+    return () => {
+      delete root.dataset.productAccent;
+    };
+  }, [appearance.accent, appearance.textSize]);
   useEffect(() => {
     const unlisten = listenWorkspaceEvent<{ projectId: string; path: string }>(
       "workspace-open-directory",
@@ -98,7 +122,7 @@ export function Layout() {
   // Cmd+, to open Settings
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+      if (matchesWorkbenchShortcut(e, shortcuts.settings)) {
         const target = e.target as HTMLElement;
         if (
           target.tagName === "INPUT" ||
@@ -109,7 +133,7 @@ export function Layout() {
         e.preventDefault();
         navigate("/settings");
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "r") {
+      if (matchesWorkbenchShortcut(e, shortcuts.refresh)) {
         const target = e.target as HTMLElement;
         if (
           target.tagName === "INPUT" ||
@@ -125,7 +149,7 @@ export function Layout() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [navigate, refreshAppData]);
+  }, [navigate, refreshAppData, shortcuts.settings, shortcuts.refresh]);
 
   return (
     <SidebarVisibilityContext.Provider
@@ -154,7 +178,10 @@ export function Layout() {
           inert={!started}
           className="relative flex h-full w-full flex-col overflow-hidden bg-background text-primary"
         >
-          <WindowTitleBar onOpenCommands={() => setCommandsOpen(true)} />
+          <WindowTitleBar
+            onOpenCommands={() => setCommandsOpen(true)}
+            onRefresh={() => void refreshAppData()}
+          />
           <div className="flex min-h-0 flex-1 overflow-hidden">
             <Sidebar />
             <div

@@ -50,6 +50,8 @@ npm run app:build -- --product /path/to/product.json
 
 `cloud-sync` 同时控制 Skill、自动化任务和用户配置的云端备份、同步与恢复。品牌资源可以通过 `iconDir` 配置，路径相对 SDK 根目录。更多选项见解压目录中的 `docs/product-development.md`。
 
+产品可用 `"layoutPreset": "custom/workbench.json"` 引用独立工作台预设。预设可声明侧栏、顶部工具栏、启动页面、主题色、字号和快捷键。私有模块用稳定 ID 加入侧栏或工具栏，私有页面也可声明为启动页。开发阶段编辑预设会热更新当前工作台，并保留上一个通过校验的布局。[字段与示例](../../docs/product-development.md#工作台预设)
+
 并行维护的独立产品使用不同的 `id`，以获得各自的安装标识和数据目录。同一产品升级时继续使用原 ID。
 
 外部产品可以用 `version` 管理自己的桌面与 CLI 版本，格式为三段整数，每段在 0 到 65535 之间。该字段独立于 `SDK_VERSION`。省略时继承 SDK 包内的应用基础版本。
