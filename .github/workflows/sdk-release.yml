@@ -1,4 +1,4 @@
-name: SDK Release Gate
+name: SDK Release
 
 on:
   push:
@@ -53,3 +53,53 @@ jobs:
         env:
           SDK_REVISION: ${{ steps.candidate.outputs.revision }}
         run: node packages/agent-hub-core/verify-release.mjs sdk-assets "$GITHUB_REF_NAME" "$SDK_REVISION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-sdk-candidate
+          path: sdk-assets/
+          retention-days: 1
+          if-no-files-found: error
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: sdk-release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-sdk-candidate
+          path: sdk-assets
+      - name: Prepare registry workspace
+        run: |
+          version="$(cat packages/agent-hub-core/VERSION)"
+          cargo fetch --locked --manifest-path packages/agent-hub-core/Cargo.toml
+          node packages/agent-hub-core/package-registry.mjs \
+            "sdk-assets/agent-hub-core-$version.tar.gz" "$RUNNER_TEMP/sdk-registry"
+      - name: Publish fonts, Desktop and Core in dependency order
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          version="$(cat packages/agent-hub-core/VERSION)"
+          node packages/agent-hub-core/publish-registry.mjs "$RUNNER_TEMP/sdk-registry" "$version"
+      - name: Verify registry installation without Git
+        run: |
+          version="$(cat packages/agent-hub-core/VERSION)"
+          work="$(mktemp -d)"
+          cargo install agent-hub-core --version "=$version" --features sdk-cli --bin agent-hub-sdk --locked --root "$work/cargo"
+          mkdir "$work/blocked"
+          printf '#!/bin/sh\nexit 71\n' > "$work/blocked/git"
+          chmod +x "$work/blocked/git"
+          PATH="$work/blocked:$PATH" GIT_ALLOW_PROTOCOL=none "$work/cargo/bin/agent-hub-sdk" install "$work/sdk"
+          test "$(cat "$work/sdk/SDK_VERSION")" = "$version"
+          test "$(cat "$work/sdk/SDK_REVISION")" = "$(git rev-parse HEAD)"

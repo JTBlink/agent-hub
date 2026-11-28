@@ -1,6 +1,6 @@
 # AgentHub Core SDK 发布规范
 
-SDK 的维护目录是 `packages/agent-hub-core/`，crate 名和安装命令统一为 `agent-hub-core`。正式发行渠道为 crates.io。GitHub Actions 验证候选和标签，Git 源码提交为完整 SDK 提供可追溯的下载来源。
+SDK 的维护目录是 `packages/agent-hub-core/`，crate 名和安装命令统一为 `agent-hub-core`。正式发行渠道为 crates.io。GitHub Actions 验证同一提交的候选和标签，再按依赖顺序发布全部 SDK 包。
 
 ## 1. 选择版本并提交
 
@@ -26,28 +26,21 @@ sdk_tag="sdk-v${sdk_version}"
 sdk_commit="$(git rev-parse HEAD)"
 git tag -a "$sdk_tag" "$sdk_commit" -m "发布 AgentHub Core SDK $sdk_version"
 git push origin "refs/tags/${sdk_tag}:refs/tags/${sdk_tag}"
-gh run watch <sdk-release-gate-run-id> --exit-status
+gh run watch <sdk-release-run-id> --exit-status
 ```
 
-标签必须指向候选验收的同一提交。**SDK Release Gate** 重新校验同提交候选的归档与附件。已占用的标签保留对应关系。候选过期时，在同一提交上重新构建候选。
+标签必须指向候选验收的同一提交。**SDK Release** 重新校验同提交候选的归档与附件，再进入 crates.io 发布任务。已占用的标签保留对应关系。候选过期时，在同一提交上重新构建候选。
 
 ## 3. 发布并从 crates.io 验收
 
-从同一提交验收的 SDK 候选归档生成注册表工作区。桌面宿主及 React 源码进入 `agent-hub-desktop`，字体与许可证进入 `agent-hub-fonts`。先发布两个配套包，再发布使用精确版本依赖的 `agent-hub-core`。发布凭据使用本机 Cargo 认证或 crates.io Trusted Publishing。
+发布任务运行在 GitHub Actions 的 `sdk-release` 环境。首次接入时，在该环境的 Secrets 中配置 `CARGO_REGISTRY_TOKEN`。令牌的包名范围覆盖 `agent-hub-fonts`、`agent-hub-desktop` 和 `agent-hub-core`。新包需要 `Publish new crates`，已有包需要 `Publish new versions`。候选构建无需发布令牌。
 
-```bash
-node packages/agent-hub-core/package-registry.mjs <candidate-archive> <new-registry-directory>
-cd <new-registry-directory>
-cargo test --locked --workspace --all-features
-cargo publish --locked -p agent-hub-fonts
-cargo publish --locked -p agent-hub-desktop
-cargo publish --dry-run --locked --all-features -p agent-hub-core
-cargo publish --locked --all-features -p agent-hub-core
-cargo install agent-hub-core --version "=${sdk_version}" --features sdk-cli --locked
-agent-hub-sdk lock
-agent-hub-sdk install <new-sdk-directory>
-```
+每次推送 SDK 标签并通过候选校验后，发布任务自动执行：
 
-在禁止访问 GitHub 的环境中验证安装命令的版本和锁文件，核对 Cargo 包内的 SDK 源码提交，确认解包后包含对应版本的 README、变更日志和构建入口。保留 crates.io 链接、标签解引用提交和候选记录。发布失败时对已验收版本续发。
+1. 从验收归档生成注册表工作区。
+2. 依次发布字体、Desktop 和 Core。续发时会比对已经上传的包，只有内容一致才接着发布。
+3. 从 crates.io 安装指定版本的 SDK，禁用 Git 后解包并核对版本及源码提交。
+
+保留 crates.io 链接、标签解引用提交和候选记录。发布失败时，在相同标签和候选下重跑 SDK Release。桌面应用发布仍走独立流程。
 
 旧 SDK 的 GitHub Release 附件只能在替代版本通过 registry 下载验收后清理。Git 标签及其指向的源码提交仍作为安装来源保留。

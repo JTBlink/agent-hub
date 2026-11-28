@@ -68,7 +68,16 @@ describe("GitHub Actions workflow contract", () => {
         step.run?.includes("verify-release.mjs"),
       ),
     ).toBe(true);
-    expect(Object.keys(jobs)).toEqual(["verify"]);
+    expect(jobs.publish.needs).toBe("verify");
+    expect(jobs.publish.environment).toBe("sdk-release");
+    expect(jobs.publish.permissions).toEqual({ contents: "read" });
+    const publish = jobs.publish.steps.find((step) =>
+      step.run?.includes("publish-registry.mjs"),
+    );
+    expect(publish.env).toEqual({
+      CARGO_REGISTRY_TOKEN: "${{ secrets.CARGO_REGISTRY_TOKEN }}",
+    });
+    expect(jobs.publish.steps.at(-1).run).toContain("GIT_ALLOW_PROTOCOL=none");
     expect(parse(installers).on.push.tags).toEqual(["v*"]);
   });
   it("isolates different revisions of main without canceling active installer runs", () => {
