@@ -139,6 +139,8 @@ agent-hub-sdk build product.json .build/agent-hub-core-0.2.0
 
 在产品仓库维护 `product.json`，并把品牌和侧栏扩展放在旁边的 `custom/`。构建命令会校验由 Cargo 提供的版本化 SDK 资源，并按产品清单选择功能、构建界面和配套 CLI。只下载和解压时，可使用 `agent-hub-sdk install .build/agent-hub-core-0.2.0`。安装需要 Node.js，桌面构建还需要对应平台的 Rust 与 Tauri 工具链。 [产品清单和扩展示例](packages/agent-hub-core/README.md)
 
+下载和使用公开 SDK 无需发布令牌。维护者可查看 [SDK 发布规范](docs/sdk-release.md)，了解如何配置一枚 crates.io 令牌并通过 SDK 标签自动发布全部三个包。
+
 ## 本地数据与备份
 
 - 技能默认在 `~/.agent-hub/skills`，可在设置中移动技能库。

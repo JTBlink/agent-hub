@@ -1,6 +1,21 @@
 # AgentHub Core SDK 发布规范
 
-SDK 的维护目录是 `packages/agent-hub-core/`，crate 名和安装命令统一为 `agent-hub-core`。正式发行渠道为 crates.io。GitHub Actions 验证同一提交的候选和标签，再按依赖顺序发布全部 SDK 包。
+SDK 的维护目录是 `packages/agent-hub-core/`。在 crates.io 安装 `agent-hub-core` 并启用 `sdk-cli` feature，即可使用 `agent-hub-sdk` 命令。GitHub Actions 验证同一提交的候选和标签，再按依赖顺序发布全部 SDK 包。
+
+## 配置 crates.io 发布令牌
+
+三个 SDK 包共用一枚 crates.io API Token。候选构建、下载公开包和安装 SDK 均无需发布令牌。
+
+1. 在 [crates.io API Tokens](https://crates.io/settings/tokens) 创建令牌。将包名范围设为 `agent-hub-fonts`、`agent-hub-desktop` 和 `agent-hub-core`。首次发布新包需要 `publish-new`，更新已有包需要 `publish-update`。
+2. 在 GitHub 仓库的 **Settings → Environments → sdk-release** 中，确认部署仅允许 `sdk-v*` 标签。在 **Environment secrets** 中添加 `CARGO_REGISTRY_TOKEN`，值为上一步生成的令牌。
+3. 也可以在仓库目录使用 GitHub CLI 写入同一 Secret，按提示输入令牌。
+
+```bash
+gh secret set CARGO_REGISTRY_TOKEN --env sdk-release
+gh secret list --env sdk-release
+```
+
+列表只显示 Secret 的名称和更新时间。更新令牌时覆盖同名的 Environment Secret。使用仓库外的凭据存储备份令牌，公开仓库中只记录 Secret 名称。
 
 ## 1. 选择版本并提交
 
@@ -33,9 +48,7 @@ gh run watch <sdk-release-run-id> --exit-status
 
 ## 3. 发布并从 crates.io 验收
 
-发布任务运行在 GitHub Actions 的 `sdk-release` 环境。首次接入时，在该环境的 Secrets 中配置 `CARGO_REGISTRY_TOKEN`。令牌的包名范围覆盖 `agent-hub-fonts`、`agent-hub-desktop` 和 `agent-hub-core`。新包需要 `Publish new crates`，已有包需要 `Publish new versions`。候选构建无需发布令牌。
-
-每次推送 SDK 标签并通过候选校验后，发布任务自动执行：
+每次推送 SDK 标签并通过候选校验后，发布任务在 GitHub Actions 的 `sdk-release` 环境中自动执行以下步骤。发布令牌仅在上传到 crates.io 的步骤注入。
 
 1. 从验收归档生成注册表工作区。
 2. 依次发布字体、Desktop 和 Core。续发时会比对已经上传的包，只有内容一致才接着发布。
