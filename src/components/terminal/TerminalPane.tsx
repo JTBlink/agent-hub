@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FitAddon } from "@xterm/addon-fit";
-import { createTerminalOutput } from "./terminalOutput";
+import { createTerminalOutput, decodeTerminalOutput } from "./terminalOutput";
 import { createTerminalRenderer } from "./terminalRenderer";
 import {
   bindTerminalPaste,
@@ -215,7 +215,6 @@ export function TerminalPane({
         )
           return;
         fit.fit();
-        terminal.refresh(0, terminal.rows - 1);
         const size = { rows: terminal.rows, cols: terminal.cols };
         if (
           sessionId &&
@@ -303,10 +302,7 @@ export function TerminalPane({
         const onEvent = (event: api.TerminalEvent) => {
           if (disposed) return;
           if (event.kind === "output") {
-            const bytes = Uint8Array.from(atob(event.data), (character) =>
-              character.charCodeAt(0),
-            );
-            output.enqueue(bytes, event.seq);
+            output.enqueue(decodeTerminalOutput(event.data), event.seq);
           } else if (event.kind === "exit") {
             output.whenDrained(() => {
               setExitCode(event.code);

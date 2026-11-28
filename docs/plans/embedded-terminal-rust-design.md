@@ -65,6 +65,44 @@ xterm 的 `write` 异步消费数据，callback 才表示该片段已处理；�
 
 Fit 扩展和 `ResizeObserver` 测量真实 rows / cols。隐藏窗格不发送 0×0；字体加载、侧栏变化和恢复可见时重新测量，合并快速 resize 后调用 PTY 的真正尺寸调整。仅改变 CSS 不能使 TUI 正确适配。
 
+### 参考官方 Herdr 的渲染优化
+
+官方桌面端是 [herdrdev/herdr-app](https://github.com/herdrdev/herdr-app)。Herdr 2 将终端进程与会话交给 `herdr-core`，桌面端订阅有序字节流，用 libghostty 解析终端协议，由 GPUI 绘制。其终端用时间预算限制每轮输出处理并在拥堵时让出执行机会；只对画面变化的可见窗格请求更新，复用未变的终端行。JSON 布局和 gpui-kit 的 JavaScript 扩展负责工作台构成。终端网格的绘制由 Rust 接管。[终端调度](https://github.com/herdrdev/herdr-app/blob/4c14b47be28c917022991184ea4cfdb70646aaa7/src/terminal.rs#L24) · [视口行缓存](https://github.com/herdrdev/herdr-app/blob/4c14b47be28c917022991184ea4cfdb70646aaa7/src/vt.rs#L1788) · [扩展指南](https://github.com/herdrdev/herdr-app/blob/4c14b47be28c917022991184ea4cfdb70646aaa7/defaults/AGENTS.md)
+
+AgentHub 延续 xterm 与现有 PTY 背压。高峰时将一个传输批次分为最多 16 KiB 的解析片段，使 xterm 可以在片段间检查自己的时间预算。最后一片解析完成后，才确认该批次的最高序号并报告输出已排空。可见性仍只控制绘制资源，后台字节照常消费。窗口测量交给 FitAddon 在网格变化时触发重绘，字体变更和恢复可见继续走显式刷新。
+
+本地解析对照使用同版本 xterm，在 Node.js 里交替运行两种写入方式，预热后各取 10 轮。每轮四个窗格各输入 256 KiB ANSI 和中英文文本。单次解析 p95 从 3.08 ms 降至 0.26 ms，整批排空中位数从 12.40 ms 变为 12.62 ms。采样范围是解析和调度，桌面帧率与真实输入回显需单独测量。
+
+#### 桌面基准
+
+参照 [Herdr benchmark](https://github.com/herdrdev/herdr-app/blob/4c14b47be28c917022991184ea4cfdb70646aaa7/scripts/bench.py)，使用原生 WebView、真实 PTY、生产输入队列、输出背压和渲染切换。基准独立启动测试进程和窗口。每轮执行前台回显、四个后台窗格持续输出及四个可见窗格持续输出，并校验输出序号和最后的完成标记。
+
+```bash
+# 第一个终端，保持运行
+npm run dev -- --host 127.0.0.1 --port 4183 --strictPort
+
+# 第二个终端，分别运行分片和同批合并模式
+cargo run --locked --manifest-path src-tauri/Cargo.toml --example terminal_benchmark -- 4183
+cargo run --locked --manifest-path src-tauri/Cargo.toml --example terminal_benchmark -- 4183 --baseline
+# 保留解析分片，仅切回逐字节回调解码，隔离测量解码成本
+cargo run --locked --manifest-path src-tauri/Cargo.toml --example terminal_benchmark -- 4183 --legacy-decode
+```
+
+每轮输出一行 JSON。将窗口留在前台并保持屏幕解锁，在同一设备和显示设置交替运行两种模式。记录回显到 xterm 解析完成的 p95、WebView 帧回调间隔 p95、PTY 输出吞吐、Base64 解码总时间和宿主进程 CPU。宿主 CPU 与 WebView 子进程分开统计。窗口不可见或没有帧回调时，帧指标为 `null`。帧回调反映 WebView 的调度；实际屏幕呈现和物理键盘回显还需原生观测。Windows 应在交互式桌面会话运行；Linux 的 Xvfb 结果单独记为虚拟显示。
+
+Linux WebKitGTK 在 Xvfb 下交替测了两轮，解析分片在两组都启用。下表取各组两轮指标的中位数。
+
+| 场景         | 解码耗时（ms/MiB） | 回显到解析 p95（ms） | 帧回调间隔 p95（ms） | 吞吐（MiB/s） |
+| ------------ | ------------------ | -------------------- | -------------------- | ------------- |
+| 四个后台窗格 | 14.85 → 2.86       | 40.5 → 31.5          | 44 → 33              | 19.52 → 26.82 |
+| 四个可见窗格 | 16.46 → 3.06       | 25.5 → 20            | 36 → 26              | 22.91 → 32.70 |
+
+据此用直接填充 `Uint8Array` 替代每字节回调，保留原始 ANSI 与 UTF-8 字节。吞吐随解码改进上升，测试宿主 CPU 也随处理字节量上升。macOS 锁屏环境已验证真实 PTY 路径和输出序号，只记录回显到解析延迟与吞吐。
+
+Windows 原生基准已编译。在 SSH 的 Session 0 中，WebView2 窗口未能启动，前台数据需在交互式桌面采集。基准为窗口初始化设置单独超时。
+
+中文输入、粘贴、滚动历史和分屏继续做原生功能验收。如果数据显示瓶颈在 Base64 解码或 IPC，优先优化传输。如果开销仍集中在 WebView 绘制，再评估独立 GPUI 终端窗口原型，复用现有会话和输入接口。
+
 ## Herdr 快捷启动与自动安装
 
 按钮的职责只有“检测本地程序 → 缺失则安装 → 在当前窗格启动”。本机 `herdr --help` 已确认 bare `herdr` 用于启动或 attach TUI；本次没有控制个人会话或启动真实 TUI。

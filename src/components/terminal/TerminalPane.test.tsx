@@ -495,14 +495,18 @@ it("does not resize the PTY again when the measured grid is unchanged", async ()
       ),
     );
     await act(async () => finishFonts());
+    const initialRedraws = renderer.redraw.mock.calls.length;
     await act(async () => {
       frames.splice(0).forEach((frame) => frame(0));
     });
     expect(api.resizeTerminal).not.toHaveBeenCalled();
+    expect(renderer.redraw).toHaveBeenCalledTimes(initialRedraws);
     await act(async () => fontEvents.dispatchEvent(new Event("loadingdone")));
+    expect(renderer.redraw).toHaveBeenCalledTimes(initialRedraws + 1);
     await act(async () => {
       frames.splice(0).forEach((frame) => frame(0));
     });
+    expect(renderer.redraw).toHaveBeenCalledTimes(initialRedraws + 1);
     expect(api.resizeTerminal).not.toHaveBeenCalled();
     expect(api.createTerminal).toHaveBeenCalledOnce();
   } finally {
