@@ -1,5 +1,9 @@
 # AgentHub SDK 变更日志
 
+## [Unreleased]
+
+- 产品清单支持替换发现页面，默认沿用内置页面和既有路由。
+
 ## [0.2.0]
 
 - 新增 `agent-hub-sdk` 构建入口，由 Cargo 提供同版本桌面资源和字体，产品构建无需访问 GitHub。

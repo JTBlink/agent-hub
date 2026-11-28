@@ -162,3 +162,5 @@ export function Discover() {
     </div>
   );
 }
+
+export default Discover;

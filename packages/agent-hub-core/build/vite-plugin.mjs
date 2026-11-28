@@ -3,6 +3,7 @@ import { relative, resolve } from "node:path";
 import {
   loadProduct,
   prepareProduct,
+  discoverPagePath,
   featureAliases,
   featureCatalog,
 } from "./config.mjs";
@@ -28,6 +29,7 @@ export function productViteConfig(root) {
   return {
     resolve: {
       alias: {
+        "@app/discover": discoverPagePath(root, product),
         "@app/features": resolve(product.generatedDir, "features.ts"),
         ...integrationAliases,
         "@app/platforms": resolve(product.generatedDir, "platforms.ts"),

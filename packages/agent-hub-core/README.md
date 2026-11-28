@@ -83,6 +83,20 @@ export default {
 } satisfies FeatureModule;
 ```
 
+## 替换发现页面
+
+产品默认使用 AgentHub 内置的「发现」页面。要整页替换，在产品清单的现有配置中添加：
+
+```json
+{
+  "pageOverrides": {
+    "discover": "custom/discover.tsx"
+  }
+}
+```
+
+在 `product.json` 同级的 `custom/` 中放入入口文件，默认导出一个无需必填 props 的 React 页面组件。保留侧栏的 `discover` 项即可继续从原位置打开页面。原有 `/discover` 和 `/install` 链接都会渲染这个组件，并保留查询参数。例如，自定义页面可通过路由的 `useSearchParams` 读取 `type=automations`，按需提供自动化任务入口。接入私有 Skill Hub 时，可使用下文的 Skill catalog 命令。
+
 ## 私有桌面插件
 
 产品可以在 `custom/` 下提供一个 Cargo crate，并在产品清单中注册。这个 crate 随桌面宿主编译，请在其中维护内部 OpenAPI URL、认证和协议转换。

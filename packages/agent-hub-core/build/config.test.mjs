@@ -7,6 +7,7 @@ import {
   productArguments,
   loadProduct,
   prepareProduct,
+  discoverPagePath,
   featureAliases,
   featureCatalog,
 } from "./config.mjs";
@@ -198,4 +199,28 @@ it("registers a product-owned sidebar module and lets it be the default panel", 
       cargoFeatures,
     ),
   ).toThrow(/Invalid custom sidebar modules/);
+});
+
+it("selects the built-in discovery page by default and carries an explicit replacement", () => {
+  const root = tmpdir();
+  expect(discoverPagePath(root, resolveProduct(base, cargoFeatures))).toBe(
+    join(root, "src/views/Discover.tsx"),
+  );
+  const pageOverrides = { discover: "custom/skills/discover.tsx" };
+  const product = resolveProduct({ ...base, pageOverrides }, cargoFeatures);
+  expect(discoverPagePath(root, product)).toBe(
+    join(root, pageOverrides.discover),
+  );
+});
+
+it.each([
+  { settings: "custom/settings.tsx" },
+  { discover: "src/views/Discover.tsx" },
+  { discover: "custom/../discover.tsx" },
+  { discover: "custom/discover.js" },
+  null,
+])("rejects invalid page replacements %#", (pageOverrides) => {
+  expect(() =>
+    resolveProduct({ ...base, pageOverrides }, cargoFeatures),
+  ).toThrow(/Invalid pageOverrides/);
 });

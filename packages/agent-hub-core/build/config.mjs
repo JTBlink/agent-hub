@@ -33,6 +33,14 @@ export function featureAliases(root, features) {
     ),
   );
 }
+
+export function discoverPagePath(root, product) {
+  return resolve(
+    root,
+    product.pageOverrides?.discover ?? "src/views/Discover.tsx",
+  );
+}
+
 const modules = new Set([
   "projects",
   "search",
@@ -98,6 +106,23 @@ export function resolveProduct(input, cargoFeatures) {
   )
     throw new Error("Invalid product icon directory");
   const selected = resolveFeatures(input.features, cargoFeatures);
+  const pageOverrides = input.pageOverrides;
+  if (
+    pageOverrides !== undefined &&
+    (!pageOverrides ||
+      typeof pageOverrides !== "object" ||
+      Array.isArray(pageOverrides) ||
+      Object.entries(pageOverrides).some(
+        ([id, path]) =>
+          id !== "discover" ||
+          typeof path !== "string" ||
+          !/^custom\/(?:[\w.-]+\/)*[\w.-]+\.tsx?$/.test(path) ||
+          path.split("/").some((part) => part === "." || part === ".."),
+      ))
+  )
+    throw new Error(
+      "Invalid pageOverrides: discover must point to a .ts or .tsx file under custom/",
+    );
   const sidebarModules = input.sidebarModules ?? {};
   if (
     typeof sidebarModules !== "object" ||
@@ -149,6 +174,7 @@ export function resolveProduct(input, cargoFeatures) {
       ? {}
       : { productName: input.productName.trim() }),
     ...(input.iconDir === undefined ? {} : { iconDir: input.iconDir }),
+    ...(pageOverrides?.discover ? { pageOverrides } : {}),
     ...(Object.keys(sidebarModules).length ? { sidebarModules } : {}),
     features: [...selected].sort(),
     devPort:
@@ -436,6 +462,7 @@ export function prepareProduct(product) {
           tsBuildInfoFile: resolve(product.generatedDir, "app.tsbuildinfo"),
           baseUrl: ROOT,
           paths: {
+            "@app/discover": [discoverPagePath(ROOT, product)],
             "@app/features": [resolve(product.generatedDir, "features.ts")],
             "@app/herdr": [integration],
             "@app/product": [resolve(product.generatedDir, "product.ts")],

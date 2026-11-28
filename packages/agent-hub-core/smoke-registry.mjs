@@ -85,12 +85,17 @@ try {
       version: "1.2.0",
       features: ["gitlab", "herdr"],
       sidebarModules: { review: "custom/review.tsx" },
+      pageOverrides: { discover: "custom/discover.tsx" },
       sidebar: {
-        primary: ["projects", "herdr", "review"],
+        primary: ["projects", "herdr", "discover", "review"],
         bottom: ["settings"],
         defaultPanel: "review",
       },
     }),
+  );
+  writeFileSync(
+    join(cwd, "custom/discover.tsx"),
+    "export default function ProductDiscovery() { return <p>Product discovery</p>; }\n",
   );
   writeFileSync(
     join(cwd, "custom/review.tsx"),
@@ -117,7 +122,9 @@ try {
   if (
     report.product_id !== "agent-flow" ||
     report.features.join(",") !== "gitlab,herdr" ||
-    !report.modules.includes("custom/review.tsx")
+    !report.modules.includes("custom/review.tsx") ||
+    !report.modules.includes("custom/discover.tsx") ||
+    report.modules.includes("src/views/Discover.tsx")
   )
     throw new Error("Unexpected Agent Flow build identity or modules");
   if (flags.includes("--native")) {

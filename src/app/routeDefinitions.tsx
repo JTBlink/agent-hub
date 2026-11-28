@@ -9,7 +9,7 @@ import {
   CODING_WORKSPACE_CONFIG,
   LOBSTER_WORKSPACE_CONFIG,
 } from "../views/workspaceConfigs";
-import { Discover } from "../views/Discover";
+import Discover from "@app/discover";
 import { Settings } from "../views/Settings";
 import { ProjectSkills } from "../views/ProjectSkills";
 import { cloudSyncRoutes } from "@app/cloud-sync";
