@@ -9,6 +9,14 @@ pub mod product;
 pub mod commands;
 pub mod core;
 
+/// Read a resource from the pinned default catalog at compile time.
+macro_rules! default_content {
+    ($path:literal) => {
+        include_str!(concat!(env!("AGENT_HUB_DEFAULT_CONTENT_DIR"), "/", $path))
+    };
+}
+pub(crate) use default_content;
+
 pub use desktop::builder;
 pub use desktop::lifecycle::{quit_app, restart_app, QUITTING};
 pub use desktop::tray::set_tray_icon_enabled;

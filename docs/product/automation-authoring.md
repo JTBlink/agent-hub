@@ -16,7 +16,7 @@
 
 ## Herdr 模块
 
-任务入口复用 `automations/_shared/agent-entry.py` 薄适配器，通过 `agents launch execute` 调用 `core/agent_execution`。Herdr 专有行为维护于 `core/herdr`，状态事务维护于 `core/state_store`；公共实现随匹配 CLI 管理为单份版本资源，任务不携带 `herdr_agent.py` 或存储实现副本，无需运行桌面进程。业务筛选与结果校验仍由任务自己的脚本负责。
+任务入口复用 公开内容仓库的 [任务入口](https://github.com/JTBlink/agent-hub-skills/blob/main/automations/_shared/agent-entry.py) 薄适配器，通过 `agents launch execute` 调用 `core/agent_execution`。Herdr 专有行为维护于 `core/herdr`，状态事务维护于 `core/state_store`；公共实现随匹配 CLI 管理为单份版本资源，任务不携带 `herdr_agent.py` 或存储实现副本，无需运行桌面进程。业务筛选与结果校验仍由任务自己的脚本负责。
 
 ```json
 {

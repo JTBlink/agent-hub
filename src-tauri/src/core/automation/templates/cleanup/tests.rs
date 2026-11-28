@@ -26,7 +26,7 @@ fn script(workspace: &Path) -> std::path::PathBuf {
     }
     fs::write(
         &file,
-        include_str!("../../../../../../automations/system/disk-cleanup/scripts/disk-cleanup.py"),
+        crate::default_content!("automations/system/disk-cleanup/scripts/disk-cleanup.py"),
     )
     .unwrap();
     file

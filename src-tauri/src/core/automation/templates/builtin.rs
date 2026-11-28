@@ -78,7 +78,7 @@ pub(super) fn agent_starter(shell: &str) -> AutomationDraft {
         files: vec![
             AutomationScriptFile {
                 path: "scripts/agent.py".into(),
-                content: include_str!("../../../../../automations/_shared/agent-entry.py").into(),
+                content: crate::default_content!("automations/_shared/agent-entry.py").into(),
             },
             AutomationScriptFile {
                 path: "prompts/prompt.md".into(),
@@ -99,124 +99,399 @@ pub(super) fn agent_starter(shell: &str) -> AutomationDraft {
 pub(super) const DISK_CLEANUP_FILES: &[(&str, &str)] = &[
     (
         "scripts/disk-cleanup.py",
-        include_str!("../../../../../automations/system/disk-cleanup/scripts/disk-cleanup.py"),
+        crate::default_content!("automations/system/disk-cleanup/scripts/disk-cleanup.py"),
     ),
     (
         "scripts/cleanup_config.py",
-        include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_config.py"),
+        crate::default_content!("automations/system/disk-cleanup/scripts/cleanup_config.py"),
     ),
     (
         "scripts/cleanup_files.py",
-        include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_files.py"),
+        crate::default_content!("automations/system/disk-cleanup/scripts/cleanup_files.py"),
     ),
     (
         "scripts/cleanup_rules.py",
-        include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_rules.py"),
+        crate::default_content!("automations/system/disk-cleanup/scripts/cleanup_rules.py"),
     ),
     (
         "scripts/cleanup_actions.py",
-        include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_actions.py"),
+        crate::default_content!("automations/system/disk-cleanup/scripts/cleanup_actions.py"),
     ),
     (
         "scripts/cleanup_report.py",
-        include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_report.py"),
+        crate::default_content!("automations/system/disk-cleanup/scripts/cleanup_report.py"),
     ),
     (
         "config/cleanup-config.json",
-        include_str!("../../../../../automations/system/disk-cleanup/config/cleanup-config.json"),
+        crate::default_content!("automations/system/disk-cleanup/config/cleanup-config.json"),
     ),
     (
         "TASK.md",
-        include_str!("../../../../../automations/system/disk-cleanup/TASK.md"),
+        crate::default_content!("automations/system/disk-cleanup/TASK.md"),
     ),
 ];
 
 const BUNDLES: &[Bundle] = &[
-#[cfg(feature = "herdr")]
-(include_str!("../../../../../automations/engineering/agent-code-review/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-code-review/config/task.json"), &[
-("scripts/agent-code-review.py", include_str!("../../../../../automations/engineering/agent-code-review/scripts/agent-code-review.py")),
-("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-code-review/prompts/prompt.md")),
-("config/agent.json", include_str!("../../../../../automations/engineering/agent-code-review/config/agent.json")),
-("TASK.md", include_str!("../../../../../automations/engineering/agent-code-review/TASK.md")),
-("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-code-review/scripts/run.sh"))
-]),
-#[cfg(feature = "herdr")]
-(include_str!("../../../../../automations/engineering/agent-issue-processing/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-issue-processing/config/task.json"), &[
-("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-issue-processing/scripts/agent.py")),
-("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-issue-processing/prompts/prompt.md")),
-("config/agent.json", include_str!("../../../../../automations/engineering/agent-issue-processing/config/agent.json")),
-("TASK.md", include_str!("../../../../../automations/engineering/agent-issue-processing/TASK.md")),
-("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-issue-processing/scripts/run.sh"))
-]),
-#[cfg(feature = "herdr")]
-(include_str!("../../../../../automations/engineering/agent-maintenance/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-maintenance/config/task.json"), &[
-("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-maintenance/scripts/agent.py")),
-("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-maintenance/prompts/prompt.md")),
-("config/agent.json", include_str!("../../../../../automations/engineering/agent-maintenance/config/agent.json")),
-("TASK.md", include_str!("../../../../../automations/engineering/agent-maintenance/TASK.md")),
-("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-maintenance/scripts/run.sh"))
-]),
-#[cfg(feature = "herdr")]
-(include_str!("../../../../../automations/engineering/agent-mr-processing/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-mr-processing/config/task.json"), &[
-("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/agent.py")),
-("scripts/review.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/review.py")),
-("scripts/review_host.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/review_host.py")),
-("scripts/repair_state.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/repair_state.py")),
-("scripts/review_labels.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/review_labels.py")),
-("references/review-labels.md", include_str!("../../../../../automations/engineering/agent-mr-processing/references/review-labels.md")),
-("scripts/task_state.py", include_str!("../../../../../automations/_shared/task-state.py")),
-("config/review-config.json", include_str!("../../../../../automations/engineering/agent-mr-processing/config/review-config.json")),
-("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-mr-processing/prompts/prompt.md")),
-("config/agent.json", include_str!("../../../../../automations/engineering/agent-mr-processing/config/agent.json")),
-("TASK.md", include_str!("../../../../../automations/engineering/agent-mr-processing/TASK.md")),
-("references/platforms.md", include_str!("../../../../../automations/engineering/agent-mr-processing/references/platforms.md")),
-("references/runtime.md", include_str!("../../../../../automations/engineering/agent-mr-processing/references/runtime.md")),
-("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/run.sh"))
-]),
-#[cfg(feature = "herdr")]
-(include_str!("../../../../../automations/hermes/daily-summary/config/catalog.json"), include_str!("../../../../../automations/hermes/daily-summary/config/task.json"), &[
-("scripts/agent.py", include_str!("../../../../../automations/hermes/daily-summary/scripts/agent.py")),
-("scripts/run.sh", include_str!("../../../../../automations/hermes/daily-summary/scripts/run.sh")),
-("config/agent.json", include_str!("../../../../../automations/hermes/daily-summary/config/agent.json")),
-("prompts/prompt.md", include_str!("../../../../../automations/hermes/daily-summary/prompts/prompt.md")),
-("TASK.md", include_str!("../../../../../automations/hermes/daily-summary/TASK.md"))
-]),
-(include_str!("../../../../../automations/system/disk-cleanup/config/catalog.json"), include_str!("../../../../../automations/system/disk-cleanup/config/task.json"), &[
-("scripts/disk-cleanup.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/disk-cleanup.py")),
-("scripts/cleanup_config.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_config.py")),
-("scripts/cleanup_files.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_files.py")),
-("scripts/cleanup_rules.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_rules.py")),
-("scripts/cleanup_actions.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_actions.py")),
-("scripts/cleanup_report.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_report.py")),
-("config/cleanup-config.json", include_str!("../../../../../automations/system/disk-cleanup/config/cleanup-config.json")),
-("TASK.md", include_str!("../../../../../automations/system/disk-cleanup/TASK.md")),
-("scripts/run.sh", include_str!("../../../../../automations/system/disk-cleanup/scripts/run.sh"))
-]),
-(include_str!("../../../../../automations/system/git-status/config/catalog.json"), include_str!("../../../../../automations/system/git-status/config/task.json"), &[
-("scripts/git-status.py", include_str!("../../../../../automations/system/git-status/scripts/git-status.py")),
-("scripts/run.sh", include_str!("../../../../../automations/system/git-status/scripts/run.sh")),
-("TASK.md", include_str!("../../../../../automations/system/git-status/TASK.md"))
-]),
-(include_str!("../../../../../automations/system/network-reset/config/catalog.json"), include_str!("../../../../../automations/system/network-reset/config/task.json"), &[
-("scripts/network-reset.py", include_str!("../../../../../automations/system/network-reset/scripts/network-reset.py")),
-("scripts/setup.sh", include_str!("../../../../../automations/system/network-reset/scripts/setup.sh")),
-("scripts/reset.sh", include_str!("../../../../../automations/system/network-reset/scripts/reset.sh")),
-("TASK.md", include_str!("../../../../../automations/system/network-reset/TASK.md")),
-("scripts/run.sh", include_str!("../../../../../automations/system/network-reset/scripts/run.sh"))
-]),
-#[cfg(feature = "herdr")]
-(include_str!("../../../../../automations/hermes/repository-audit/config/catalog.json"), include_str!("../../../../../automations/hermes/repository-audit/config/task.json"), &[
-("scripts/agent.py", include_str!("../../../../../automations/hermes/repository-audit/scripts/agent.py")),
-("scripts/run.sh", include_str!("../../../../../automations/hermes/repository-audit/scripts/run.sh")),
-("config/agent.json", include_str!("../../../../../automations/hermes/repository-audit/config/agent.json")),
-("prompts/prompt.md", include_str!("../../../../../automations/hermes/repository-audit/prompts/prompt.md")),
-("TASK.md", include_str!("../../../../../automations/hermes/repository-audit/TASK.md"))
-]),
-(include_str!("../../../../../automations/system/workspace-check/config/catalog.json"), include_str!("../../../../../automations/system/workspace-check/config/task.json"), &[
-("scripts/workspace-check.py", include_str!("../../../../../automations/system/workspace-check/scripts/workspace-check.py")),
-("scripts/run.sh", include_str!("../../../../../automations/system/workspace-check/scripts/run.sh")),
-("TASK.md", include_str!("../../../../../automations/system/workspace-check/TASK.md"))
-])
+    #[cfg(feature = "herdr")]
+    (
+        crate::default_content!("automations/engineering/agent-code-review/config/catalog.json"),
+        crate::default_content!("automations/engineering/agent-code-review/config/task.json"),
+        &[
+            (
+                "scripts/agent-code-review.py",
+                crate::default_content!(
+                    "automations/engineering/agent-code-review/scripts/agent-code-review.py"
+                ),
+            ),
+            (
+                "prompts/prompt.md",
+                crate::default_content!(
+                    "automations/engineering/agent-code-review/prompts/prompt.md"
+                ),
+            ),
+            (
+                "config/agent.json",
+                crate::default_content!(
+                    "automations/engineering/agent-code-review/config/agent.json"
+                ),
+            ),
+            (
+                "TASK.md",
+                crate::default_content!("automations/engineering/agent-code-review/TASK.md"),
+            ),
+            (
+                "scripts/run.sh",
+                crate::default_content!("automations/engineering/agent-code-review/scripts/run.sh"),
+            ),
+        ],
+    ),
+    #[cfg(feature = "herdr")]
+    (
+        crate::default_content!(
+            "automations/engineering/agent-issue-processing/config/catalog.json"
+        ),
+        crate::default_content!("automations/engineering/agent-issue-processing/config/task.json"),
+        &[
+            (
+                "scripts/agent.py",
+                crate::default_content!(
+                    "automations/engineering/agent-issue-processing/scripts/agent.py"
+                ),
+            ),
+            (
+                "prompts/prompt.md",
+                crate::default_content!(
+                    "automations/engineering/agent-issue-processing/prompts/prompt.md"
+                ),
+            ),
+            (
+                "config/agent.json",
+                crate::default_content!(
+                    "automations/engineering/agent-issue-processing/config/agent.json"
+                ),
+            ),
+            (
+                "TASK.md",
+                crate::default_content!("automations/engineering/agent-issue-processing/TASK.md"),
+            ),
+            (
+                "scripts/run.sh",
+                crate::default_content!(
+                    "automations/engineering/agent-issue-processing/scripts/run.sh"
+                ),
+            ),
+        ],
+    ),
+    #[cfg(feature = "herdr")]
+    (
+        crate::default_content!("automations/engineering/agent-maintenance/config/catalog.json"),
+        crate::default_content!("automations/engineering/agent-maintenance/config/task.json"),
+        &[
+            (
+                "scripts/agent.py",
+                crate::default_content!(
+                    "automations/engineering/agent-maintenance/scripts/agent.py"
+                ),
+            ),
+            (
+                "prompts/prompt.md",
+                crate::default_content!(
+                    "automations/engineering/agent-maintenance/prompts/prompt.md"
+                ),
+            ),
+            (
+                "config/agent.json",
+                crate::default_content!(
+                    "automations/engineering/agent-maintenance/config/agent.json"
+                ),
+            ),
+            (
+                "TASK.md",
+                crate::default_content!("automations/engineering/agent-maintenance/TASK.md"),
+            ),
+            (
+                "scripts/run.sh",
+                crate::default_content!("automations/engineering/agent-maintenance/scripts/run.sh"),
+            ),
+        ],
+    ),
+    #[cfg(feature = "herdr")]
+    (
+        crate::default_content!("automations/engineering/agent-mr-processing/config/catalog.json"),
+        crate::default_content!("automations/engineering/agent-mr-processing/config/task.json"),
+        &[
+            (
+                "scripts/agent.py",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/scripts/agent.py"
+                ),
+            ),
+            (
+                "scripts/review.py",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/scripts/review.py"
+                ),
+            ),
+            (
+                "scripts/review_host.py",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/scripts/review_host.py"
+                ),
+            ),
+            (
+                "scripts/repair_state.py",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/scripts/repair_state.py"
+                ),
+            ),
+            (
+                "scripts/review_labels.py",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/scripts/review_labels.py"
+                ),
+            ),
+            (
+                "references/review-labels.md",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/references/review-labels.md"
+                ),
+            ),
+            (
+                "scripts/task_state.py",
+                crate::default_content!("automations/_shared/task-state.py"),
+            ),
+            (
+                "config/review-config.json",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/config/review-config.json"
+                ),
+            ),
+            (
+                "prompts/prompt.md",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/prompts/prompt.md"
+                ),
+            ),
+            (
+                "config/agent.json",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/config/agent.json"
+                ),
+            ),
+            (
+                "TASK.md",
+                crate::default_content!("automations/engineering/agent-mr-processing/TASK.md"),
+            ),
+            (
+                "references/platforms.md",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/references/platforms.md"
+                ),
+            ),
+            (
+                "references/runtime.md",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/references/runtime.md"
+                ),
+            ),
+            (
+                "scripts/run.sh",
+                crate::default_content!(
+                    "automations/engineering/agent-mr-processing/scripts/run.sh"
+                ),
+            ),
+        ],
+    ),
+    #[cfg(feature = "herdr")]
+    (
+        crate::default_content!("automations/hermes/daily-summary/config/catalog.json"),
+        crate::default_content!("automations/hermes/daily-summary/config/task.json"),
+        &[
+            (
+                "scripts/agent.py",
+                crate::default_content!("automations/hermes/daily-summary/scripts/agent.py"),
+            ),
+            (
+                "scripts/run.sh",
+                crate::default_content!("automations/hermes/daily-summary/scripts/run.sh"),
+            ),
+            (
+                "config/agent.json",
+                crate::default_content!("automations/hermes/daily-summary/config/agent.json"),
+            ),
+            (
+                "prompts/prompt.md",
+                crate::default_content!("automations/hermes/daily-summary/prompts/prompt.md"),
+            ),
+            (
+                "TASK.md",
+                crate::default_content!("automations/hermes/daily-summary/TASK.md"),
+            ),
+        ],
+    ),
+    (
+        crate::default_content!("automations/system/disk-cleanup/config/catalog.json"),
+        crate::default_content!("automations/system/disk-cleanup/config/task.json"),
+        &[
+            (
+                "scripts/disk-cleanup.py",
+                crate::default_content!("automations/system/disk-cleanup/scripts/disk-cleanup.py"),
+            ),
+            (
+                "scripts/cleanup_config.py",
+                crate::default_content!(
+                    "automations/system/disk-cleanup/scripts/cleanup_config.py"
+                ),
+            ),
+            (
+                "scripts/cleanup_files.py",
+                crate::default_content!("automations/system/disk-cleanup/scripts/cleanup_files.py"),
+            ),
+            (
+                "scripts/cleanup_rules.py",
+                crate::default_content!("automations/system/disk-cleanup/scripts/cleanup_rules.py"),
+            ),
+            (
+                "scripts/cleanup_actions.py",
+                crate::default_content!(
+                    "automations/system/disk-cleanup/scripts/cleanup_actions.py"
+                ),
+            ),
+            (
+                "scripts/cleanup_report.py",
+                crate::default_content!(
+                    "automations/system/disk-cleanup/scripts/cleanup_report.py"
+                ),
+            ),
+            (
+                "config/cleanup-config.json",
+                crate::default_content!(
+                    "automations/system/disk-cleanup/config/cleanup-config.json"
+                ),
+            ),
+            (
+                "TASK.md",
+                crate::default_content!("automations/system/disk-cleanup/TASK.md"),
+            ),
+            (
+                "scripts/run.sh",
+                crate::default_content!("automations/system/disk-cleanup/scripts/run.sh"),
+            ),
+        ],
+    ),
+    (
+        crate::default_content!("automations/system/git-status/config/catalog.json"),
+        crate::default_content!("automations/system/git-status/config/task.json"),
+        &[
+            (
+                "scripts/git-status.py",
+                crate::default_content!("automations/system/git-status/scripts/git-status.py"),
+            ),
+            (
+                "scripts/run.sh",
+                crate::default_content!("automations/system/git-status/scripts/run.sh"),
+            ),
+            (
+                "TASK.md",
+                crate::default_content!("automations/system/git-status/TASK.md"),
+            ),
+        ],
+    ),
+    (
+        crate::default_content!("automations/system/network-reset/config/catalog.json"),
+        crate::default_content!("automations/system/network-reset/config/task.json"),
+        &[
+            (
+                "scripts/network-reset.py",
+                crate::default_content!(
+                    "automations/system/network-reset/scripts/network-reset.py"
+                ),
+            ),
+            (
+                "scripts/setup.sh",
+                crate::default_content!("automations/system/network-reset/scripts/setup.sh"),
+            ),
+            (
+                "scripts/reset.sh",
+                crate::default_content!("automations/system/network-reset/scripts/reset.sh"),
+            ),
+            (
+                "TASK.md",
+                crate::default_content!("automations/system/network-reset/TASK.md"),
+            ),
+            (
+                "scripts/run.sh",
+                crate::default_content!("automations/system/network-reset/scripts/run.sh"),
+            ),
+        ],
+    ),
+    #[cfg(feature = "herdr")]
+    (
+        crate::default_content!("automations/hermes/repository-audit/config/catalog.json"),
+        crate::default_content!("automations/hermes/repository-audit/config/task.json"),
+        &[
+            (
+                "scripts/agent.py",
+                crate::default_content!("automations/hermes/repository-audit/scripts/agent.py"),
+            ),
+            (
+                "scripts/run.sh",
+                crate::default_content!("automations/hermes/repository-audit/scripts/run.sh"),
+            ),
+            (
+                "config/agent.json",
+                crate::default_content!("automations/hermes/repository-audit/config/agent.json"),
+            ),
+            (
+                "prompts/prompt.md",
+                crate::default_content!("automations/hermes/repository-audit/prompts/prompt.md"),
+            ),
+            (
+                "TASK.md",
+                crate::default_content!("automations/hermes/repository-audit/TASK.md"),
+            ),
+        ],
+    ),
+    (
+        crate::default_content!("automations/system/workspace-check/config/catalog.json"),
+        crate::default_content!("automations/system/workspace-check/config/task.json"),
+        &[
+            (
+                "scripts/workspace-check.py",
+                crate::default_content!(
+                    "automations/system/workspace-check/scripts/workspace-check.py"
+                ),
+            ),
+            (
+                "scripts/run.sh",
+                crate::default_content!("automations/system/workspace-check/scripts/run.sh"),
+            ),
+            (
+                "TASK.md",
+                crate::default_content!("automations/system/workspace-check/TASK.md"),
+            ),
+        ],
+    ),
 ];
 
 /// Resolve localized built-in display names to their stable English catalog ID.

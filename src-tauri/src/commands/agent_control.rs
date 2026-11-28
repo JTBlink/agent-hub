@@ -11,7 +11,7 @@ use crate::core::{
 };
 
 const SKILL_NAME: &str = "agent-hub-cli";
-const BUNDLED_SKILL: &str = include_str!("../../../skills/productivity/agent-hub-cli/SKILL.md");
+const BUNDLED_SKILL: &str = crate::default_content!("skills/productivity/agent-hub-cli/SKILL.md");
 
 #[derive(Debug, Serialize)]
 pub struct SkillLocation {

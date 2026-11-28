@@ -85,7 +85,7 @@ Agent 任务通过共享执行器启动和检查会话。任务可按业务设�
 
 </details>
 
-任务包位于 [`automations/`](automations/README.md)，以 `TASK.md` 为说明入口，`config/task.json` 保存清单，脚本、提示词和引用分别放在 `scripts/`、`prompts/`、`references/`。本机任务默认分配到 `~/.agent-hub/automations/<task-name>/`，项目工作目录单独绑定。导入、复制和备份恢复创建独立且默认暂停的实例，并准备运行依赖；没有单独的安装/卸载步骤。
+公开任务包维护在 [AgentHub Skills 仓库](https://github.com/JTBlink/agent-hub-skills/tree/main/automations)，以 `TASK.md` 为说明入口，`config/task.json` 保存清单，脚本、提示词和引用分别放在 `scripts/`、`prompts/`、`references/`。本机任务默认分配到 `~/.agent-hub/automations/<task-name>/`，项目工作目录单独绑定。导入、复制和备份恢复创建独立且默认暂停的实例，并准备运行依赖；没有单独的安装/卸载步骤。
 
 通过 CLI 创建、编辑和查看任务：
 
@@ -99,7 +99,7 @@ agent-hub-cli --json automations runs '<task-id>'
 agent-hub-cli --json automations logs '<task-id>' --run '<run-id>'
 ```
 
-需要执行时使用 `automations run '<task-id>'`；需要计划运行时使用 `automations resume '<task-id>'`。`run` 返回“已请求运行”，真实结果通过本次执行记录与业务证据核实。完整参数见 [CLI 说明](docs/help/zh/reference/cli.md)；Agent 使用规范见 [agent-hub-cli Skill](skills/productivity/agent-hub-cli/SKILL.md)。
+需要执行时使用 `automations run '<task-id>'`；需要计划运行时使用 `automations resume '<task-id>'`。`run` 返回“已请求运行”，真实结果通过本次执行记录与业务证据核实。完整参数见 [CLI 说明](docs/help/zh/reference/cli.md)；Agent 使用规范见 [agent-hub-cli Skill](https://github.com/JTBlink/agent-hub-skills/blob/main/skills/productivity/agent-hub-cli/SKILL.md)。
 
 ## 安装与开始使用
 
@@ -195,8 +195,6 @@ src-tauri/       Rust 核心、原生能力、CLI 和桌面宿主
 homepage/        产品主页静态源文件
 docs/help/       应用帮助与公开文档的共享正文
 docs-site/       VitePress 文档站配置
-skills/          随项目提供的管理 Skill
-automations/     可独立导入和维护的自动化任务包
 tests/browser/   合成数据产品预览和浏览器验证
 scripts/         开发、验证、版本与发布脚本
 ```

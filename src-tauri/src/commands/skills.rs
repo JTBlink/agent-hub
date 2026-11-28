@@ -2966,6 +2966,32 @@ fn should_skip_update_check(
 }
 
 pub fn git_source_from_skill(skill: &SkillRecord) -> Result<GitSkillSource, AppError> {
+    let mut source = recorded_git_source(skill)?;
+    let legacy_repository = source
+        .clone_url
+        .trim_end_matches(".git")
+        .eq_ignore_ascii_case("https://github.com/JTBlink/agent-hub");
+    let published_content = match source.subpath.as_deref() {
+        Some("skills/productivity/agent-hub-cli" | "skills/engineering/code-review") => true,
+        None => matches!(
+            source.locator_skill_id.as_deref(),
+            Some("agent-hub-cli" | "code-review")
+        ),
+        _ => false,
+    };
+    if legacy_repository
+        && published_content
+        && matches!(source.branch.as_deref(), None | Some("main"))
+    {
+        source.clone_url = format!(
+            "https://github.com/{}.git",
+            env!("AGENT_HUB_CONTENT_REPOSITORY")
+        );
+    }
+    Ok(source)
+}
+
+fn recorded_git_source(skill: &SkillRecord) -> Result<GitSkillSource, AppError> {
     if let Some(resolved) = &skill.source_ref_resolved {
         return Ok(GitSkillSource {
             clone_url: resolved.clone(),

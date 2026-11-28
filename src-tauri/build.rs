@@ -1,5 +1,9 @@
+#[path = "build/default_content.rs"]
+mod default_content;
+
 fn main() {
     product_identity();
+    default_content::prepare();
     println!("cargo:rustc-check-cfg=cfg(agent_hub_desktop_plugin)");
     println!("cargo:rerun-if-env-changed=AGENT_HUB_DESKTOP_PLUGIN");
     if std::env::var("AGENT_HUB_DESKTOP_PLUGIN").as_deref() == Ok("1") {

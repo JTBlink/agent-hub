@@ -52,7 +52,7 @@ fn inspect(id: String, draft: &AutomationDraft) -> TaskAudit {
         }
         let body = &file.content;
         shared |=
-            body.trim() == include_str!("../../../../automations/_shared/agent-entry.py").trim();
+            body.trim() == crate::default_content!("automations/_shared/agent-entry.py").trim();
         let code = if body.contains("def previous_agent(") && body.contains("def wait_for_result(")
         {
             Some("embedded_agent_runtime")

@@ -23,6 +23,7 @@ scripts/app/               本机开发、桌面打包与 CLI 安装入口，调
 ```text
 agent-hub/
 ├── products/                       # 产品清单：standard、personal，仅选择特性与导航
+│   └── default-content.json        # 内置内容的上游提交和校验值
 ├── prototype.sh                    # 一键启动原型目录或指定原型
 ├── src/                            # React/TypeScript 前端
 │   ├── views/                      # 页面视图
@@ -131,6 +132,7 @@ agent-hub/
 │   └── index.css                   # 全局样式
 │
 ├── src-tauri/                      # Rust 桌面端（Tauri 2）
+│   ├── default-content.json        # 可离线构建的默认内容快照
 │   ├── src/
 │   │   ├── main.rs                 #   应用入口（保持精简）
 │   │   ├── lib.rs                  #   共享 Builder 与显式 Context 启动入口
@@ -222,7 +224,7 @@ agent-hub/
 │   │       │   ├── next_run.rs      #   launchd 日历任务的本地时区下一次时间
 │   │       │   ├── libraries.rs      #   自动化公共库管理、依赖解析与Python加载入口
 │   │       │   ├── libraries/        #   声明校验、更新恢复、备份投影与隔离回归
-│   │       │   └── templates/       #   从根目录 automations/ 编译嵌入推荐目录与跨平台入口
+│   │       │   └── templates/       #   从默认内容快照编译嵌入推荐目录与跨平台入口
 │   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理
 │   │       ├── platforms/          #     独立 GitHub／GitLab 实现、共享契约与缺省适配
@@ -295,10 +297,6 @@ agent-hub/
 │   ├── rust-dev/                   #   开发、UI、测试与提交规范
 │   └── github/             #   版本发布、Actions 与产物验收
 │
-├── automations/                    # 可独立安装的真实任务包：TASK.md、config/、scripts/ 与按需 references/
-├── skills/                         # 内置 Skill
-│   └── agent-hub-cli/SKILL.md      #   技能管理 Skill
-│
 ├── public/                         # 前端静态资源
 │   ├── agent-icons/                #   Agent 图标库（50+）
 │   └── icons/                      #   应用图标
@@ -334,8 +332,7 @@ agent-hub/
 | `src-tauri/src/bin/`             | agent-hub-cli 入口                 |
 | `src-tauri/icons/`               | 默认深色图标、深浅变体与菜单栏模板 |
 | `public/`                        | 前端静态资源                       |
-| `automations/`                   | 可发现、可分发的自动化任务包       |
-| `skills/`                        | 内置管理 Skill                     |
+| [agent-hub-skills](https://github.com/JTBlink/agent-hub-skills) | 可分发的 Skills 与自动化任务包     |
 | `docs/reference/skills-manager/` | 导入来源清单与原许可证             |
 
 `packages/agent-hub-core/` 是独立版本的 Rust 核心库，目前提供 Agent 启动方案逻辑。

@@ -15,7 +15,7 @@ Agent 是可选能力。普通自动化任务执行自己的命令；需要交�
 | `core/herdr/agent_execution.py`            | Herdr 专有的面板归属、布局、状态观察与恢复；启动统一委托 `core/herdr/agents`。                                |
 | `core/state_store`                         | 公共状态读取、进程运行锁及兼容的 Python 扩展事务存储。                                                        |
 | `core/python_support`                      | 公共 Python 检测及按内容版本发布共享模块。                                                                    |
-| `automations/_shared/agent-entry.py`       | 任务薄适配器：从旧/新布局解析配置、提示词与状态目录，将请求交给 CLI。                                         |
+| [`agent-entry.py`](https://github.com/JTBlink/agent-hub-skills/blob/main/automations/_shared/agent-entry.py)       | 任务薄适配器：从旧/新布局解析配置、提示词与状态目录，将请求交给 CLI。                                         |
 
 ## 多套启动方案
 

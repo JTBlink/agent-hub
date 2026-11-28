@@ -142,7 +142,7 @@ Agent 模板通过薄入口调用 `core/agent_execution` 与 `core/herdr` 的共
 
 内置每小时维护（:15，只读）、PR / MR 代码审查（:30，评论反馈与自动请求更改）和 Issue 自动处理（:45）模板；Issue 模板仅授权明确候选的分支实现、验证及草稿交付，不自动合并或发布。每小时日程以固定本地分钟执行：launchd 使用仅含 Minute 的日历，systemd 使用每小时 OnCalendar，Windows 使用下一次目标分钟开始的一小时重复触发。
 
-PR / MR 任务由脚本通过项目配置的平台 CLI 按创建时间选择最早的开放、非草稿待处理请求，每轮一个，将编号、标题、URL、源提交与目标分支快照交给 Herdr Agent。Agent 调用 `code-review` 审查，自动修复并提交到对应源分支，评论结论与结果，不批准或合并。实际修复前后通过本地回调保存 `extensions.mr_repair`，每个请求累计最多 3 次；失败后打回并交给人工，后续运行不再自动处理。记录与执行日志一样只留本机，不生成本地审查报告；Herdr 运行状态继续防止未结束任务重复投递。任务包 2.5.0 保留 `agent-mr-processing` 标识及旧名称映射，不自动覆盖已安装定义或启用任务。执行与配置见[任务说明](../../automations/engineering/agent-mr-processing/TASK.md)。
+PR / MR 任务由脚本通过项目配置的平台 CLI 按创建时间选择最早的开放、非草稿待处理请求，每轮一个，将编号、标题、URL、源提交与目标分支快照交给 Herdr Agent。Agent 调用 `code-review` 审查，自动修复并提交到对应源分支，评论结论与结果，不批准或合并。实际修复前后通过本地回调保存 `extensions.mr_repair`，每个请求累计最多 3 次；失败后打回并交给人工，后续运行不再自动处理。记录与执行日志一样只留本机，不生成本地审查报告；Herdr 运行状态继续防止未结束任务重复投递。任务包 2.5.0 保留 `agent-mr-processing` 标识及旧名称映射，不自动覆盖已安装定义或启用任务。执行与配置见[任务说明](https://github.com/JTBlink/agent-hub-skills/blob/main/automations/engineering/agent-mr-processing/TASK.md)。
 
 ## 统一创建入口
 

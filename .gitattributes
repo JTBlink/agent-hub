@@ -1,0 +1,2 @@
+# Cargo checks the digest of the snapshot's exact bytes on every platform.
+src-tauri/default-content.json text eol=lf

@@ -1,28 +1,8 @@
+import contentFiles from "../../src-tauri/default-content.json";
+import { mockWindows } from "@tauri-apps/api/mocks";
 import { worktreeFixture } from "./worktree-fixture";
 import { taskTerminalFixture } from "./task-terminal-fixture";
-import networkManifestCatalog from "../../automations/system/network-reset/config/catalog.json";
-import diskCleanupManifestPackage from "../../automations/system/disk-cleanup/config/task.json";
-import issueManifestPackage from "../../automations/engineering/agent-issue-processing/config/task.json";
-import mrManifestPackage from "../../automations/engineering/agent-mr-processing/config/task.json";
-import maintenanceManifestPackage from "../../automations/engineering/agent-maintenance/config/task.json";
-import networkManifestPackage from "../../automations/system/network-reset/config/task.json";
-import networkLauncher from "../../automations/system/network-reset/scripts/network-reset.py?raw";
-import networkSetup from "../../automations/system/network-reset/scripts/setup.sh?raw";
-import networkReset from "../../automations/system/network-reset/scripts/reset.sh?raw";
-import networkReadme from "../../automations/system/network-reset/TASK.md?raw";
-import maintenanceManifestCatalog from "../../automations/engineering/agent-maintenance/config/catalog.json";
-import mrManifestCatalog from "../../automations/engineering/agent-mr-processing/config/catalog.json";
-import mrPrompt from "../../automations/engineering/agent-mr-processing/prompts/prompt.md?raw";
-import mrConfig from "../../automations/engineering/agent-mr-processing/config/agent.json?raw";
-import issueManifestCatalog from "../../automations/engineering/agent-issue-processing/config/catalog.json";
-import issuePrompt from "../../automations/engineering/agent-issue-processing/prompts/prompt.md?raw";
-import issueConfig from "../../automations/engineering/agent-issue-processing/config/agent.json?raw";
 import React from "react";
-import diskCleanupManifestCatalog from "../../automations/system/disk-cleanup/config/catalog.json";
-import diskCleanupScript from "../../automations/system/disk-cleanup/scripts/disk-cleanup.py?raw";
-import herdrScript from "../../automations/_shared/agent-entry.py?raw";
-import maintenancePrompt from "../../automations/engineering/agent-maintenance/prompts/prompt.md?raw";
-import maintenanceConfig from "../../automations/engineering/agent-maintenance/config/agent.json?raw";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes, Outlet } from "react-router-dom";
 import { PreviewRouteMarker } from "./PreviewRouteMarker";
@@ -36,6 +16,69 @@ import type {
   AutomationTemplate,
 } from "../../src/lib/tauri";
 import "../../src/index.css";
+
+const networkManifestCatalog = JSON.parse(
+  contentFiles["automations/system/network-reset/config/catalog.json"],
+);
+const diskCleanupManifestPackage = JSON.parse(
+  contentFiles["automations/system/disk-cleanup/config/task.json"],
+);
+const issueManifestPackage = JSON.parse(
+  contentFiles[
+    "automations/engineering/agent-issue-processing/config/task.json"
+  ],
+);
+const mrManifestPackage = JSON.parse(
+  contentFiles["automations/engineering/agent-mr-processing/config/task.json"],
+);
+const maintenanceManifestPackage = JSON.parse(
+  contentFiles["automations/engineering/agent-maintenance/config/task.json"],
+);
+const networkManifestPackage = JSON.parse(
+  contentFiles["automations/system/network-reset/config/task.json"],
+);
+const networkLauncher =
+  contentFiles["automations/system/network-reset/scripts/network-reset.py"];
+const networkSetup =
+  contentFiles["automations/system/network-reset/scripts/setup.sh"];
+const networkReset =
+  contentFiles["automations/system/network-reset/scripts/reset.sh"];
+const networkReadme = contentFiles["automations/system/network-reset/TASK.md"];
+const maintenanceManifestCatalog = JSON.parse(
+  contentFiles["automations/engineering/agent-maintenance/config/catalog.json"],
+);
+const mrManifestCatalog = JSON.parse(
+  contentFiles[
+    "automations/engineering/agent-mr-processing/config/catalog.json"
+  ],
+);
+const mrPrompt =
+  contentFiles["automations/engineering/agent-mr-processing/prompts/prompt.md"];
+const mrConfig =
+  contentFiles["automations/engineering/agent-mr-processing/config/agent.json"];
+const issueManifestCatalog = JSON.parse(
+  contentFiles[
+    "automations/engineering/agent-issue-processing/config/catalog.json"
+  ],
+);
+const issuePrompt =
+  contentFiles[
+    "automations/engineering/agent-issue-processing/prompts/prompt.md"
+  ];
+const issueConfig =
+  contentFiles[
+    "automations/engineering/agent-issue-processing/config/agent.json"
+  ];
+const diskCleanupManifestCatalog = JSON.parse(
+  contentFiles["automations/system/disk-cleanup/config/catalog.json"],
+);
+const diskCleanupScript =
+  contentFiles["automations/system/disk-cleanup/scripts/disk-cleanup.py"];
+const herdrScript = contentFiles["automations/_shared/agent-entry.py"];
+const maintenancePrompt =
+  contentFiles["automations/engineering/agent-maintenance/prompts/prompt.md"];
+const maintenanceConfig =
+  contentFiles["automations/engineering/agent-maintenance/config/agent.json"];
 
 const networkManifest = {
   ...networkManifestCatalog,
@@ -440,6 +483,7 @@ const projects: Project[] = (
   updated_at: timestamp,
 }));
 Object.assign(window, {
+  __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener: () => {} },
   __TAURI_INTERNALS__: {
     transformCallback: () => 1,
     unregisterCallback: () => {},
@@ -736,6 +780,7 @@ Object.assign(window, {
     },
   },
 });
+mockWindows("main");
 const { i18nReady } = await import("../../src/i18n/index");
 await i18nReady;
 const { AppProvider } = await import("../../src/context/AppContext");
@@ -746,7 +791,7 @@ const { ProjectSkills } = await import("../../src/views/ProjectSkills");
 const { Tasks } = await import("../../src/views/Tasks");
 const { Git } = await import("../../src/views/Git");
 const { Automation } = await import("../../src/views/Automation");
-const { Discover } = await import("../../src/views/Discover");
+const { default: Discover } = await import("@app/discover");
 const { MySkills } = await import("../../src/views/MySkills");
 const { WorkspaceView } = await import("../../src/views/WorkspaceView");
 const { CODING_WORKSPACE_CONFIG, LOBSTER_WORKSPACE_CONFIG } =

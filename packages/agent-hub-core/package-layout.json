@@ -1,6 +1,5 @@
 {
   "directories": [
-    "automations",
     "docs",
     "docs-site",
     "homepage",
@@ -8,7 +7,6 @@
     "public",
     "scripts",
     "shared",
-    "skills",
     "src",
     "src-tauri",
     "tests",
@@ -45,9 +43,13 @@
     "src-tauri/src/bin/agent-hub-cli.rs",
     "packages/agent-hub-core/Cargo.toml",
     "shared/preview-file-types.json",
-    "automations/_shared/agent-entry.py"
+    "products/default-content.json",
+    "src-tauri/default-content.json"
   ],
   "sdkFiles": [
+    "products/default-content.json",
+    "src-tauri/default-content.json",
+    "src-tauri/build/default_content.rs",
     "packages/agent-hub-core/build/config.mjs",
     "packages/agent-hub-core/build/frontend-build.mjs",
     "packages/agent-hub-core/build/vite-plugin.d.mts",

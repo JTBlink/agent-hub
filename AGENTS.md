@@ -16,7 +16,7 @@
 - `src-tauri/src/core/`：核心业务（技能库、同步引擎、Git 备份、合并引擎、扫描器）。
 - `src-tauri/src/bin/`：agent-hub-cli 入口。
 - `scripts/`：Node.js 构建、发布与版本管理脚本。
-- `skills/`：随产品分发的内置 Skill。
+- [agent-hub-skills](https://github.com/JTBlink/agent-hub-skills) 维护公开 Skills 和自动化任务。应用内置内容以 `products/default-content.json` 固定版本。
 - `.agents/skills/rust-dev/`：随仓库共享的项目内部开发、UI、测试与提交规范。
 - `.agents/skills/github-cli/`：GitHub 版本发布、自动 tag、Actions 与产物验收规范。
 - `docs/`：产品、架构与 ADR；后续规划统一放在 `docs/plans/agent-hub.md`。

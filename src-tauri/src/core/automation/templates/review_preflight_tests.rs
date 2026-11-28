@@ -72,9 +72,9 @@ fn review_entrypoint_selects_requests_before_launching_agent() {
 #[test]
 fn task_state_distribution_matches_shared_storage_source() {
     assert_eq!(
-        include_str!("../../../../../automations/_shared/task-state.py"),
-        include_str!(
-            "../../../../../automations/engineering/agent-mr-processing/scripts/task_state.py"
+        crate::default_content!("automations/_shared/task-state.py"),
+        crate::default_content!(
+            "automations/engineering/agent-mr-processing/scripts/task_state.py"
         )
     );
 }

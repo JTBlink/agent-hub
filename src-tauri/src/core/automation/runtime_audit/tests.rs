@@ -18,7 +18,7 @@ fn draft(provider: Provider) -> AutomationDraft {
 
 #[test]
 fn audits_all_repository_tasks_without_creating_state_or_registering_jobs() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let root = Path::new(env!("AGENT_HUB_DEFAULT_CONTENT_DIR"));
     let report = repository(root).unwrap();
     assert_eq!(report.tasks.len(), 10);
     assert!(report.is_clean(), "{report:?}");
@@ -91,7 +91,7 @@ fn an_empty_directory_is_not_reported_as_a_successful_task_audit() {
 
 #[test]
 fn generated_builtin_tasks_use_the_same_shared_runtime_contract() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let root = Path::new(env!("AGENT_HUB_DEFAULT_CONTENT_DIR"));
     let catalog = crate::core::automation::package::catalog::scan_portable(root).unwrap();
     let mut checked = 0;
     for entry in catalog.packages {
@@ -113,7 +113,7 @@ fn generated_builtin_tasks_use_the_same_shared_runtime_contract() {
 #[test]
 fn every_repository_shell_entry_resolves_its_package_and_forwards_literal_arguments() {
     use std::os::unix::fs::PermissionsExt;
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let root = Path::new(env!("AGENT_HUB_DEFAULT_CONTENT_DIR"));
     let catalog = crate::core::automation::package::catalog::scan_portable(root).unwrap();
     let sandbox = tempfile::tempdir().unwrap();
     let python = sandbox.path().join("fake python");

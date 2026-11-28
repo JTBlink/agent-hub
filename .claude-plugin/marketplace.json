@@ -4,5 +4,15 @@
     "name": "JTStudio",
     "url": "https://jtblink.github.io/agent-hub/"
   },
-  "description": "AgentHub public skills — agent workflow and productivity tools."
+  "description": "AgentHub public skills and productivity tools.",
+  "plugins": [
+    {
+      "name": "agent-hub-skills",
+      "source": {
+        "source": "github",
+        "repo": "JTBlink/agent-hub-skills"
+      },
+      "description": "AgentHub public skills and productivity tools."
+    }
+  ]
 }

@@ -55,9 +55,30 @@ npm run build -- --product personal                  # 只构建前端
 
 也可将 `--product` 指向产品 JSON 文件。外部产品可通过清单的 `version` 设置桌面和 CLI 版本，省略时继承应用 `VERSION`。生成的配置、入口与缓存由脚本管理。
 
+## 仓库与升级入口
+
+| 仓库                                                                  | 维护范围                                                       |
+| --------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [JTBlink/agent-hub](https://github.com/JTBlink/agent-hub)               | AgentHub 应用、CLI、SDK、运行器和内置内容快照                   |
+| [JTBlink/agent-hub-skills](https://github.com/JTBlink/agent-hub-skills) | 可独立安装的公开 Skills、自动化任务模板，以及 Codex 和 Claude Code 插件清单 |
+
+应用与 SDK 分别按 [桌面应用发布流程](../.agents/skills/github-cli/references/release-flow.md) 和 [SDK 发布规范](sdk-release.md) 维护版本。单独更新 Skill 或任务模板时，在 `agent-hub-skills` 提交发布。需要随下一个应用或 SDK 版本附带更新时，再在 `agent-hub` 刷新默认内容快照。
+
+### 更新内置 Skills 与自动化任务
+
+先在 [agent-hub-skills](https://github.com/JTBlink/agent-hub-skills) 更新和发布内容。AgentHub 使用 `products/default-content.json` 记录内容提交和快照摘要。桌面、CLI 和 SDK 构建都使用同一份快照，无需在构建中联网获取内容仓库。
+
+选定公开内容仓库的提交后，在 AgentHub 仓库执行以下命令，把更新后的锁文件和快照一起提交。
+
+```bash
+content_revision='<内容仓库的完整提交 SHA>'
+git fetch --no-tags https://github.com/JTBlink/agent-hub-skills.git "$content_revision"
+node scripts/update-default-content.mjs "$content_revision"
+```
+
 ## 复用和升级 Rust 核心库
 
-完整桌面能力也可以通过 [AgentHub SDK](../packages/agent-hub-core/README.md) 交付。SDK 同时带上界面、Rust 宿主、CLI 和内置资源。独立产品可以通过 `sidebarModules` 注册自己的侧栏和页面。
+完整桌面能力也可以通过 [AgentHub SDK](../packages/agent-hub-core/README.md) 交付。SDK 同时带上界面、Rust 宿主、CLI 和内置资源。独立产品可以通过 `sidebarModules` 注册自己的侧栏和页面，也可以通过 `pageOverrides.discover` 替换「发现」页面并沿用现有入口。
 
 需要复用完整桌面功能时，在产品仓库固定一个 AgentHub 源码提交，使用其构建入口接收外部产品清单。此入口同时构建 React 工作台、Rust 宿主和配套 CLI，内置自动化资源也来自同一提交。产品清单可以选择全部可选集成：
 

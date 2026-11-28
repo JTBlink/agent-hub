@@ -64,6 +64,35 @@ fn sample_skill(id: &str, name: &str, central_path: &Path) -> SkillRecord {
 }
 
 #[test]
+fn follows_the_new_repository_for_installed_public_skills() {
+    let mut skill = sample_skill("skill-1", "agent-hub-cli", Path::new("agent-hub-cli"));
+    skill.source_type = "skillssh".into();
+    skill.source_ref = Some("JTBlink/agent-hub/agent-hub-cli".into());
+    let expected = format!(
+        "https://github.com/{}.git",
+        env!("AGENT_HUB_CONTENT_REPOSITORY")
+    );
+    let source = git_source_from_skill(&skill).unwrap();
+    assert_eq!(source.clone_url, expected);
+    assert_eq!(source.locator_skill_id.as_deref(), Some("agent-hub-cli"));
+
+    skill.source_type = "git".into();
+    let legacy = "https://github.com/JTBlink/agent-hub.git";
+    skill.source_ref_resolved = Some(legacy.into());
+    skill.source_subpath = Some("skills/engineering/code-review".into());
+    skill.source_branch = Some("main".into());
+    let source = git_source_from_skill(&skill).unwrap();
+    assert_eq!(source.clone_url, expected);
+    assert_eq!(source.subpath, skill.source_subpath);
+
+    skill.source_branch = Some("v0.1.14".into());
+    assert_eq!(git_source_from_skill(&skill).unwrap().clone_url, legacy);
+    skill.source_branch = Some("main".into());
+    skill.source_subpath = Some(".agents/skills/rust-dev".into());
+    assert_eq!(git_source_from_skill(&skill).unwrap().clone_url, legacy);
+}
+
+#[test]
 fn batch_delete_removes_skills_targets_and_stale_metadata_once() {
     let repo = test_repo();
     let skill_one_dir = write_skill_dir("skill-one");

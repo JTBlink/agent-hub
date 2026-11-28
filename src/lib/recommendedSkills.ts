@@ -1,4 +1,4 @@
-import { MANAGE_SKILLS_SOURCE } from "./distribution";
+import { CONTENT_REPOSITORY, MANAGE_SKILLS_SOURCE } from "./distribution";
 
 export interface RecommendedSkill {
   skill_id: string;
@@ -13,7 +13,7 @@ export const RECOMMENDED_SKILLS: RecommendedSkill[] = [
   {
     skill_id: "agent-hub-cli",
     name: "agent-hub-cli",
-    source: "JTBlink/agent-hub",
+    source: CONTENT_REPOSITORY,
     description:
       "通过 agent-hub-cli 管理共享技能库——安装、更新、部署、技能组、标签与多 Agent 同步。",
     tag: "Agent 工作流",

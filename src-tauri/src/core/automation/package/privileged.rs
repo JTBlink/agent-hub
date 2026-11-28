@@ -5,9 +5,8 @@ use super::*;
 use base64::Engine;
 
 const NETWORK_ENTRY: &str =
-    include_str!("../../../../../automations/system/network-reset/scripts/network-reset.py");
-const RESET: &str =
-    include_str!("../../../../../automations/system/network-reset/scripts/reset.sh");
+    crate::default_content!("automations/system/network-reset/scripts/network-reset.py");
+const RESET: &str = crate::default_content!("automations/system/network-reset/scripts/reset.sh");
 
 fn supported(record: &ManagedAutomation) -> bool {
     record
