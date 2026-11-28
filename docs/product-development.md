@@ -57,9 +57,9 @@ npm run build -- --product personal                  # 只构建前端
 
 ## 仓库与升级入口
 
-| 仓库                                                                  | 维护范围                                                       |
-| --------------------------------------------------------------------- | -------------------------------------------------------------- |
-| [JTBlink/agent-hub](https://github.com/JTBlink/agent-hub)               | AgentHub 应用、CLI、SDK、运行器和内置内容快照                   |
+| 仓库                                                                    | 维护范围                                                                    |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [JTBlink/agent-hub](https://github.com/JTBlink/agent-hub)               | AgentHub 应用、CLI、SDK、运行器和内置内容快照                               |
 | [JTBlink/agent-hub-skills](https://github.com/JTBlink/agent-hub-skills) | 可独立安装的公开 Skills、自动化任务模板，以及 Codex 和 Claude Code 插件清单 |
 
 应用与 SDK 分别按 [桌面应用发布流程](release/release-flow.md) 和 [SDK 发布规范](sdk-release.md) 维护版本。单独更新 Skill 或任务模板时，在 `agent-hub-skills` 提交发布。需要随下一个应用或 SDK 版本附带更新时，再在 `agent-hub` 刷新默认内容快照。
@@ -193,13 +193,13 @@ export const notesModule: FeatureModule = {
 
 静态入口生成器按统一能力清单选择集成别名与平台模块，Herdr 面板贡献仍有明确的生成入口，不是自动发现插件系统。新增 Notes 时需要补齐以下位置：
 
-| 位置                                                             | 必须处理的内容                                               |
-| ---------------------------------------------------------------- | ------------------------------------------------------------ |
+| 位置                                                              | 必须处理的内容                                               |
+| ----------------------------------------------------------------- | ------------------------------------------------------------ |
 | `packages/agent-hub-core/build/config.mjs` 的 `modules`、`panels` | 登记侧栏／默认面板 ID，增加入口需要对应 Cargo 特性的校验     |
-| 同文件的 `prepareProduct()`                                      | 根据实际特性生成 `features.ts`，仅导入已启用的 `notesModule` |
-| `src/app/features/default.ts`                                    | 若默认标准版包含 Notes，登记普通开发入口                     |
-| `src/app/product/default.ts`                                     | 同步默认特性集合、侧栏顺序和默认面板                         |
-| 产品 JSON                                                        | 仅为需要 Notes 的产品选择特性和入口                          |
+| 同文件的 `prepareProduct()`                                       | 根据实际特性生成 `features.ts`，仅导入已启用的 `notesModule` |
+| `src/app/features/default.ts`                                     | 若默认标准版包含 Notes，登记普通开发入口                     |
+| `src/app/product/default.ts`                                      | 同步默认特性集合、侧栏顺序和默认面板                         |
+| 产品 JSON                                                         | 仅为需要 Notes 的产品选择特性和入口                          |
 
 有跨功能调用时，再增加 Notes 的实现／缺省 adapter 选择，并在 Vite 和 TypeScript 中使用相同别名。每增加一个别名，同步 `tsconfig.app.json`、生成的产品 tsconfig 和 Vite 产品配置；不能只改调用方。这也是避免 `Cannot find module '@app/…'` 的关键。
 

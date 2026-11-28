@@ -4,18 +4,18 @@ Agent 是可选能力。普通自动化任务执行自己的命令；需要交�
 
 ## 模块边界
 
-| 模块                                       | 职责                                                                                                          |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `core/agent_launch_config`                 | 可移植启动指令、默认 Agent、argv 解析、修订保护与持久化。独立于 Herdr、UI、任务与 Git。                       |
-| `core/agent_launcher`                      | 通用入口选择已安装的 Herdr 或原生终端；Herdr 已受理或结果不明时不降级重跑。                                   |
-| `core/herdr/agents`                        | 通用 Herdr 启动：明确会话、窗格、Agent 名称、类型和已解析指令；核验空闲 Shell，发起一次，验证身份并等待就绪。 |
-| `core/herdr/session`、`core/herdr/control` | 会话与工作空间定位、窗格操作及已有 Agent 的安全交互。                                                         |
-| 场景适配器                                 | 选择项目和目标、决定复用或新建布局、准备提示词、处理业务结果。                                                |
-| `core/agent_execution`                     | 受管理的 Agent 执行：显式请求、运行锁、输出流和旧结果恢复；不包含任务筛选与评审规则。                         |
-| `core/herdr/agent_execution.py`            | Herdr 专有的面板归属、布局、状态观察与恢复；启动统一委托 `core/herdr/agents`。                                |
-| `core/state_store`                         | 公共状态读取、进程运行锁及兼容的 Python 扩展事务存储。                                                        |
-| `core/python_support`                      | 公共 Python 检测及按内容版本发布共享模块。                                                                    |
-| [`agent-entry.py`](https://github.com/JTBlink/agent-hub-skills/blob/main/automations/_shared/agent-entry.py)       | 任务薄适配器：从旧/新布局解析配置、提示词与状态目录，将请求交给 CLI。                                         |
+| 模块                                                                                                         | 职责                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `core/agent_launch_config`                                                                                   | 可移植启动指令、默认 Agent、argv 解析、修订保护与持久化。独立于 Herdr、UI、任务与 Git。                       |
+| `core/agent_launcher`                                                                                        | 通用入口选择已安装的 Herdr 或原生终端；Herdr 已受理或结果不明时不降级重跑。                                   |
+| `core/herdr/agents`                                                                                          | 通用 Herdr 启动：明确会话、窗格、Agent 名称、类型和已解析指令；核验空闲 Shell，发起一次，验证身份并等待就绪。 |
+| `core/herdr/session`、`core/herdr/control`                                                                   | 会话与工作空间定位、窗格操作及已有 Agent 的安全交互。                                                         |
+| 场景适配器                                                                                                   | 选择项目和目标、决定复用或新建布局、准备提示词、处理业务结果。                                                |
+| `core/agent_execution`                                                                                       | 受管理的 Agent 执行：显式请求、运行锁、输出流和旧结果恢复；不包含任务筛选与评审规则。                         |
+| `core/herdr/agent_execution.py`                                                                              | Herdr 专有的面板归属、布局、状态观察与恢复；启动统一委托 `core/herdr/agents`。                                |
+| `core/state_store`                                                                                           | 公共状态读取、进程运行锁及兼容的 Python 扩展事务存储。                                                        |
+| `core/python_support`                                                                                        | 公共 Python 检测及按内容版本发布共享模块。                                                                    |
+| [`agent-entry.py`](https://github.com/JTBlink/agent-hub-skills/blob/main/automations/_shared/agent-entry.py) | 任务薄适配器：从旧/新布局解析配置、提示词与状态目录，将请求交给 CLI。                                         |
 
 ## 多套启动方案
 

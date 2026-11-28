@@ -320,20 +320,20 @@ agent-hub/
 
 ## 模块职责速查
 
-| 路径                             | 职责                               |
-| -------------------------------- | ---------------------------------- |
-| `src/views/`                     | 页面与页面组合                     |
-| `src/components/`                | 共享 UI                            |
-| `src/context/`、`src/hooks/`     | 前端状态和交互逻辑                 |
-| `src/lib/`                       | Tauri bindings、展示函数和项目链接 |
-| `src/styles/brand.css`           | agent-hub 明暗主题与色调           |
-| `src-tauri/src/commands/`        | Tauri 命令边界                     |
-| `src-tauri/src/core/`            | 技能库、工具适配、存储和 Git 核心  |
-| `src-tauri/src/bin/`             | agent-hub-cli 入口                 |
-| `src-tauri/icons/`               | 默认深色图标、深浅变体与菜单栏模板 |
-| `public/`                        | 前端静态资源                       |
+| 路径                                                            | 职责                               |
+| --------------------------------------------------------------- | ---------------------------------- |
+| `src/views/`                                                    | 页面与页面组合                     |
+| `src/components/`                                               | 共享 UI                            |
+| `src/context/`、`src/hooks/`                                    | 前端状态和交互逻辑                 |
+| `src/lib/`                                                      | Tauri bindings、展示函数和项目链接 |
+| `src/styles/brand.css`                                          | agent-hub 明暗主题与色调           |
+| `src-tauri/src/commands/`                                       | Tauri 命令边界                     |
+| `src-tauri/src/core/`                                           | 技能库、工具适配、存储和 Git 核心  |
+| `src-tauri/src/bin/`                                            | agent-hub-cli 入口                 |
+| `src-tauri/icons/`                                              | 默认深色图标、深浅变体与菜单栏模板 |
+| `public/`                                                       | 前端静态资源                       |
 | [agent-hub-skills](https://github.com/JTBlink/agent-hub-skills) | 可分发的 Skills 与自动化任务包     |
-| `docs/reference/skills-manager/` | 导入来源清单与原许可证             |
+| `docs/reference/skills-manager/`                                | 导入来源清单与原许可证             |
 
 `packages/agent-hub-core/` 是独立版本的 Rust 核心库，目前提供 Agent 启动方案逻辑。
 
