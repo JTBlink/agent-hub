@@ -1,5 +1,10 @@
 fn main() {
     product_identity();
+    println!("cargo:rustc-check-cfg=cfg(agent_hub_desktop_plugin)");
+    println!("cargo:rerun-if-env-changed=AGENT_HUB_DESKTOP_PLUGIN");
+    if std::env::var("AGENT_HUB_DESKTOP_PLUGIN").as_deref() == Ok("1") {
+        println!("cargo:rustc-cfg=agent_hub_desktop_plugin");
+    }
     println!("cargo:rerun-if-env-changed=AGENT_HUB_ICON_DIR");
     let icons = std::env::var_os("AGENT_HUB_ICON_DIR")
         .map(std::path::PathBuf::from)

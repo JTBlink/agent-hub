@@ -1,19 +1,27 @@
-use std::{
-    env,
-    ffi::OsString,
-    fs, io,
-    path::{Path, PathBuf},
-    process::Command,
-    process::ExitCode,
-};
+use std::path::Path;
+use std::{env, ffi::OsString, fs, io, path::PathBuf, process::Command, process::ExitCode};
 
 use agent_hub_core::{RELEASE_LOCK_JSON, VERSION};
+
+#[cfg(registry_sdk)]
+fn prepare_archive(staging: &Path) -> io::Result<PathBuf> {
+    let mut lock: serde_json::Value = serde_json::from_str(RELEASE_LOCK_JSON)?;
+    let desktop = staging.join("desktop.tar.gz");
+    let fonts = staging.join("fonts.tar.gz");
+    fs::write(&desktop, agent_hub_desktop::ARCHIVE)?;
+    fs::write(&fonts, agent_hub_fonts::ARCHIVE)?;
+    lock["source"] = serde_json::json!(desktop);
+    lock["fonts"] = serde_json::json!({ "source": fonts, "sha256": lock["fonts_sha256"] });
+    let path = staging.join("sdk-lock.json");
+    fs::write(&path, serde_json::to_vec(&lock)?)?;
+    Ok(path)
+}
 
 fn main() -> ExitCode {
     match run(env::args_os().skip(1).collect()) {
         Ok(code) => code,
         Err(error) => {
-            eprintln!("agent-hub-core: {error}");
+            eprintln!("{}: {error}", env!("CARGO_BIN_NAME"));
             ExitCode::FAILURE
         }
     }
@@ -27,7 +35,7 @@ fn run(args: Vec<OsString>) -> io::Result<ExitCode> {
             return Ok(ExitCode::SUCCESS);
         }
         Some("--version" | "-V") if args.len() == 1 => {
-            println!("agent-hub-core {VERSION}");
+            println!("{} {VERSION}", env!("CARGO_BIN_NAME"));
             return Ok(ExitCode::SUCCESS);
         }
         Some("install") if args.len() == 2 => "install.mjs",
@@ -39,7 +47,7 @@ fn run(args: Vec<OsString>) -> io::Result<ExitCode> {
                     "invalid arguments; see --help",
                 ));
             }
-            println!("agent-hub-core {VERSION}\n\n  lock\n  install <new-sdk-directory>\n  build <product.json> <new-sdk-directory> [--frontend | -- <desktop build args>]\n\nInstall and build require Git and Node.js.");
+            println!("{} {VERSION}\n\n  lock\n  install <new-sdk-directory>\n  build <product.json> <new-sdk-directory> [--frontend | -- <desktop build args>]\n\nInstall and build require Node.js. Development source builds may also require Git.", env!("CARGO_BIN_NAME"));
             return Ok(ExitCode::SUCCESS);
         }
     };
@@ -70,6 +78,7 @@ fn run(args: Vec<OsString>) -> io::Result<ExitCode> {
     })
 }
 
+#[cfg(not(registry_sdk))]
 fn checked(command: &mut Command, step: &str) -> io::Result<()> {
     if command.status()?.success() {
         Ok(())
@@ -78,6 +87,7 @@ fn checked(command: &mut Command, step: &str) -> io::Result<()> {
     }
 }
 
+#[cfg(not(registry_sdk))]
 fn prepare_archive(staging: &Path) -> io::Result<PathBuf> {
     let source: serde_json::Value = serde_json::from_str(RELEASE_LOCK_JSON)?;
     let revision = source["revision"].as_str().unwrap_or_default();

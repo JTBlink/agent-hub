@@ -57,25 +57,15 @@ try {
       throw new Error("SDK URLs must use HTTPS");
     await copyFile(resolve(dirname(lockPath), lock.source), archive);
   }
-  const digest = createHash("sha256");
-  for await (const bytes of createReadStream(archive)) digest.update(bytes);
-  if (digest.digest("hex") !== lock.sha256)
-    throw new Error("SDK SHA-256 mismatch");
-
-  const list = (flag) =>
-    execFileSync("tar", [flag, archive], { encoding: "utf8" })
-      .trimEnd()
-      .split("\n");
-  if (
-    list("-tzf").some(
-      (path) =>
-        !/^agent-hub-core(?:\/|$)/.test(path) ||
-        /(?:^|\/)\.\.(?:\/|$)|\\/.test(path),
-    ) ||
-    list("-tvzf").some((entry) => !/^[-d]/.test(entry))
-  )
-    throw new Error("Unexpected entry in SDK archive");
-  execFileSync("tar", ["-xzf", archive, "-C", staged]);
+  await extract(archive, lock.sha256, staged);
+  if (lock.fonts) {
+    await extract(
+      resolve(dirname(lockPath), lock.fonts.source),
+      lock.fonts.sha256,
+      staged,
+      true,
+    );
+  }
   const root = join(staged, "agent-hub-core");
   for (const [name, expected] of [
     ["SDK_VERSION", lock.version],
@@ -88,4 +78,28 @@ try {
   process.stdout.write(destination + "\n");
 } finally {
   await rm(staged, { recursive: true, force: true });
+}
+
+async function extract(archive, sha256, destination, fontsOnly = false) {
+  const digest = createHash("sha256");
+  for await (const bytes of createReadStream(archive)) digest.update(bytes);
+  if (digest.digest("hex") !== sha256) throw new Error("SDK SHA-256 mismatch");
+  const list = (flag) =>
+    execFileSync("tar", [flag, archive], { encoding: "utf8" })
+      .trimEnd()
+      .split("\n");
+  if (
+    list("-tzf").some(
+      (path) =>
+        !/^agent-hub-core(?:\/|$)/.test(path) ||
+        /(?:^|\/)\.\.(?:\/|$)|\\/.test(path) ||
+        (fontsOnly &&
+          !/^agent-hub-core\/(public\/fonts|src\/fonts\/terminal-icons\/assets)\//.test(
+            path,
+          )),
+    ) ||
+    list("-tvzf").some((entry) => !/^[-d]/.test(entry))
+  )
+    throw new Error("Unexpected entry in SDK archive");
+  execFileSync("tar", ["-xzf", archive, "-C", destination]);
 }

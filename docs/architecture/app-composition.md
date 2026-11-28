@@ -49,9 +49,9 @@ app_lib::builder()?
 
 ## 尚未拆分的部分
 
-当前前端仍通过本仓库的 Vite 工程构建，尚未发布为独立 UI 包，也没有新增私有仓库依赖或第二套打包配置。后续有具体扩展时，再确定 UI 包导出、菜单注册、资源构建及品牌／更新渠道配置。Rust Cargo 依赖本身不会完成前端复用与打包。
+React 工作台仍通过共享 Vite 工程构建。SDK 注册表候选将桌面源码及 React 构建入口放在 `agent-hub-desktop`，字体放在 `agent-hub-fonts`，由 `agent-hub-core` 的构建命令解包并按产品清单组装。私有产品可以通过 `desktopPlugin` 引入本地 Tauri 插件。详情见 [SDK 定制说明](../../packages/agent-hub-core/README.md)。
 
-不预建动态库加载器、通用扩展 trait 或第二套业务实现。拆分按实际私有功能发生，通用业务、存储和 UI 保持单一实现。
+内部 Skill Hub 通过 `agent_hub_core::skill_source::SkillSource` 接入。插件注册来源并负责认证、查询和下载指定版本，桌面宿主调用来源并负责归档校验、安装和库登记。插件由产品构建期注册，并配置本地可信 WebView 权限。
 
 ## 共享 Rust 核心库
 

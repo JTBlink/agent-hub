@@ -32,6 +32,7 @@ jobs:
           archive="$output/agent-hub-core-$version.tar.gz"
           node packages/agent-hub-core/package.mjs "$archive"
           node packages/agent-hub-core/smoke.mjs "$archive" --native
+          node packages/agent-hub-core/smoke-registry.mjs "$archive" --native
       - name: Upload verified SDK candidate
         uses: actions/upload-artifact@v4
         with:

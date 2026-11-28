@@ -1,3 +1,4 @@
+mod catalog_install;
 mod rename;
 mod repository_overwrite;
 use super::*;

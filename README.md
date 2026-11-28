@@ -6,6 +6,7 @@
   <p>
     <a href="https://jtblink.github.io/agent-hub/">产品主页</a> ·
     <a href="https://github.com/JTBlink/agent-hub/releases">下载安装包</a> ·
+    <a href="https://crates.io/crates/agent-hub-core">SDK（crates.io）</a> ·
     <a href="docs/README.md">文档</a> ·
     <a href="CHANGELOG.md">更新日志</a>
   </p>
@@ -115,6 +116,28 @@ agent-hub-cli --json automations logs '<task-id>' --run '<run-id>'
 3. 连接 GitHub / GitLab，查看当前项目的工作项和代码审查。
 4. 从模板创建定时任务，核对工作目录、脚本与日程后启用。
 5. 配置自己的 Git 远端，备份技能、任务定义和受支持的用户配置。
+
+## 引用 AgentHub Core SDK
+
+[`agent-hub-core`](https://crates.io/crates/agent-hub-core) 提供 Rust 启动方案 API，以及获取完整 SDK、构建定制桌面产品的命令。以下以 `0.2.0` 为例。
+
+**在 Rust 项目中引用**，将版本写入 `Cargo.toml`：
+
+```toml
+[dependencies]
+agent-hub-core = "=0.2.0"
+```
+
+Rust 代码通过 `agent_hub_core::agent_launch` 校验和解析 Agent 启动方案。
+
+**构建定制桌面产品**，先安装 SDK 命令：
+
+```bash
+cargo install agent-hub-core --version '=0.2.0' --features sdk-cli --locked
+agent-hub-sdk build product.json .build/agent-hub-core-0.2.0
+```
+
+在产品仓库维护 `product.json`，并把品牌和侧栏扩展放在旁边的 `custom/`。构建命令会校验由 Cargo 提供的版本化 SDK 资源，并按产品清单选择功能、构建界面和配套 CLI。只下载和解压时，可使用 `agent-hub-sdk install .build/agent-hub-core-0.2.0`。安装需要 Node.js，桌面构建还需要对应平台的 Rust 与 Tauri 工具链。 [产品清单和扩展示例](packages/agent-hub-core/README.md)
 
 ## 本地数据与备份
 

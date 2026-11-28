@@ -2,6 +2,19 @@ use std::{env, fs, path::PathBuf, process::Command};
 
 fn main() -> std::io::Result<()> {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let output = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo output directory"));
+    let bundled = manifest.join("registry-sdk.json");
+    println!("cargo:rustc-check-cfg=cfg(registry_sdk)");
+    println!("cargo:rerun-if-changed={}", bundled.display());
+    if bundled.is_file() {
+        let body = fs::read_to_string(bundled)?;
+        let metadata: serde_json::Value = serde_json::from_str(&body)?;
+        if metadata["version"] != env!("CARGO_PKG_VERSION") {
+            return Err(std::io::Error::other("Registry SDK version mismatch"));
+        }
+        println!("cargo:rustc-cfg=registry_sdk");
+        return fs::write(output.join("sdk-source.json"), body);
+    }
     let shipped = manifest.join(".cargo_vcs_info.json");
     let archived = manifest.join("../../SDK_REVISION");
     println!("cargo:rerun-if-changed={}", shipped.display());
@@ -50,7 +63,6 @@ fn main() -> std::io::Result<()> {
         "version": env!("CARGO_PKG_VERSION"),
         "revision": revision,
     });
-    let output = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo output directory"));
     fs::write(
         output.join("sdk-source.json"),
         format!("{}\n", serde_json::to_string_pretty(&lock)?),

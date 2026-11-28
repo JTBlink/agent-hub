@@ -1,5 +1,11 @@
 # AgentHub SDK 变更日志
 
+## [0.2.0]
+
+- 新增 `agent-hub-sdk` 构建入口，由 Cargo 提供同版本桌面资源和字体，产品构建无需访问 GitHub。
+- 产品清单支持私有 Tauri 插件，Agent Flow 可接入独立 Skill Hub。
+- 共享 Skill 来源支持搜索、查询版本和校验指定版本归档，安装后登记到技能库。
+
 ## [0.1.3]
 
 - 统一项目 SDK 与 Cargo 包名称为 agent-hub-core，保留 Agent 启动方案接口。

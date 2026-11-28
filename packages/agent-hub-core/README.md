@@ -1,13 +1,15 @@
 # AgentHub Core SDK
 
-下游可以通过 crates.io 安装同版本的 SDK 构建入口。以下以 SDK 0.1.3 为例：
+下游可以通过 crates.io 安装同版本的 SDK 构建入口。以下以 SDK 0.2.0 为例：
 
 ```bash
-cargo install agent-hub-core --version '=0.1.3' --features sdk-cli --locked
-agent-hub-core build product.json .build/sdk-0.1.3
+cargo install agent-hub-core --version '=0.2.0' --features sdk-cli --locked
+agent-hub-sdk build product.json .build/sdk-0.2.0
 ```
 
-Cargo 包携带源码仓库、版本和不可变提交。使用 `agent-hub-core lock` 可读取源码身份，使用 `agent-hub-core install <目录>` 可获取和解压完整 SDK。Rust 项目依赖同版本的 `agent-hub-core` 后，可以使用启动方案 API，并通过 `RELEASE_LOCK_JSON` 获得相同的源码描述。安装和构建需要 Git 与 Node.js。
+使用 `agent-hub-sdk lock` 查看锁定的源码提交，或用 `agent-hub-sdk install <目录>` 只解压 SDK。Rust 项目可依赖同版本的 `agent-hub-core` 使用启动方案 API。
+
+从 0.2.0 起，Cargo 会同时解析 `agent-hub-desktop` 和 `agent-hub-fonts`。SDK 命令校验并解压配套归档，第三方前端依赖可以通过 npm 镜像或缓存提供。
 
 此源码包包含 React 工作台、Rust 宿主、CLI 和内置资源。解压后安装依赖，再从 SDK 目录传入自己的产品清单构建：
 
@@ -79,6 +81,38 @@ export default {
     component: () => <p>Review workbench</p>,
   },
 } satisfies FeatureModule;
+```
+
+## 私有桌面插件
+
+产品可以在 `custom/` 下提供一个 Cargo crate，并在产品清单中注册。这个 crate 随桌面宿主编译，请在其中维护内部 OpenAPI URL、认证和协议转换。
+
+```json
+{
+  "desktopPlugin": {
+    "package": "product-skill-hub",
+    "path": "custom/skill-hub",
+    "capability": "custom/skill-hub-capability.json"
+  }
+}
+```
+
+插件导出 `init() -> tauri::plugin::TauriPlugin<tauri::Wry>`，也可以使用泛型 Runtime。可选 capability 的 ID 为 `agenthub-private-plugin`，仅能授权本地 `main` 和 `workspace-*` WebView。
+
+Skill Hub 插件实现 `agent_hub_core::skill_source::SkillSource`，并在插件初始化时通过宿主提供的 `SkillSourceRegistry` 注册稳定的来源 ID。自定义页面可以调用 `skill_catalog_search`、`skill_catalog_versions` 和 `skill_catalog_install`。安装命令从已注册来源读取精确版本和摘要，再走共享校验与技能库登记流程。插件凭据留在后端。
+
+```ts
+import { invoke } from "@tauri-apps/api/core";
+
+const sourceId = "product-skill-hub";
+const skillId = "review";
+await invoke("skill_catalog_search", { sourceId, query: "review" });
+await invoke("skill_catalog_versions", { sourceId, skillId });
+const librarySkillId = await invoke<string>("skill_catalog_install", {
+  sourceId,
+  skillId,
+  version: "1.2.0",
+});
 ```
 
 ## 校验与升级

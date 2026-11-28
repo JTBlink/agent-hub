@@ -16,5 +16,12 @@ fn main() {
     let context = tauri::generate_context!();
     #[cfg(all(target_os = "macos", debug_assertions))]
     dev_bundle::relaunch(context.config()).expect("failed to prepare macOS development app");
+    #[cfg(not(agent_hub_desktop_plugin))]
     app_lib::run(context);
+    #[cfg(agent_hub_desktop_plugin)]
+    app_lib::builder()
+        .expect("Failed to initialize app state")
+        .plugin(agent_hub_product_plugin::init())
+        .run(context)
+        .expect("error while running tauri application");
 }

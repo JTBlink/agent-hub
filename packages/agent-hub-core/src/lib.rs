@@ -1,6 +1,7 @@
 //! Shared AgentHub domain library.
 
 pub mod agent_launch;
+pub mod skill_source;
 
 /// Cargo package version, matched to the SDK distribution it installs.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

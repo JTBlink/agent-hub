@@ -16,7 +16,7 @@ fn make_skill_dir(parent: &Path, dir_name: &str, meta_name: Option<&str>) -> Pat
 fn unique_dest_returns_base_when_free() {
     let tmp = tempdir().unwrap();
     let source = make_skill_dir(tmp.path(), "source", Some("a-b"));
-    let dest = unique_skill_dest(tmp.path(), "a-b", &source).unwrap();
+    let dest = unique_skill_dest(tmp.path(), "a-b", &source, true, |_| Ok(false)).unwrap();
     assert_eq!(dest, tmp.path().join("a-b"));
 }
 
@@ -28,7 +28,7 @@ fn unique_dest_reuses_base_for_same_content() {
     std::fs::write(existing.join("body.md"), "same").unwrap();
     std::fs::write(source.join("body.md"), "same").unwrap();
 
-    let dest = unique_skill_dest(tmp.path(), "a-b", &source).unwrap();
+    let dest = unique_skill_dest(tmp.path(), "a-b", &source, true, |_| Ok(false)).unwrap();
     assert_eq!(dest, tmp.path().join("a-b"));
 }
 
@@ -40,7 +40,7 @@ fn unique_dest_uses_suffix_for_different_content_even_if_name_matches() {
     std::fs::write(existing.join("body.md"), "old").unwrap();
     std::fs::write(source.join("body.md"), "new").unwrap();
 
-    let dest = unique_skill_dest(tmp.path(), "a-b", &source).unwrap();
+    let dest = unique_skill_dest(tmp.path(), "a-b", &source, true, |_| Ok(false)).unwrap();
     assert_eq!(dest, tmp.path().join("a-b-2"));
 }
 
@@ -54,7 +54,7 @@ fn unique_dest_reuses_existing_suffix_for_same_content() {
     std::fs::write(second.join("body.md"), "second").unwrap();
     std::fs::write(source.join("body.md"), "second").unwrap();
 
-    let dest = unique_skill_dest(tmp.path(), "a-b", &source).unwrap();
+    let dest = unique_skill_dest(tmp.path(), "a-b", &source, true, |_| Ok(false)).unwrap();
     assert_eq!(dest, tmp.path().join("a-b-2"));
 }
 
@@ -85,7 +85,7 @@ fn unique_dest_legacy_no_metadata_base_can_reinstall_if_content_matches() {
     std::fs::write(existing.join("body.md"), "same").unwrap();
     std::fs::write(source.join("body.md"), "same").unwrap();
 
-    let dest = unique_skill_dest(tmp.path(), "legacy", &source).unwrap();
+    let dest = unique_skill_dest(tmp.path(), "legacy", &source, true, |_| Ok(false)).unwrap();
     assert_eq!(dest, tmp.path().join("legacy"));
 }
 

@@ -1,4 +1,5 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
@@ -9,6 +10,15 @@ use super::sync_engine;
 
 #[cfg(test)]
 mod import_tests;
+mod source;
+pub use source::install_from_skill_source_to_destination;
+pub(crate) use source::prepare_skill_from_source;
+
+#[derive(Clone, Copy)]
+struct ArchiveLimits {
+    entries: usize,
+    extracted_bytes: u64,
+}
 
 pub struct InstallResult {
     pub name: String,
@@ -31,11 +41,11 @@ impl PreparedSource {
             validate_skill_source(source)?;
             Ok(PreparedSource::Directory(source.to_path_buf()))
         } else {
-            Self::from_archive(source)
+            Self::from_archive(source, None)
         }
     }
 
-    fn from_archive(source: &Path) -> Result<Self> {
+    fn from_archive(source: &Path, limits: Option<ArchiveLimits>) -> Result<Self> {
         let ext = source
             .extension()
             .map(|e| e.to_string_lossy().to_string())
@@ -47,7 +57,7 @@ impl PreparedSource {
         let temp_dir = tempfile::tempdir()?;
         let file = std::fs::File::open(source)?;
         let mut archive = zip::ZipArchive::new(file)?;
-        safe_extract(&mut archive, temp_dir.path())?;
+        safe_extract(&mut archive, temp_dir.path(), limits)?;
 
         // Find supported skill markers for local/archive import flows.
         let mut found = Vec::new();
@@ -105,7 +115,7 @@ pub fn install_from_local(source: &Path, name: Option<&str>) -> Result<InstallRe
     };
 
     let skills_dir = central_repo::skills_dir();
-    let dest = unique_skill_dest(&skills_dir, &sanitized_name, skill_dir)?;
+    let dest = unique_skill_dest(&skills_dir, &sanitized_name, skill_dir, true, |_| Ok(false))?;
     let final_name = dest
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
@@ -120,8 +130,15 @@ pub fn install_from_local_to_destination(
     destination: &Path,
 ) -> Result<InstallResult> {
     let prepared = PreparedSource::open(source)?;
-    let skill_dir = prepared.skill_dir();
+    install_prepared_to_destination(&prepared, name, destination)
+}
 
+fn install_prepared_to_destination(
+    prepared: &PreparedSource,
+    name: Option<&str>,
+    destination: &Path,
+) -> Result<InstallResult> {
+    let skill_dir = prepared.skill_dir();
     let skill_name = match name {
         Some(n) if !n.is_empty() => {
             sanitize_skill_name(n).ok_or_else(|| anyhow::anyhow!("Invalid skill name: '{}'", n))?
@@ -200,22 +217,35 @@ pub fn install_skill_dir_to_destination(
     })
 }
 
-/// Extract a ZIP archive into `dest`, skipping any entry whose path would
-/// escape the destination directory (Zip Slip defence).
-fn safe_extract(archive: &mut zip::ZipArchive<std::fs::File>, dest: &Path) -> Result<()> {
+/// Extract a ZIP archive. Source adapters require strict paths and bounded extraction.
+fn safe_extract(
+    archive: &mut zip::ZipArchive<std::fs::File>,
+    dest: &Path,
+    limits: Option<ArchiveLimits>,
+) -> Result<()> {
+    let mut remaining = limits.map(|limit| limit.extracted_bytes);
+    if let Some(limit) = limits {
+        ensure!(
+            archive.len() <= limit.entries,
+            "Skill archive has too many entries"
+        );
+    }
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i)?;
 
-        // enclosed_name() returns None for absolute paths and entries that
-        // contain `..` components, so those are silently skipped.
-        let entry_path = match entry.enclosed_name() {
-            Some(name) => dest.join(name),
-            None => continue,
-        };
-
-        // Belt-and-suspenders: verify the resolved path stays inside dest.
-        if !entry_path.starts_with(dest) {
+        let Some(entry_path) = entry
+            .enclosed_name()
+            .map(|name| dest.join(name))
+            .filter(|path| path.starts_with(dest))
+        else {
+            ensure!(limits.is_none(), "Skill archive contains an invalid path");
             continue;
+        };
+        if limits.is_some() {
+            ensure!(
+                entry.is_file() || entry.is_dir(),
+                "Skill archive contains an unsupported entry"
+            );
         }
 
         if entry.is_dir() {
@@ -225,7 +255,20 @@ fn safe_extract(archive: &mut zip::ZipArchive<std::fs::File>, dest: &Path) -> Re
                 std::fs::create_dir_all(parent)?;
             }
             let mut outfile = std::fs::File::create(&entry_path)?;
-            std::io::copy(&mut entry, &mut outfile)?;
+            if let Some(bytes) = remaining.as_mut() {
+                ensure!(
+                    entry.size() <= *bytes,
+                    "Extracted skill archive exceeds size limit"
+                );
+                let written = std::io::copy(&mut (&mut entry).take(*bytes + 1), &mut outfile)?;
+                ensure!(
+                    written <= *bytes,
+                    "Extracted skill archive exceeds size limit"
+                );
+                *bytes -= written;
+            } else {
+                std::io::copy(&mut entry, &mut outfile)?;
+            }
 
             // Restore Unix file permissions (especially executable bits)
             // from the ZIP entry metadata.
@@ -233,6 +276,7 @@ fn safe_extract(archive: &mut zip::ZipArchive<std::fs::File>, dest: &Path) -> Re
             {
                 if let Some(mode) = entry.unix_mode() {
                     use std::os::unix::fs::PermissionsExt;
+                    let mode = if limits.is_some() { mode & 0o777 } else { mode };
                     let _ = std::fs::set_permissions(
                         &entry_path,
                         std::fs::Permissions::from_mode(mode),
@@ -247,12 +291,20 @@ fn safe_extract(archive: &mut zip::ZipArchive<std::fs::File>, dest: &Path) -> Re
 /// Return a collision-safe destination directory for an install.
 ///
 /// Rules:
-/// - Prefer `<name>` if missing.
+/// - Prefer `<name>` if missing and not reserved by the caller.
 /// - Reuse an existing directory when it clearly belongs to the same skill
 ///   (same metadata `name`, or legacy no-metadata `<name>` directory).
 /// - Otherwise allocate `<name>-2`, `<name>-3`, ...
-fn unique_skill_dest(parent: &Path, sanitized_name: &str, source: &Path) -> Result<PathBuf> {
-    let source_hash = content_hash::hash_directory(source)?;
+fn unique_skill_dest(
+    parent: &Path,
+    sanitized_name: &str,
+    source: &Path,
+    reuse_identical: bool,
+    is_reserved: impl Fn(&Path) -> Result<bool>,
+) -> Result<PathBuf> {
+    let source_hash = reuse_identical
+        .then(|| content_hash::hash_directory(source))
+        .transpose()?;
 
     for i in 1u32.. {
         let candidate = if i == 1 {
@@ -261,11 +313,17 @@ fn unique_skill_dest(parent: &Path, sanitized_name: &str, source: &Path) -> Resu
             parent.join(format!("{}-{}", sanitized_name, i))
         };
 
-        if !candidate.exists() {
+        if is_reserved(&candidate)? {
+            continue;
+        }
+
+        if !candidate.exists() && !candidate.is_symlink() {
             return Ok(candidate);
         }
 
-        if content_hash::hash_directory(&candidate).ok().as_deref() == Some(source_hash.as_str()) {
+        if source_hash.as_deref().is_some_and(|hash| {
+            content_hash::hash_directory(&candidate).ok().as_deref() == Some(hash)
+        }) {
             return Ok(candidate);
         }
     }

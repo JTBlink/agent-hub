@@ -9,7 +9,9 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tauri::State;
 use walkdir::WalkDir;
+pub(crate) mod catalog_install;
 pub(crate) mod repository_install;
+pub use catalog_install::install_catalog_skill;
 
 use crate::core::{
     audit_log::AuditDraft,

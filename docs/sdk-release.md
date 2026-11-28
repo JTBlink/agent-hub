@@ -33,17 +33,21 @@ gh run watch <sdk-release-gate-run-id> --exit-status
 
 ## 3. 发布并从 crates.io 验收
 
-从标签对应的干净提交打包。先运行测试和发布预检，再上传包。发布凭据使用本机 Cargo 认证或 crates.io Trusted Publishing。
+从同一提交验收的 SDK 候选归档生成注册表工作区。桌面宿主及 React 源码进入 `agent-hub-desktop`，字体与许可证进入 `agent-hub-fonts`。先发布两个配套包，再发布使用精确版本依赖的 `agent-hub-core`。发布凭据使用本机 Cargo 认证或 crates.io Trusted Publishing。
 
 ```bash
-cargo test --locked --all-features --manifest-path packages/agent-hub-core/Cargo.toml
-cargo publish --dry-run --locked --all-features --manifest-path packages/agent-hub-core/Cargo.toml
-cargo publish --locked --all-features --manifest-path packages/agent-hub-core/Cargo.toml
+node packages/agent-hub-core/package-registry.mjs <candidate-archive> <new-registry-directory>
+cd <new-registry-directory>
+cargo test --locked --workspace --all-features
+cargo publish --locked -p agent-hub-fonts
+cargo publish --locked -p agent-hub-desktop
+cargo publish --dry-run --locked --all-features -p agent-hub-core
+cargo publish --locked --all-features -p agent-hub-core
 cargo install agent-hub-core --version "=${sdk_version}" --features sdk-cli --locked
-agent-hub-core lock
-agent-hub-core install <new-sdk-directory>
+agent-hub-sdk lock
+agent-hub-sdk install <new-sdk-directory>
 ```
 
-验证安装命令的版本和锁文件，核对下载的源码提交，确认解包后提供对应版本的 README、变更日志和构建入口。保留 crates.io 链接、标签解引用提交和候选记录。发布失败时对已验收版本续发。
+在禁止访问 GitHub 的环境中验证安装命令的版本和锁文件，核对 Cargo 包内的 SDK 源码提交，确认解包后包含对应版本的 README、变更日志和构建入口。保留 crates.io 链接、标签解引用提交和候选记录。发布失败时对已验收版本续发。
 
 旧 SDK 的 GitHub Release 附件只能在替代版本通过 registry 下载验收后清理。Git 标签及其指向的源码提交仍作为安装来源保留。

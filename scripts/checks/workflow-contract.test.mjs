@@ -40,6 +40,7 @@ describe("GitHub Actions workflow contract", () => {
     expect(check).toBeGreaterThan(0);
     expect(steps[check].run).toContain("packages/agent-hub-core/VERSION");
     expect(steps[check].run).toContain("--native");
+    expect(steps[check].run).toContain("smoke-registry.mjs");
     expect(upload).toBeGreaterThan(check);
     expect(steps[upload].with["if-no-files-found"]).toBe("error");
   });

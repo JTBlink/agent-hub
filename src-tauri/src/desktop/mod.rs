@@ -30,6 +30,7 @@ pub fn builder() -> anyhow::Result<tauri::Builder<tauri::Wry>> {
     let builder = tauri::Builder::default()
         .manage(workspaces::WorkspaceWindows::default())
         .manage(store)
+        .manage(agent_hub_core::skill_source::SkillSourceRegistry::default())
         .manage(cancel_registry)
         .manage(Arc::new(core::agent_usage::AgentUsage::default()))
         .manage(Arc::new(std::sync::Mutex::new(

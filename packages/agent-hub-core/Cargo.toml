@@ -1,11 +1,12 @@
 [package]
 name = "agent-hub-core"
-version = "0.1.3"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.77.2"
 license = "MIT"
 description = "Shared AgentHub domain library and desktop SDK build entry"
 repository = "https://github.com/JTBlink/agent-hub"
+publish = false
 include = ["build.rs", "src/**", "tests/**", "install.mjs", "build-product.mjs", "README.md", "LICENSE"]
 
 [dependencies]
@@ -24,6 +25,11 @@ sdk-cli = ["dep:tempfile"]
 [[bin]]
 name = "agent-hub-core"
 path = "src/main.rs"
+required-features = ["sdk-cli"]
+
+[[bin]]
+name = "agent-hub-sdk"
+path = "src/bin/agent-hub-sdk.rs"
 required-features = ["sdk-cli"]
 
 [build-dependencies]
