@@ -21,7 +21,7 @@ Client ID 是公开标识，可以随源码发布。Client Secret、访问令牌
 
 ## 1. 确认旧应用与本项目应用的区别
 
-1. 检查 [前端元数据](../../../../src/lib/distribution.ts) 和 [Rust GitHub 客户端](../../../../src-tauri/src/core/github_api.rs) 使用的 Client ID。
+1. 检查 [前端元数据](../../../../src/lib/distribution.ts) 和 [Rust GitHub 客户端](../../../../src-tauri/src/core/platforms/github/backup_api.rs) 使用的 Client ID。
 2. 使用已登录的浏览器打开 [OAuth Apps](https://github.com/settings/developers)，确认本项目应用已经存在。
 3. 如果授权页显示上游应用名称，检查 Client ID 的归属；仅修改本地应用名或翻译不会改变 GitHub 授权页。
 4. 如果当前账户无法管理旧应用，应为本项目注册独立应用，然后切换 Client ID。
@@ -64,7 +64,7 @@ PY
 修改以下两个公开常量，使其与 GitHub 新应用一致：
 
 - `src/lib/distribution.ts`：`GITHUB_OAUTH_CLIENT_ID`，用于打开当前应用的 GitHub 授权管理页面。
-- `src-tauri/src/core/github_api.rs`：`OAUTH_CLIENT_ID`，用于申请设备码和轮询授权结果。
+- `src-tauri/src/core/platforms/github/backup_api.rs`：`OAUTH_CLIENT_ID`，用于申请设备码和轮询授权结果。
 
 备份页默认展示 **使用 GitHub 登录**，保留个人访问令牌入口。重新编译并启动桌面应用后，新的 Rust Client ID 才会用于设备授权；仅刷新网页无法更新已运行的 Rust 进程。
 

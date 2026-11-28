@@ -7,7 +7,7 @@
 确认发布仓库、远端和发布范围。新发布未指定版本时运行：
 
 ```bash
-node .agents/skills/github-cli/scripts/select-release-version.mjs --remote <remote>
+node scripts/release/select-release-version.mjs --remote <remote>
 ```
 
 - 默认升级 patch；VERSION 已高于远端最新稳定版且未被 tag 占用时，沿用 VERSION；没有稳定版 tag 时使用当前稳定版 VERSION。

@@ -7,6 +7,7 @@
     <a href="https://jtblink.github.io/agent-hub/">产品主页</a> ·
     <a href="https://github.com/JTBlink/agent-hub/releases">下载安装包</a> ·
     <a href="https://crates.io/crates/agent-hub-core">SDK（crates.io）</a> ·
+    <a href="https://github.com/JTBlink/agent-hub-skills#安装">Skills 与插件</a> ·
     <a href="docs/README.md">文档</a> ·
     <a href="CHANGELOG.md">更新日志</a>
   </p>

@@ -88,7 +88,7 @@ fn follows_the_new_repository_for_installed_public_skills() {
     skill.source_branch = Some("v0.1.14".into());
     assert_eq!(git_source_from_skill(&skill).unwrap().clone_url, legacy);
     skill.source_branch = Some("main".into());
-    skill.source_subpath = Some(".agents/skills/rust-dev".into());
+    skill.source_subpath = Some(".agents/skills/agent-hub-dev".into());
     assert_eq!(git_source_from_skill(&skill).unwrap().clone_url, legacy);
 }
 

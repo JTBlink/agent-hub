@@ -103,10 +103,7 @@ export async function assembleRelease({
   }
 
   const changelogPath = resolve(root, "CHANGELOG.md");
-  const platformSupportPath = resolve(
-    root,
-    ".agents/skills/github-cli/references/platform-support.md",
-  );
+  const platformSupportPath = resolve(root, "docs/release/platform-support.md");
   const changelog = readFileSync(changelogPath, "utf8");
   const platformSupport = readFileSync(platformSupportPath, "utf8");
   const platformBody = platformSupport.replace(/^# [^\n]+\n+/, "").trim();

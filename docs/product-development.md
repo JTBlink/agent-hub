@@ -62,7 +62,7 @@ npm run build -- --product personal                  # 只构建前端
 | [JTBlink/agent-hub](https://github.com/JTBlink/agent-hub)               | AgentHub 应用、CLI、SDK、运行器和内置内容快照                   |
 | [JTBlink/agent-hub-skills](https://github.com/JTBlink/agent-hub-skills) | 可独立安装的公开 Skills、自动化任务模板，以及 Codex 和 Claude Code 插件清单 |
 
-应用与 SDK 分别按 [桌面应用发布流程](../.agents/skills/github-cli/references/release-flow.md) 和 [SDK 发布规范](sdk-release.md) 维护版本。单独更新 Skill 或任务模板时，在 `agent-hub-skills` 提交发布。需要随下一个应用或 SDK 版本附带更新时，再在 `agent-hub` 刷新默认内容快照。
+应用与 SDK 分别按 [桌面应用发布流程](release/release-flow.md) 和 [SDK 发布规范](sdk-release.md) 维护版本。单独更新 Skill 或任务模板时，在 `agent-hub-skills` 提交发布。需要随下一个应用或 SDK 版本附带更新时，再在 `agent-hub` 刷新默认内容快照。
 
 ### 更新内置 Skills 与自动化任务
 

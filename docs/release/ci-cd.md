@@ -1,6 +1,6 @@
 # 当前 CI/CD 配置
 
-本文记录工作流与环境配置；版本选择、提交、候选、tag 和验收统一见 [版本发布流程](release-flow.md)。GitHub 负责构建与发布，需求、状态与版本归属保存在 Issues 和 Milestones。SDK 的维护流程见 [AgentHub SDK 发布规范](../../../../docs/sdk-release.md)。
+本文记录工作流与环境配置；版本选择、提交、候选、tag 和验收统一见 [版本发布流程](release-flow.md)。GitHub 负责构建与发布，需求、状态与版本归属保存在 Issues 和 Milestones。SDK 的维护流程见 [AgentHub SDK 发布规范](../sdk-release.md)。
 
 ## 工作流
 

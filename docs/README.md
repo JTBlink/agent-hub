@@ -14,14 +14,14 @@
 - [应用组装边界](architecture/app-composition.md)（含 AI Native 实验性功能的原型边界）
 - [AI Native 场景流程编排](plans/agent-hub.md#ai-native-场景流程编排)（独立需求设计，尚未接入生产）
 - [目录与本地数据](architecture/directory-structure.md)
-- [项目开发 Skill](../.agents/skills/rust-dev/SKILL.md)与 [GitHub 发布 Skill](../.agents/skills/github-cli/SKILL.md)
-- [视觉规范](../.agents/skills/rust-dev/references/ui-guidelines.md)与[图标](../.agents/skills/rust-dev/references/icon-assets.md)
-- [开发指南](../.agents/skills/rust-dev/references/development.md)与[开发规范](../.agents/skills/rust-dev/references/coding-standards.md)
-- [CI/CD 配置](../.agents/skills/github-cli/references/ci-cd.md)、[平台支持](../.agents/skills/github-cli/references/platform-support.md)及[版本发布流程](../.agents/skills/github-cli/references/release-flow.md)
-- [提交规范](../.agents/skills/rust-dev/references/commit-conventions.md)
-- [GitHub OAuth App 注册与品牌维护](../.agents/skills/rust-dev/references/github-oauth-setup.md)
+- [项目开发 Skill](../.agents/skills/agent-hub-dev/SKILL.md)
+- [视觉规范](../.agents/skills/agent-hub-dev/references/ui-guidelines.md)与[图标](../.agents/skills/agent-hub-dev/references/icon-assets.md)
+- [开发指南](../.agents/skills/agent-hub-dev/references/development.md)与[开发规范](../.agents/skills/agent-hub-dev/references/coding-standards.md)
+- [CI/CD 配置](release/ci-cd.md)、[平台支持](release/platform-support.md)及[版本发布流程](release/release-flow.md)
+- [提交规范](../.agents/skills/agent-hub-dev/references/commit-conventions.md)
+- [GitHub OAuth App 注册与品牌维护](../.agents/skills/agent-hub-dev/references/github-oauth-setup.md)
 - [ADR 索引](adr/README.md)
-- [需求 tracker](../.agents/skills/rust-dev/references/issue-tracker.md)
+- [需求 tracker](../.agents/skills/agent-hub-dev/references/issue-tracker.md)
 - [导入来源与许可](reference/skills-manager/README.md)
 
 版本变更见根目录 [CHANGELOG](../CHANGELOG.md)，领域术语见 [CONTEXT](../CONTEXT.md)。

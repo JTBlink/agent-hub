@@ -277,6 +277,7 @@ agent-hub/
 ├── docs/                           # 项目文档
 │   ├── product/                    #   产品概览
 │   ├── architecture/               #   架构文档
+│   ├── release/                    #   GitHub Actions、平台与桌面应用发布规范
 │   ├── adr/                        #   架构决策记录
 │   ├── plans/                      #   规划设计文档
 │   ├── prototypes/                 #   全部需求原型、目录索引与设计参考
@@ -294,8 +295,7 @@ agent-hub/
 │   └── shared/                     #   跨模块共用仓库路径
 │
 ├── .agents/skills/                 # 项目内部规范，随 Git 共享
-│   ├── rust-dev/                   #   开发、UI、测试与提交规范
-│   └── github/             #   版本发布、Actions 与产物验收
+│   └── agent-hub-dev/                   #   开发、UI、测试与提交规范
 │
 ├── public/                         # 前端静态资源
 │   ├── agent-icons/                #   Agent 图标库（50+）

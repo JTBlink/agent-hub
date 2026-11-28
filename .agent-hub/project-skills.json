@@ -1,26 +1,13 @@
 {
   "version": 1,
   "skills": {
-    "github-cli": {
-      "id": "35ba7c38-f67d-43a4-820a-636b4447401f",
-      "name": "github-cli",
-      "content_hash": "825cad0225df2d0f5485a6ee050e04eb82eab0e631239066517cb4ed11c16a7d",
-      "targets": {
-        "claude_code": ".claude/skills/github-cli",
-        "codex": ".codex/skills/github-cli"
-      },
-      "source": null,
-      "disabled": false,
-      "disabled_targets": [],
-      "linked_targets": ["claude_code", "codex"]
-    },
-    "rust-dev": {
+    "agent-hub-dev": {
       "id": "4e68ae9f-b61b-45ba-8d22-2d3d436d7357",
-      "name": "rust-dev",
-      "content_hash": "876b06e90bc2e2653da9bc27f6a11286ee70c65fe2eb3baaec27bb0ddbe264c4",
+      "name": "agent-hub-dev",
+      "content_hash": "914c50cf9f2c640a8a7e765d19ef7314682c3a0938a0c5ad93e0f397ef493df9",
       "targets": {
-        "claude_code": ".claude/skills/rust-dev",
-        "codex": ".codex/skills/rust-dev"
+        "claude_code": ".claude/skills/agent-hub-dev",
+        "codex": ".codex/skills/agent-hub-dev"
       },
       "source": null,
       "disabled": false,

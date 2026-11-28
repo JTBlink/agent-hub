@@ -1,24 +1,16 @@
 ---
-name: rust-dev
-description: 项目内部开发规范。在本仓库进行 Rust、Tauri、React 功能开发、缺陷修复、UI 调整或代码审查时使用，落实 SOLID、性能、复用设计、测试、兼容性和提交要求。
+name: agent-hub-dev
+description: AgentHub 项目开发规范。用于本仓库的 Rust、Tauri 或 React 开发、缺陷修复、UI 调整与代码审查。涵盖 IPC、CLI 与桌面验证、平台集成及交付约定。
 license: MIT
 metadata:
-  version: "1.7.0"
+  version: "2.0.0"
 ---
 
-# 项目开发规范
+# AgentHub 开发规范
 
-本 skill 位于仓库的 `.agents/skills/rust-dev/`，随 Git 共享，是本项目开发规范的统一维护入口；不属于产品内置技能或用户全局技能库。名称通用，规则服务当前项目，不能未经适配直接套用到其他仓库。仅阅读文档时无需执行构建。
+先读仓库根目录的 `AGENTS.md`、`CONTEXT.md`、相关 Issue 和 ADR，再检查实际调用方。桌面与 CLI 共用 Rust core，延续单入口工作台架构。
 
-Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VERSION`；能力或规范变化时按 SemVer 更新，并同步界面元数据、参考资料与项目记录。
-
-## 建立项目上下文
-
-从当前工作目录向上定位同时包含 `CONTEXT.md`、`src/` 和 `src-tauri/` 的项目根目录；本文的代码和文档路径均相对该目录，`references/` 链接相对本 skill。未找到仓库时可提供规范建议，不能猜测目录并修改其他项目。
-
-先读取项目 `AGENTS.md`、`CONTEXT.md`、相关 GitHub Issue 规格和有效 ADR，再查当前调用方与同类实现。当前项目为单入口 Skills Manager 工作台，桌面与 CLI 共用 Rust core；不恢复旧配置编辑器或双窗口架构。
-
-开发约定统一修改本 skill 的原文；任务、分诊与领域文档消费规则在 `docs/agents/` 统一维护，本 skill 的参考入口链接这些规则，避免重复。领域上下文、产品规划、架构说明与 ADR 保留原位；源码、锁文件和工作流反映实际实现。发现规范与实现不一致时，明确差异并在当前任务范围内修正，不能把规划描述为已实现功能。
+下表按任务链接 AgentHub 专用约定。模块设计、行为测试和审查可按需使用全局 `codebase-design`、`tdd` 和 `code-review`。GitHub Actions 与发版使用全局 `github-cli` 和仓库的发布文档。
 
 ## 按任务读取规则
 
@@ -33,7 +25,7 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 | 需求、状态与领域文档               | [Issue tracker](references/issue-tracker.md)、[分诊状态](references/triage-labels.md)、[领域文档](references/domain.md)                               |
 | GitHub Device Flow、凭据与授权品牌 | [OAuth 维护](references/github-oauth-setup.md)                                                                                                        |
 
-只读当前任务所需资料；本 skill 独立执行开发任务，普通开发不触发发布，版本 tag、Actions 与 Release 不属于本技能范围。
+按任务读取相关资料。仅文档改动可用链接与文档检查验收。
 
 ## 执行与交付
 

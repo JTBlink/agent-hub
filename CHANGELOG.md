@@ -4,7 +4,8 @@
 
 ## [Unreleased]
 
-- 公开 Skills 与自动化任务模板由独立内容仓库维护，应用和 SDK 继续内置固定提交的默认内容。
+- 项目开发 Skill 改名为 `agent-hub-dev`。GitHub 操作使用全局 `github-cli`，项目发布规范和脚本迁到仓库常规目录。
+- 公开 Skills、自动化任务模板及 Codex 和 Claude Code 插件由独立内容仓库分发，请从 `JTBlink/agent-hub-skills` 添加插件市场。应用和 SDK 继续内置固定提交的默认内容。
 - 产品可通过 SDK 清单替换发现页面，沿用现有侧栏、快捷入口和链接。
 - 定制 SDK 通过 Cargo 提供桌面源码与字体，可在禁用 Git 的环境中构建产品。
 - 产品可注册私有桌面插件，为 Skill 库接入自定义来源并安装指定版本。

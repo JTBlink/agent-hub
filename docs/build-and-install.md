@@ -9,7 +9,7 @@
 - Windows：安装 Visual Studio C++ Build Tools、Windows SDK 和 WebView2。
 - Linux：安装目标发行版的 Tauri 2 系统依赖，包括 WebKitGTK 4.1 开发库及对应打包工具。
 
-平台支持与依赖详情见[平台说明](../.agents/skills/github-cli/references/platform-support.md)。
+平台支持与依赖详情见[平台说明](release/platform-support.md)。
 
 ```bash
 npm ci
@@ -33,7 +33,7 @@ npm run version:check
 
 Unix 也可执行 `./agent-hub.sh build`；Windows 可执行 `agent-hub.bat build`。参数继续传给 Tauri，例如 `npm run app:build -- --bundles dmg`。默认构建本机架构；显式目标通过 `--target <triple>` 指定，并需事先安装相应 Rust target 和原生工具链。
 
-请使用项目包装入口打包，使 sidecar 与桌面版本一致。普通本地打包不会创建 Git tag 或发布 Release；签名、更新器与正式发布见[发布流程](../.agents/skills/github-cli/references/release-flow.md)。
+请使用项目包装入口打包，使 sidecar 与桌面版本一致。普通本地打包不会创建 Git tag 或发布 Release；签名、更新器与正式发布见[发布流程](release/release-flow.md)。
 
 macOS 开发启动会生成完整的 `.app`，使用本机 ad-hoc 签名并验证包内资源，
 让系统识别开发应用的文件访问请求。首次通过内嵌终端访问下载目录时，需由
@@ -85,7 +85,7 @@ dev 入口通过 `AGENT_HUB_DEV_CLI` 将桌面重启绑定到当前产品已准�
 
 `AGENT_HUB_BRIDGE_DIR` 可指定发布目录；`AGENT_HUB_CLI_BIN_DIR` 或 `CARGO_HOME/bin` 决定已有开发软链接的位置。桌面启动也会校验并更新其配套副本；开发中应使用匹配的新桌面构建，避免启动旧应用后重新发布旧版 CLI。
 
-开发交付要求见[开发规范](../.agents/skills/rust-dev/references/development.md#cli-自动更新约定)。
+开发交付要求见[开发规范](../.agents/skills/agent-hub-dev/references/development.md#cli-自动更新约定)。
 
 ## 自动清理与缓存复用
 
@@ -96,7 +96,7 @@ dev 入口通过 `AGENT_HUB_DEV_CLI` 将桌面重启绑定到当前产品已准�
 - `app:test`、`app:lint` 全部成功后。
 - `./agent-hub.sh install --dev` 复用 CLI 构建入口的清理逻辑。
 
-保留规则以[构建产物保留规范](../.agents/skills/rust-dev/references/development.md#构建产物保留规范)为准：每个产品目录、架构、debug/release 和编译／检查／测试模式只保留最新应用产物，历史 feature、rustflags 与 Cargo 配置不各留一份。应用及集成测试二进制和 fingerprint 同步淘汰；每个当前 crate 只保留最新完成的增量工作目录及 session。安装包按名称、架构和格式保留最高版本的一份，同版本按最近构建选择，同时清理旧包签名。
+保留规则以[构建产物保留规范](../.agents/skills/agent-hub-dev/references/development.md#构建产物保留规范)为准：每个产品目录、架构、debug/release 和编译／检查／测试模式只保留最新应用产物，历史 feature、rustflags 与 Cargo 配置不各留一份。应用及集成测试二进制和 fingerprint 同步淘汰；每个当前 crate 只保留最新完成的增量工作目录及 session。安装包按名称、架构和格式保留最高版本的一份，同版本按最近构建选择，同时清理旧包签名。
 
 共享第三方依赖、build-script 输出与工具链继续复用，不作为应用历史版本清空。CLI 安装显式复用项目构建目录，避免每次使用临时目录重编依赖。
 

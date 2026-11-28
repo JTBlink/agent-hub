@@ -9,7 +9,7 @@ import { assembleRelease } from "./assemble-release.mjs";
 function fixture({ omit = "" } = {}) {
   const root = mkdtempSync(join(tmpdir(), "agent-hub-release-"));
   const output = join(root, "release-assets");
-  mkdirSync(join(root, ".agents/skills/github-cli/references"), {
+  mkdirSync(join(root, "docs/release"), {
     recursive: true,
   });
   mkdirSync(join(output, "nested"), { recursive: true });
@@ -18,7 +18,7 @@ function fixture({ omit = "" } = {}) {
     "# 更新日志\n\n## [Unreleased]\n\n- 下一版本。\n\n## [1.2.3]\n\n- 已发布功能。\n\n## 版本约定\n",
   );
   writeFileSync(
-    join(root, ".agents/skills/github-cli/references/platform-support.md"),
+    join(root, "docs/release/platform-support.md"),
     "# 平台支持矩阵\n\n支持 Windows、macOS 和 Linux。\n",
   );
   for (const extension of [".exe", ".dmg", ".AppImage", ".deb"]) {

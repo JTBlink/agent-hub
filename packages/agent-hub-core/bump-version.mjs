@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import {
   selectReleaseVersion,
   readRemoteTags,
-} from "../../.agents/skills/github-cli/scripts/select-release-version.mjs";
+} from "../../scripts/release/select-release-version.mjs";
 import { repositoryRoot } from "../../scripts/shared/paths.mjs";
 
 const versionFile = new URL("./VERSION", import.meta.url);

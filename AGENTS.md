@@ -17,15 +17,15 @@
 - `src-tauri/src/bin/`：agent-hub-cli 入口。
 - `scripts/`：Node.js 构建、发布与版本管理脚本。
 - [agent-hub-skills](https://github.com/JTBlink/agent-hub-skills) 维护公开 Skills 和自动化任务。应用内置内容以 `products/default-content.json` 固定版本。
-- `.agents/skills/rust-dev/`：随仓库共享的项目内部开发、UI、测试与提交规范。
-- `.agents/skills/github-cli/`：GitHub 版本发布、自动 tag、Actions 与产物验收规范。
+- `.agents/skills/agent-hub-dev/`：随仓库共享的项目内部开发、UI、测试与提交规范。
+- `docs/release/`：本项目的 GitHub Actions、桌面版本发布与验收规范。
 - `docs/`：产品、架构与 ADR；后续规划统一放在 `docs/plans/agent-hub.md`。
 - `docs/agents/`：工程技能的 Issue tracker、分诊标签和领域文档入口；任务按版本关联 GitHub Milestones。
 - `.github/workflows/`：CI、跨平台安装包构建和主页部署。
 
 新增代码遵循 [ADR-0006：文件体量、模块拆分与代码复用规范](docs/adr/0006-file-size-and-reuse-conventions.md)：页面文件超过 600 行、Rust 模块超过 800 行必须拆分；优先复用领域类型、路径解析、扫描器、bindings 和展示纯函数，禁止复制 Agent 路径、安全校验或诊断文案。
 
-具体的 SOLID 落地、模块边界、状态迁移、错误处理与验证要求见[开发规范](.agents/skills/rust-dev/references/coding-standards.md)。GitHub 与 GitLab 按[独立集成边界](.agents/skills/rust-dev/references/coding-standards.md#github--gitlab-独立集成)分别实现和验证。
+具体的 SOLID 落地、模块边界、状态迁移、错误处理与验证要求见[开发规范](.agents/skills/agent-hub-dev/references/coding-standards.md)。GitHub 与 GitLab 按[独立集成边界](.agents/skills/agent-hub-dev/references/coding-standards.md#github--gitlab-独立集成)分别实现和验证。
 
 ## 需求原型
 
@@ -66,13 +66,13 @@
 
 ## 测试规范
 
-测试采用“单元测试就近、跨模块流程集中”的规则：前端 `*.test.ts(x)` 与源码同目录，Rust 模块测试放相邻独立测试文件，Rust 公共接口与 CLI 集成测试放 `src-tauri/tests/`，浏览器验收放 `tests/browser/`，构建脚本测试与脚本同目录。详细的命名、辅助代码、fixture 与清理规则统一见[开发规范：测试与变更范围](.agents/skills/rust-dev/references/coding-standards.md#测试与变更范围)。
+测试采用“单元测试就近、跨模块流程集中”的规则：前端 `*.test.ts(x)` 与源码同目录，Rust 模块测试放相邻独立测试文件，Rust 公共接口与 CLI 集成测试放 `src-tauri/tests/`，浏览器验收放 `tests/browser/`，构建脚本测试与脚本同目录。详细的命名、辅助代码、fixture 与清理规则统一见[开发规范：测试与变更范围](.agents/skills/agent-hub-dev/references/coding-standards.md#测试与变更范围)。
 
 测试代码保持精简，覆盖可观察行为和关键边界；清理失效或无额外覆盖价值的测试脚本，保留缺陷回归与独有覆盖。测试名称应描述具体行为，例如 `creates_workspace_with_default_settings`。每次修复缺陷都应添加回归测试。提交拉取请求前，请运行 `cargo test`、格式检查和 Clippy 检查。
 
 ## 提交与变更审查规范
 
-完整的 Git 提交标题、正文、提交前检查和双轴审查要求见 [Git 提交规范](.agents/skills/rust-dev/references/commit-conventions.md)。需求状态、验证结果和版本里程碑必须及时回写对应 GitHub Issue。
+完整的 Git 提交标题、正文、提交前检查和双轴审查要求见 [Git 提交规范](.agents/skills/agent-hub-dev/references/commit-conventions.md)。需求状态、验证结果和版本里程碑必须及时回写对应 GitHub Issue。
 
 每次提交前都必须检查本次变更是否影响用户可见行为、发布流程或兼容性；如有影响，及时在根目录 `CHANGELOG.md` 的 `Unreleased` 或对应版本章节中补充记录。
 
@@ -84,7 +84,7 @@
 
 ### Project development
 
-在本仓库开发、调整 UI 或审查时，使用 [rust-dev](.agents/skills/rust-dev/SKILL.md)。发布版本或维护 GitHub Actions 时，使用 [github-cli](.agents/skills/github-cli/SKILL.md)。开发与发布规范集中维护于这两个项目级 Skill；工程技能共享的任务、标签与领域文档规则见 `docs/agents/`。领域上下文、架构文档和有效 ADR 保留原位。
+在本仓库开发、调整 UI 或审查时，使用 [agent-hub-dev](.agents/skills/agent-hub-dev/SKILL.md)。发布版本或维护 GitHub Actions 时，使用全局 `github-cli` Skill，并读取本仓库的[桌面发布流程](docs/release/release-flow.md)及 [CI/CD 配置](docs/release/ci-cd.md)。工程技能共享的任务、标签与领域文档规则见 `docs/agents/`。领域上下文、架构文档和有效 ADR 保留原位。
 
 ### Issue tracker
 
