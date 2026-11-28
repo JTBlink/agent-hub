@@ -1,7 +1,7 @@
 //! Bounded recent history; project registrations remain valid for open windows and skills.
 use super::*;
 
-const RECENT_PROJECT_LIMIT: i64 = 15;
+const RECENT_PROJECT_LIMIT: i64 = 50;
 
 fn prune(conn: &Connection) -> Result<()> {
     conn.execute(

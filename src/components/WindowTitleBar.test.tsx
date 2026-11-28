@@ -342,8 +342,8 @@ it.each([
   },
 );
 
-it("shows at most 15 workspaces in recent-open order instead of project registration order", async () => {
-  titleProjects = Array.from({ length: 20 }, (_, index) => ({
+it("shows at most 50 workspaces in recent-open order instead of project registration order", async () => {
+  titleProjects = Array.from({ length: 55 }, (_, index) => ({
     ...makeProject(),
     id: index === 0 ? "demo" : `project-${index}`,
     name: `Workspace ${index}`,
@@ -360,7 +360,7 @@ it("shows at most 15 workspaces in recent-open order instead of project registra
   const options = [...document.querySelectorAll('[role="option"]')];
   expect(options.map((item) => item.textContent)).toEqual([
     "Workspace 0",
-    ...Array.from({ length: 14 }, (_, i) => `Workspace ${19 - i}`),
+    ...Array.from({ length: 49 }, (_, i) => `Workspace ${54 - i}`),
   ]);
 });
 

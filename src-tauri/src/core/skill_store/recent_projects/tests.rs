@@ -4,7 +4,7 @@ use super::*;
 fn prunes_legacy_history_and_reopens_evicted_projects_without_deleting_registrations() {
     let temp = tempfile::tempdir().unwrap();
     let store = SkillStore::new(&temp.path().join("store.db")).unwrap();
-    for index in 1..=17 {
+    for index in 1..=52 {
         store
             .insert_project(&ProjectRecord {
                 id: format!("project-{index:02}"),
@@ -23,10 +23,10 @@ fn prunes_legacy_history_and_reopens_evicted_projects_without_deleting_registrat
     }
     store.prune_recent_projects().unwrap();
     let records = store.get_all_projects().unwrap();
-    assert_eq!(records.len(), 17);
+    assert_eq!(records.len(), 52);
     assert_eq!(
         records.iter().filter(|p| p.visited_at != Some(0)).count(),
-        15
+        50
     );
     assert_eq!(
         store
@@ -70,9 +70,9 @@ fn prunes_legacy_history_and_reopens_evicted_projects_without_deleting_registrat
     drop(store);
     let reopened = SkillStore::new(&temp.path().join("store.db")).unwrap();
     let records = reopened.get_all_projects().unwrap();
-    assert_eq!(records.len(), 17);
+    assert_eq!(records.len(), 52);
     assert_eq!(
         records.iter().filter(|p| p.visited_at != Some(0)).count(),
-        15
+        50
     );
 }

@@ -1,6 +1,6 @@
 import type { Project } from "./tauri";
 
-export const RECENT_PROJECT_LIMIT = 15;
+export const RECENT_PROJECT_LIMIT = 50;
 
 /** Zero is an evicted history entry; NULL supports registrations from older versions. */
 export function recentProjects(
